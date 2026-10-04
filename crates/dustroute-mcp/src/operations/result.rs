@@ -5,7 +5,8 @@ use super::mutation::{PlacementAttempt, RepairAttempt};
 use super::piston::{DoorOperationResult, PistonPlacementResult};
 use super::preview::{
     AssemblyPreview, BuiltinPlacementPreview, DiscardedJobStage, DoorProposal,
-    ElectricalEditPreview, GroundedRevisionPreview, PistonPlacementPreview, RepairCandidate,
+    ElectricalEditPreview, GroundedRevisionPreview, MacroOptimizationCandidate,
+    PistonPlacementPreview, RepairCandidate, WireOptimizationCandidate,
 };
 use super::transition::{TransitionProposal, TransitionRestoreResult, TransitionRunResult};
 use crate::failure::ExecutionProgress;
@@ -24,6 +25,8 @@ pub enum OperationResult {
     DoorProposal(Box<DoorProposal>),
     BuiltinPlacementPreview(Box<BuiltinPlacementPreview>),
     RepairCandidate(Box<RepairCandidate>),
+    MacroOptimizationCandidate(Box<MacroOptimizationCandidate>),
+    WireOptimizationCandidate(Box<WireOptimizationCandidate>),
     AssemblyPreview(Box<AssemblyPreview>),
     ElectricalEditPreview(Box<ElectricalEditPreview>),
     GroundedRevisionPreview(Box<GroundedRevisionPreview>),
@@ -130,6 +133,16 @@ impl From<DoorProposal> for OperationResult {
         Self::DoorProposal(Box::new(result))
     }
 }
+impl From<MacroOptimizationCandidate> for OperationResult {
+    fn from(result: MacroOptimizationCandidate) -> Self {
+        Self::MacroOptimizationCandidate(Box::new(result))
+    }
+}
+impl From<WireOptimizationCandidate> for OperationResult {
+    fn from(result: WireOptimizationCandidate) -> Self {
+        Self::WireOptimizationCandidate(Box::new(result))
+    }
+}
 impl Serialize for OperationResult {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         match self {
@@ -143,6 +156,8 @@ impl Serialize for OperationResult {
             Self::DoorProposal(result) => result.serialize(serializer),
             Self::BuiltinPlacementPreview(result) => result.serialize(serializer),
             Self::RepairCandidate(result) => result.serialize(serializer),
+            Self::MacroOptimizationCandidate(result) => result.serialize(serializer),
+            Self::WireOptimizationCandidate(result) => result.serialize(serializer),
             Self::AssemblyPreview(result) => result.serialize(serializer),
             Self::ElectricalEditPreview(result) => result.serialize(serializer),
             Self::GroundedRevisionPreview(result) => result.serialize(serializer),
@@ -170,6 +185,8 @@ impl OperationResult {
             | Self::DoorProposal(_)
             | Self::BuiltinPlacementPreview(_)
             | Self::RepairCandidate(_)
+            | Self::MacroOptimizationCandidate(_)
+            | Self::WireOptimizationCandidate(_)
             | Self::AssemblyPreview(_)
             | Self::ElectricalEditPreview(_)
             | Self::GroundedRevisionPreview(_) => false,
@@ -192,6 +209,8 @@ impl OperationResult {
             | Self::DoorProposal(_)
             | Self::BuiltinPlacementPreview(_)
             | Self::RepairCandidate(_)
+            | Self::MacroOptimizationCandidate(_)
+            | Self::WireOptimizationCandidate(_)
             | Self::AssemblyPreview(_)
             | Self::ElectricalEditPreview(_)
             | Self::GroundedRevisionPreview(_)

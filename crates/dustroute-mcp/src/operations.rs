@@ -236,7 +236,8 @@ impl OperationRegistry {
         );
     }
 
-    /// Temporary owner of existing JSON workflows. Remove when every caller is migrated.
+    /// Legacy test fixtures only; production proposal owners now record Rust types.
+    #[cfg(test)]
     pub(crate) async fn record_unmigrated(&self, id: Uuid, kind: OperationKind, result: Value) {
         self.record_completed(id, kind, OperationResult::unmigrated(result))
             .await;

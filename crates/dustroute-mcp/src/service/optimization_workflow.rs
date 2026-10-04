@@ -1,6 +1,16 @@
 //! Proposal computation operates on an immutable captured circuit. It has no
 //! bridge, player-selection or MCP router capability and cannot write a world.
 use super::*;
+use crate::operations::preview::optimization::{
+    BoundaryStrength, MacroMetrics, MacroOptimizationCandidate, MacroOptimizationPreview,
+    MacroPlacement, MacroVerification, OptimizationAssessmentView, OptimizationContractView,
+    VerificationState, WireMetrics, WireObjective, WireOptimizationCandidate,
+    WireOptimizationPreview, WirePhase, WirePlanningPolicy, WireSearch, WireSemantic,
+    WireSteadyState, WireTransitions, WireVerification,
+};
+
+#[cfg(test)]
+mod tests;
 
 pub(super) struct OptimizationWorkflow<'a> {
     pub policy: &'a McpPolicy,
@@ -22,12 +32,16 @@ impl OptimizationWorkflow<'_> {
         circuit: StoredCircuit,
         component_id: String,
         contract: OptimizationContract,
-    ) -> Value {
+    ) -> Result<MacroOptimizationPreview, UnrecordedFailure> {
         let (_, world) = match dustroute_translate::snapshot::world_from_snapshot(&circuit.snapshot)
         {
             Ok(result) => (circuit.snapshot.clone(), result),
             Err(error) => {
-                return workflow_error(McpErrorCode::SerializationFailed, error.to_string(), false);
+                return Err(UnrecordedFailure::coded(
+                    McpErrorCode::SerializationFailed,
+                    error.to_string(),
+                    false,
+                ));
             }
         };
         let staged = self.app.analyze_physical(
@@ -37,11 +51,11 @@ impl OptimizationWorkflow<'_> {
                 .with_observation_complete(circuit.complete),
         );
         let Some(model) = staged.reverse.functional_network.as_ref() else {
-            return workflow_error(
+            return Err(UnrecordedFailure::coded(
                 McpErrorCode::InvalidState,
                 "a complete inferred functional network is required for macro optimization",
                 false,
-            );
+            ));
         };
         let candidates = find_builtin_verified_macro_replacements(
             model,
@@ -53,11 +67,11 @@ impl OptimizationWorkflow<'_> {
             .iter()
             .find(|candidate| candidate.component_id.as_str() == component_id)
         else {
-            return workflow_error(
+            return Err(UnrecordedFailure::coded(
                 McpErrorCode::NotFound,
                 "component_id is not a current verified macro replacement candidate",
                 false,
-            );
+            ));
         };
         let boundary = extract_model_boundary_with_context(model, &world, &staged.reverse.analysis);
         let reserved = boundary
@@ -76,20 +90,20 @@ impl OptimizationWorkflow<'_> {
             match plan_macro_replacement_with_reserved(candidate, &boundary, &reserved) {
                 Ok(plan) => plan,
                 Err(error) => {
-                    return workflow_error(
+                    return Err(UnrecordedFailure::coded(
                         McpErrorCode::InvalidState,
                         format!("macro placement is unavailable: {error:?}"),
                         false,
-                    );
+                    ));
                 }
             };
         let structural = validate_macro_structure(&placement, &world, &replaceable);
         if !structural.valid() {
-            return workflow_error(
+            return Err(UnrecordedFailure::coded(
                 McpErrorCode::VerificationFailed,
                 "macro replacement failed structural validation",
                 false,
-            );
+            ));
         }
         placement.verification.structural = ContextualVerificationState::Passed;
         let materialized = match materialize_macro_replacement_in_known_regions(
@@ -104,18 +118,22 @@ impl OptimizationWorkflow<'_> {
         ) {
             Ok(materialized) => materialized,
             Err(error) => {
-                return workflow_error(
+                return Err(UnrecordedFailure::coded(
                     McpErrorCode::VerificationFailed,
                     format!("macro replacement could not be materialized: {error:?}"),
                     false,
-                );
+                ));
             }
         };
         if let Err(error) = self
             .policy
             .validate_placement_size(materialized.patch.changes.len())
         {
-            return workflow_error(McpErrorCode::PermissionDenied, error.to_string(), false);
+            return Err(UnrecordedFailure::coded(
+                McpErrorCode::PermissionDenied,
+                error.to_string(),
+                false,
+            ));
         }
         let steady =
             verify_macro_steady_state(&model.truth_table, &world, &materialized.world, 8, 64);
@@ -181,81 +199,91 @@ impl OptimizationWorkflow<'_> {
             )
             .await
         {
-            return workflow_error(McpErrorCode::Internal, error, false);
+            return Err(UnrecordedFailure::coded(
+                McpErrorCode::Internal,
+                error,
+                false,
+            ));
         }
+        let changed_blocks = materialized.patch.changes.len();
+        let candidate_record = MacroOptimizationCandidate::new(
+            circuit_id,
+            candidate.component_id.clone(),
+            materialized.patch,
+            contract,
+            assessment,
+        );
         self.operations
-            .record_unmigrated(
+            .record_completed(
                 operation_id,
                 OperationKind::OptimizationProposal,
-                json!({
-                    "circuit_id": circuit_id,
-                    "component_id": component_id,
-                    "patch": materialized.patch,
-                    "contract": optimization_contract_json(contract),
-                    "contract_assessment": contract_assessment_json(&assessment),
-                }),
+                candidate_record.clone().into(),
             )
             .await;
-        json!({
-            "schema_version": OPTIMIZATION_SCHEMA_V1,
-            "ok": true,
-            "circuit_id": circuit_id,
-            "operation_id": operation_id,
-            "optimization_kind": "macro_replacement",
-            "component_id": component_id,
-            "name": candidate.name,
-            "contract": optimization_contract_json(contract),
-            "contract_assessment": contract_assessment_json(&assessment),
-            "placement": {
-                "origin": placement.placed.origin,
-                "rotation_y": format!("{:?}", placement.placed.rotation).to_lowercase(),
-                "route_length": placement.total_route_length,
+        Ok(MacroOptimizationPreview {
+            schema_version: OPTIMIZATION_SCHEMA_V1,
+            ok: Success,
+            operation_id,
+            optimization_kind: "macro_replacement",
+            name: candidate.name.clone(),
+            candidate: candidate_record,
+            placement: MacroPlacement {
+                origin: placement.placed.origin,
+                rotation_y: placement.placed.rotation,
+                route_length: placement.total_route_length,
             },
-            "metrics": {
-                "changed_blocks": materialized.patch.changes.len(),
-                "added_supports": materialized.added_supports.len(),
-                "inserted_repeaters": materialized.inserted_repeaters.len(),
+            metrics: MacroMetrics {
+                changed_blocks,
+                added_supports: materialized.added_supports.len(),
+                inserted_repeaters: materialized.inserted_repeaters.len(),
             },
-            "verification": {
-                "structural": "passed",
-                "steady_state": format!("{:?}", steady.state).to_lowercase(),
-                "transition_cases": transitions.as_ref().map(|report| report.cases.len()),
-                "transition_differences": transitions.as_ref().map(|report| report.differing_cases),
-                "boundary_strength": match strength_verification {
-                    Ok(()) => json!({ "state": "passed" }),
-                    Err(reason) => json!({ "state": "failed", "reason": reason }),
-                },
+            verification: MacroVerification {
+                structural: VerificationState(ContextualVerificationState::Passed),
+                steady_state: VerificationState(steady.state),
+                transition_cases: transitions.as_ref().map(|report| report.cases.len()),
+                transition_differences: transitions.as_ref().map(|report| report.differing_cases),
+                boundary_strength: BoundaryStrength::from(strength_verification),
             },
-            "patch": materialized.patch,
-            "next_step": if contract_satisfied {
+            next_step: if contract_satisfied {
                 "call show_operation, obtain explicit confirmation, then invoke_operation(confirm=true)"
             } else {
                 "do not invoke; inspect the failed or unavailable contract categories"
             },
         })
     }
+
     pub(super) async fn propose_wire(
         &self,
         circuit_id: uuid::Uuid,
         circuit: StoredCircuit,
         focus: dustroute_translate::world_reverse::RegionBounds,
-        objective: String,
+        objective: WireObjective,
         contract: OptimizationContract,
         search_budget: PhysicalOptimizationSearchBudget,
-    ) -> Value {
+    ) -> Result<WireOptimizationPreview, UnrecordedFailure> {
         if !circuit.bounds.contains(focus.min) || !circuit.bounds.contains(focus.max) {
-            return workflow_error(
+            return Err(UnrecordedFailure::coded(
                 McpErrorCode::InvalidArgument,
                 "focus must be fully contained by the immutable circuit snapshot",
                 false,
-            );
+            ));
         }
         if let Err(error) = self.policy.validate_region(focus) {
-            return workflow_error(McpErrorCode::PermissionDenied, error.to_string(), false);
+            return Err(UnrecordedFailure::coded(
+                McpErrorCode::PermissionDenied,
+                error.to_string(),
+                false,
+            ));
         }
         let world = match world_from_snapshot_for_service(&circuit.snapshot) {
             Ok(world) => world,
-            Err(error) => return workflow_error(McpErrorCode::SerializationFailed, error, false),
+            Err(error) => {
+                return Err(UnrecordedFailure::coded(
+                    McpErrorCode::SerializationFailed,
+                    error,
+                    false,
+                ));
+            }
         };
         let optimization = match optimize_physical_wire_path_with_budget(
             &world,
@@ -265,21 +293,25 @@ impl OptimizationWorkflow<'_> {
         ) {
             Ok(optimization) => optimization,
             Err(error) => {
-                return workflow_error(
+                return Err(UnrecordedFailure::coded(
                     McpErrorCode::InvalidState,
                     format!("no safe physical wire optimization: {error:?}"),
                     false,
-                );
+                ));
             }
         };
         if let Err(error) = self
             .policy
             .validate_placement_size(optimization.patch.changes.len())
         {
-            return workflow_error(McpErrorCode::PermissionDenied, error.to_string(), false);
+            return Err(UnrecordedFailure::coded(
+                McpErrorCode::PermissionDenied,
+                error.to_string(),
+                false,
+            ));
         }
         if optimization.patch.changes.len() > contract.mutation.maximum_changed_blocks {
-            return workflow_error(
+            return Err(UnrecordedFailure::coded(
                 McpErrorCode::VerificationFailed,
                 format!(
                     "{} changed blocks exceeds contract maximum {}",
@@ -287,12 +319,16 @@ impl OptimizationWorkflow<'_> {
                     contract.mutation.maximum_changed_blocks
                 ),
                 false,
-            );
+            ));
         }
         let mut optimized_world = match optimization.patch.apply_virtual(&world) {
             Ok(world) => world,
             Err(error) => {
-                return workflow_error(McpErrorCode::InvalidState, error.to_string(), false);
+                return Err(UnrecordedFailure::coded(
+                    McpErrorCode::InvalidState,
+                    error.to_string(),
+                    false,
+                ));
             }
         };
         dustroute_translate::wire::update_wire_shapes(&mut optimized_world);
@@ -305,11 +341,11 @@ impl OptimizationWorkflow<'_> {
         let before_temporal = before.scene.temporal_assessment();
         let after_temporal = after.scene.temporal_assessment();
         if before_temporal.requirement != after_temporal.requirement {
-            return workflow_error(
+            return Err(UnrecordedFailure::coded(
                 McpErrorCode::VerificationFailed,
                 "optimization changed the circuit temporal requirement",
                 false,
-            );
+            ));
         }
         let before_diagnostic = dustroute_translate::diagnostic::diagnose_scene(
             &before.scene,
@@ -326,11 +362,11 @@ impl OptimizationWorkflow<'_> {
             || after_diagnostic.counts.probable_faults > before_diagnostic.counts.probable_faults
             || after_diagnostic.counts.unsupported > before_diagnostic.counts.unsupported
         {
-            return workflow_error(
+            return Err(UnrecordedFailure::coded(
                 McpErrorCode::VerificationFailed,
                 "optimization cannot be applied while unsupported physics or a new diagnostic fault is present",
                 false,
-            );
+            ));
         }
         let before_truth =
             dustroute_translate::world_reverse::infer_truth_table(&world, &before, 8, 64).ok();
@@ -342,18 +378,15 @@ impl OptimizationWorkflow<'_> {
                 let comparison =
                     dustroute_translate::world_reverse::compare_truth_tables(before, after);
                 if !comparison.comparable || comparison.fitness_penalty != 0 {
-                    return workflow_error(
+                    return Err(UnrecordedFailure::coded(
                         McpErrorCode::VerificationFailed,
                         "optimization changed the inferred truth table",
                         false,
-                    );
+                    ));
                 }
-                json!({ "available": true, "equivalent": true, "comparison": comparison })
+                WireSemantic::Equivalent(comparison)
             }
-            _ => json!({
-                "available": false,
-                "reason": "truth-table inference was unavailable; the plan remains preview-only physical-path optimization"
-            }),
+            _ => WireSemantic::Unavailable,
         };
         let steady_state =
             before_truth
@@ -459,27 +492,7 @@ impl OptimizationWorkflow<'_> {
             .map(boundary_block_record)
             .collect::<Vec<_>>();
         let operation_id = uuid::Uuid::new_v4();
-        let phase_trace = optimization
-            .phases
-            .iter()
-            .map(|phase| {
-                json!({
-                    "name": phase.name,
-                    "accepted": phase.accepted,
-                    "before": {
-                        "bounding_volume": phase.before.bounding_volume,
-                        "occupied_blocks": phase.before.occupied_blocks,
-                        "connector_length": phase.before.connector_length
-                    },
-                    "after": {
-                        "bounding_volume": phase.after.bounding_volume,
-                        "occupied_blocks": phase.after.occupied_blocks,
-                        "connector_length": phase.after.connector_length
-                    },
-                    "connector_growth": phase.connector_growth
-                })
-            })
-            .collect::<Vec<_>>();
+        let phase_trace = optimization.phases.iter().map(WirePhase::from).collect();
         let fragments_before = before.scene.fragments.len();
         if let Err(error) = self
             .store_repair_plan(
@@ -497,85 +510,68 @@ impl OptimizationWorkflow<'_> {
             )
             .await
         {
-            return workflow_error(McpErrorCode::Internal, error, false);
+            return Err(UnrecordedFailure::coded(
+                McpErrorCode::Internal,
+                error,
+                false,
+            ));
         }
+        let candidate_record = WireOptimizationCandidate::new(
+            circuit_id,
+            focus,
+            optimization.patch.clone(),
+            semantic.clone(),
+            contract,
+            contract_assessment.clone(),
+        );
         self.operations
-            .record_unmigrated(
+            .record_completed(
                 operation_id,
                 OperationKind::OptimizationProposal,
-                json!({
-                    "circuit_id": circuit_id,
-                    "focus": bounds_json(focus),
-                    "patch": optimization.patch,
-                    "semantic_verification": semantic,
-                    "contract": optimization_contract_json(contract),
-                    "contract_assessment": contract_assessment_json(&contract_assessment)
-                }),
+                candidate_record.into(),
             )
             .await;
-        json!({
-            "schema_version": OPTIMIZATION_SCHEMA_V1,
-            "ok": true,
-            "circuit_id": circuit_id,
-            "operation_id": operation_id,
-            "objective": objective,
-            "contract": optimization_contract_json(contract),
-            "contract_assessment": contract_assessment_json(&contract_assessment),
-            "focus": bounds_json(focus),
-            "outside_focus_fixed": true,
-            "preserved_boundary_blocks": preserved_boundary.len(),
-            "fixed_endpoints": optimization.fixed_endpoints,
-            "metrics": {
-                "wire_blocks_before": optimization.wire_blocks_before,
-                "wire_blocks_after": optimization.wire_blocks_after,
-                "path_length_before": optimization.path_length_before,
-                "path_length_after": optimization.path_length_after,
-                "changed_blocks": optimization.patch.changes.len()
+        Ok(WireOptimizationPreview {
+            schema_version: OPTIMIZATION_SCHEMA_V1,
+            ok: Success,
+            circuit_id,
+            operation_id,
+            objective,
+            contract: OptimizationContractView(contract),
+            contract_assessment: OptimizationAssessmentView(contract_assessment),
+            focus,
+            outside_focus_fixed: true,
+            preserved_boundary_blocks: preserved_boundary.len(),
+            fixed_endpoints: optimization.fixed_endpoints,
+            metrics: WireMetrics {
+                wire_blocks_before: optimization.wire_blocks_before,
+                wire_blocks_after: optimization.wire_blocks_after,
+                path_length_before: optimization.path_length_before,
+                path_length_after: optimization.path_length_after,
+                changed_blocks: optimization.patch.changes.len(),
             },
-            "search": {
-                "budget": {
-                    "max_expansions": search_budget.max_expansions,
-                    "max_candidates": search_budget.max_candidates,
-                    "max_millis": search_budget.max_millis,
-                },
-                "expansions": optimization.search.expansions,
-                "candidates": optimization.search.candidates,
-                "truncated": optimization.search.truncated,
-                "stop_reason": optimization.search.stop_reason,
+            search: WireSearch::new(search_budget, optimization.search),
+            phase_trace,
+            planning_policy: WirePlanningPolicy {
+                temporary_connector_growth_is_internal_only: true,
+                temporary_connector_growth_budget: optimization.path_length_before / 2,
+                final_global_improvement_required: true,
             },
-            "phase_trace": phase_trace,
-            "planning_policy": {
-                "temporary_connector_growth_is_internal_only": true,
-                "temporary_connector_growth_budget": optimization.path_length_before / 2,
-                "final_global_improvement_required": true
+            patch: optimization.patch,
+            verification: WireVerification {
+                diagnostics_not_worse: true,
+                temporal_requirement_preserved: true,
+                temporal_requirement: after_temporal.requirement,
+                semantic,
+                steady_state: steady_state.as_ref().map(WireSteadyState::from),
+                transitions: transitions.as_ref().map(WireTransitions::from),
+                boundary_strength: strength_verification.map(BoundaryStrength::from),
             },
-            "patch": optimization.patch,
-            "verification": {
-                "diagnostics_not_worse": true,
-                "temporal_requirement_preserved": true,
-                "temporal_requirement": after_temporal.requirement,
-                "semantic": semantic,
-                "steady_state": steady_state.as_ref().map(|report| json!({
-                    "state": format!("{:?}", report.state).to_lowercase(),
-                    "differing_assignments": report.differing_assignments,
-                    "reason": report.reason,
-                })),
-                "transitions": transitions.as_ref().map(|report| json!({
-                    "state": format!("{:?}", report.state).to_lowercase(),
-                    "case_count": report.cases.len(),
-                    "differing_cases": report.differing_cases,
-                    "reason": report.reason,
-                })),
-                "boundary_strength": strength_verification.as_ref().map(|result| match result {
-                    Ok(()) => json!({ "state": "passed" }),
-                    Err(reason) => json!({ "state": "failed", "reason": reason }),
-                })
-            },
-            "next_step": if contract_satisfied {
+            next_step: if contract_satisfied {
                 "call show_operation, explain the fixed focus and verified contract, obtain explicit confirmation, then call invoke_operation(confirm=true)"
             } else {
                 "do not invoke this operation; satisfy every failed or unavailable contract category first"
-            }
+            },
         })
     }
 }

@@ -370,7 +370,7 @@ pub(super) struct NewOptimizationParams {
     pub(super) circuit_id: String,
     /// Inclusive physical region that may change. Every block outside remains fixed.
     pub(super) focus: OptimizationFocusParam,
-    /// Currently wire_length. Future objectives will be added explicitly.
+    /// wire_length or density_then_wire_length; other objectives are rejected explicitly.
     pub(super) objective: String,
     /// Explicit preservation contract. Omitted fields use the documented safe defaults.
     pub(super) contract: Option<OptimizationContractParam>,

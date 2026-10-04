@@ -1131,3 +1131,72 @@ immutableな過去の観測とfresh scanの分離を確認した。実機の過�
 workspace全targetとMCPの`--no-default-features`全targetのClippyは
 `-D warnings`で成功した。Cargoは単独・offline/locked・`-j1`、テストは単一threadで実行。
 formattingと差分の空白検査も成功した。今回も実機・host・ワールドへ操作していない。
+
+### 最適化候補・保存済み計画・履歴の型付き接続
+
+ダスト経路最適化とmacro置換の提案を、用途別のRust応答と
+`WireOptimizationCandidate` / `MacroOptimizationCandidate`で接続した。
+計算workflowにはValue、JSON構築、符号化した失敗文字列、JSON履歴の格納がない。
+objectiveはMCP入口の従来の検査位置でRust enumへ変換する。
+公開schemaの文字列入力と、受理する二つのobjectiveは変えない。
+
+contractとassessmentはnative型を保持し、公開表記をSerialize時に射影する。
+五つのtiming mode、六つの検証category、理由とreason codeを残す。
+構造・定常・遷移の結果、境界強度、探索budget/停止理由/phase score/metricsも型で接続する。
+未取得の遷移・定常・強度検証のnullは、既知のzeroや合格へ変換しない。
+定常出力が一致しても遷移や強度に差があることを応答に残す。
+既存contractが強度保存を要求しない場合の強度差を、今回の移行で新しい拒否条件にしない。
+
+registryのmacro候補は従来の5項目、wire候補は6項目だけを保持する。
+公開応答のID、rootのok、表示用metricsなどを履歴へ付け足さない。
+候補生成完了は実行完了ではなく、実行進捗・消費・現在のactivityを生成しない。
+履歴型にDeserialize、native実行planへの変換や観測権限を作るAPIは追加しない。
+実行の可否は従来通り別に保存するnative planのcontract_satisfiedで判断する。
+
+保存schema、Draft lifecycle、truth table、固定境界、変更範囲、支持の所有権と
+各検査の順序・条件は変更しない。immutable circuitからのみ計算する。
+保存成功後にregistryへ記録する順序も保つ。再起動後にregistryが空でも保存planの
+検証不足を実行許可へ読み替えない。候補生成のrecord_unmigratedはproductionの呼出しが
+なくなったため旧test fixture限定としたが、解析のcomplete_unmigratedはまだ残る。
+
+#### XORの観測snapshotで確認した既存の拒否
+
+追加したsynthetic XORの公開macro最適化試験は、当初成功を期待して失敗した。
+診断すると候補衝突は`(50, 2, 0)`の1箇所で、route衝突・cross-net接触・支持不備・
+blocked route supportはなかった。同じ配置と所有権要求をnativeな元のworldで検査すると
+構造検証に通り、観測snapshotから復元したworldでは拒否される。
+候補と観測のBlockKindは同じで、nativeの元ブロックは候補と完全一致する一方、
+観測にはobserved_name等のメタデータがありBlock全体は一致しない。
+
+既存のreplacement_ownershipは保持する境界・driverの支持を保護し、structure側は
+非所有の候補セルをBlock全体のEqで比較している。この計算は今回変更していない。
+試験を「観測を含む同じ配置の既存拒否を保持し、plan・履歴を保存しない」に修正した。
+成功応答のflatten構造・完全な履歴subset・遷移差とnullの表現は別の射影unitで確認する。
+このため、snapshot経由のXOR置換成功や実機の動作を確認済みとは扱わない。
+
+この拒否を修正するなら、物理状態の同一性と観測由来の属性をどう照合するか、
+および非所有の保持支持をmaterializeでどう維持するかの設計が必要になる。
+kindだけで一致とすることや観測属性を捨てることは、版・形状・状態差を見落としうる。
+正当性条件・所有権の変更となるため、改修は未着手とし別途承認を求める。
+
+#### 最適化の回帰検証
+
+MCPの関連42件のoffline試験が成功した。結果・registry等32件、最適化workflow5件、
+contract入力/default3件、通常修復のapply/再起動/undo1件、保存の不在・破損等を
+再起動の前後で拒否する1件を確認した。
+wire fixtureは9個から5個への短縮、truth/定常/遷移の一致、強度差の保持を検査する。
+truth推定がないfixtureでは検証をnullのまま保持し、保存・再起動後も実行前に拒否する。
+範囲外focusと変更数超過、認可の順序、macroの構造拒否ではplan・履歴を作らない。
+すべてsynthetic入力またはoffline mockであり、実機への接続・ワールド変更はない。
+
+さらに既存optimizerのXOR検証1件も成功した。native入力と明示したsynthetic既知範囲では
+構造・定常検証に通り、遷移12件の差を検出するという従来結果を保持する。
+この試験の成功は、観測snapshot経由の候補が許可されることを意味しない。
+今回確認した合計は43件であり、実機検証は行っていない。
+
+workspace全targetとMCPの`--no-default-features`全targetのClippyは
+`-D warnings`で成功した。Cargoは単独・offline/locked・`-j1`、テストは単一threadで実行。
+formattingと差分の空白検査も成功した。依存・Voxrig・保存schema・物理計算を変更していない。
+
+非同期解析・解析report・機構の逆観測表示などにはJSONが残る。
+`OperationResult::Unmigrated`はまだ暫定であり、内部JSON除去の統合ゴールは継続する。

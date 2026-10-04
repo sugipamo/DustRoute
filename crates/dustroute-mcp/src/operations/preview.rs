@@ -4,6 +4,7 @@ mod assembly;
 mod builtin;
 mod electrical;
 mod job;
+pub(crate) mod optimization;
 mod piston;
 mod repair;
 use super::mutation::Success;
@@ -26,6 +27,7 @@ use dustroute_translate::world_reverse::RegionBounds;
 pub use electrical::ElectricalEditPreview;
 pub(crate) use electrical::ShownElectricalEdit;
 pub(crate) use job::{JobObservation, JobResponse, JobStagePreview, JobSummary};
+pub use optimization::{MacroOptimizationCandidate, WireOptimizationCandidate};
 pub(crate) use piston::{
     DoorPlanningFailure, PistonPlanDisplay, PistonPlanState, ShownDoor, ShownPistonPlacement,
 };

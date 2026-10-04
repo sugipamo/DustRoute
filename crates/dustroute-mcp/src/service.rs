@@ -1,5 +1,8 @@
 use crate::bridge_protocol::CommandWrite;
 use crate::operations::mutation::{Success, UnrecordedFailure};
+use crate::operations::preview::optimization::{
+    OptimizationAssessmentView, OptimizationContractView, WireObjective,
+};
 use crate::operations::preview::{
     BuiltinOptimization, BuiltinPlacementPreview, BuiltinPlanningFailure, DoorPlanningFailure,
     DoorProposal, ExternalInputHypothesis, HypothesisConfidence, OptimizationPhase,
@@ -70,15 +73,14 @@ use dustroute_app::DustRouteService;
 use dustroute_optimize::{
     AnchorPolicy, BehavioralVerificationConfig, CompressionAxis, CompressionDirection,
     ContextualVerificationState, ContractCheck, ContractCheckState, MacroSteadyStateReport,
-    MacroStructuralReport, ObservedMacroMetrics, OptimizationContract,
-    OptimizationContractAssessment, OptimizationPlan, OptimizationRoutingConfig,
-    OptimizationSafety, PhysicalOptimizationSearchBudget, TemporalCapabilities, TimingContractMode,
-    assess_macro_contract, assess_optimization_safety, extract_model_boundary_with_context,
-    find_builtin_verified_macro_replacements, materialize_macro_replacement_in_known_regions,
-    optimize_physical_wire_path_with_budget, plan_macro_replacement_with_reserved,
-    realize_staged_optimization_against, validate_macro_structure, verify_boundary_strengths,
-    verify_macro_steady_state, verify_macro_transitions, verify_realized_optimization,
-    verify_world_transitions,
+    MacroStructuralReport, ObservedMacroMetrics, OptimizationContract, OptimizationPlan,
+    OptimizationRoutingConfig, OptimizationSafety, PhysicalOptimizationSearchBudget,
+    TemporalCapabilities, TimingContractMode, assess_macro_contract, assess_optimization_safety,
+    extract_model_boundary_with_context, find_builtin_verified_macro_replacements,
+    materialize_macro_replacement_in_known_regions, optimize_physical_wire_path_with_budget,
+    plan_macro_replacement_with_reserved, realize_staged_optimization_against,
+    validate_macro_structure, verify_boundary_strengths, verify_macro_steady_state,
+    verify_macro_transitions, verify_realized_optimization, verify_world_transitions,
 };
 use dustroute_physical::{BlockKind, Pos};
 use dustroute_physical::{PhysicalBlockChange, PhysicalPatch};
@@ -410,62 +412,6 @@ fn optimization_contract_from_param(
         return Err("maximum_width_delta_redstone_ticks must be at most 256".to_owned());
     }
     Ok(contract)
-}
-
-fn optimization_contract_json(contract: OptimizationContract) -> Value {
-    let timing_mode = match contract.timing.mode {
-        TimingContractMode::ExactTrace => "exact_trace",
-        TimingContractMode::ExactTransitions => "exact_transitions",
-        TimingContractMode::BoundedDelay => "bounded_delay",
-        TimingContractMode::SettledValueOnly => "settled_value_only",
-        TimingContractMode::PreserveOrder => "preserve_order",
-    };
-    json!({
-        "logical": { "mode": "exact_truth_table" },
-        "timing": {
-            "mode": timing_mode,
-            "maximum_added_redstone_ticks": contract.timing.maximum_added_redstone_ticks,
-            "settle_deadline_redstone_ticks": contract.timing.settle_deadline_redstone_ticks,
-        },
-        "pulse": {
-            "allow_new_pulses": contract.pulse.allow_new_pulses,
-            "allow_removed_pulses": contract.pulse.allow_removed_pulses,
-            "maximum_width_delta_redstone_ticks": contract.pulse.maximum_width_delta_redstone_ticks,
-        },
-        "analog": { "preserve_strength": contract.analog.preserve_strength },
-        "boundary": {
-            "preserve_blocks": contract.boundary.preserve_blocks,
-            "preserve_facing": contract.boundary.preserve_facing,
-            "preserve_driver_positions": contract.boundary.preserve_driver_positions,
-        },
-        "mutation": {
-            "focus_only": contract.mutation.focus_only,
-            "allow_temporary_expansion": contract.mutation.allow_temporary_expansion,
-            "maximum_changed_blocks": contract.mutation.maximum_changed_blocks,
-            "automatic_apply": contract.mutation.automatic_apply,
-        },
-    })
-}
-
-fn contract_check_json(check: &ContractCheck) -> Value {
-    let state = match check.state {
-        ContractCheckState::Passed => "passed",
-        ContractCheckState::Failed => "failed",
-        ContractCheckState::Unavailable => "unavailable",
-    };
-    json!({ "state": state, "reason_codes": check.reason_codes, "reasons": check.reasons })
-}
-
-fn contract_assessment_json(assessment: &OptimizationContractAssessment) -> Value {
-    json!({
-        "satisfied": assessment.satisfied(),
-        "logical": contract_check_json(&assessment.logical),
-        "timing": contract_check_json(&assessment.timing),
-        "pulse": contract_check_json(&assessment.pulse),
-        "analog": contract_check_json(&assessment.analog),
-        "boundary": contract_check_json(&assessment.boundary),
-        "mutation": contract_check_json(&assessment.mutation),
-    })
 }
 
 fn typed_reply(value: impl Serialize) -> CallToolResult {
@@ -2407,8 +2353,8 @@ impl DustRouteMcp {
                         "rotation_y": format!("{:?}", plan.placed.rotation).to_lowercase(),
                         "total_route_length": plan.total_route_length,
                         "automatic_apply_allowed": plan.automatic_apply_allowed,
-                        "contract": optimization_contract_json(*contract),
-                        "contract_assessment": contract_assessment.as_ref().map(contract_assessment_json),
+                        "contract": OptimizationContractView(*contract),
+                        "contract_assessment": contract_assessment.as_ref().map(|assessment| OptimizationAssessmentView(assessment.clone())),
                         "structural_report": {
                             "valid": structural.valid(),
                             "candidate_collisions": structural.candidate_collisions,
@@ -3381,8 +3327,8 @@ impl DustRouteMcp {
             Ok(player) => player,
             Err(error) => return error_reply(McpErrorCode::InvalidArgument, error, false),
         };
-        if let Some(error) = self.authorize_player(&player) {
-            return CallToolResult::error(vec![ContentBlock::text(error)]);
+        if let Err(error) = self.player_scope().authorize(&player) {
+            return typed_reply(error.at(FailurePhase::Admission).as_response());
         }
         let contract = match optimization_contract_from_param(params.contract) {
             Ok(contract) => contract,
@@ -3392,11 +3338,14 @@ impl DustRouteMcp {
             Ok(circuit) => circuit,
             Err(error) => return error_reply(McpErrorCode::NotFound, error, false),
         };
-        json_reply(
-            self.optimization_workflow()
-                .propose_macro(circuit_id, circuit, params.component_id, contract)
-                .await,
-        )
+        match self
+            .optimization_workflow()
+            .propose_macro(circuit_id, circuit, params.component_id, contract)
+            .await
+        {
+            Ok(response) => typed_reply(response),
+            Err(error) => typed_reply(error),
+        }
     }
 
     #[tool(
@@ -3409,21 +3358,22 @@ impl DustRouteMcp {
     ) -> CallToolResult {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
-            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
+            Err(error) => return typed_reply(UnrecordedFailure::message(error)),
         };
-        if let Some(error) = self.authorize_player(&player) {
-            return CallToolResult::error(vec![ContentBlock::text(error)]);
+        if let Err(error) = self.player_scope().authorize(&player) {
+            return typed_reply(error.at(FailurePhase::Admission).as_response());
         }
-        if !matches!(
-            params.objective.as_str(),
-            "wire_length" | "density_then_wire_length"
-        ) {
-            return error_reply(
-                McpErrorCode::InvalidArgument,
-                "objective must be wire_length or density_then_wire_length",
-                false,
-            );
-        }
+        let objective = match params.objective.as_str() {
+            "wire_length" => WireObjective::WireLength,
+            "density_then_wire_length" => WireObjective::DensityThenWireLength,
+            _ => {
+                return error_reply(
+                    McpErrorCode::InvalidArgument,
+                    "objective must be wire_length or density_then_wire_length",
+                    false,
+                );
+            }
+        };
         let contract = match optimization_contract_from_param(params.contract) {
             Ok(contract) => contract,
             Err(error) => return error_reply(McpErrorCode::InvalidArgument, error, false),
@@ -3440,18 +3390,21 @@ impl DustRouteMcp {
             Pos::new(params.focus.min.x, params.focus.min.y, params.focus.min.z),
             Pos::new(params.focus.max.x, params.focus.max.y, params.focus.max.z),
         );
-        json_reply(
-            self.optimization_workflow()
-                .propose_wire(
-                    circuit_id,
-                    circuit,
-                    focus,
-                    params.objective,
-                    contract,
-                    search_budget,
-                )
-                .await,
-        )
+        match self
+            .optimization_workflow()
+            .propose_wire(
+                circuit_id,
+                circuit,
+                focus,
+                objective,
+                contract,
+                search_budget,
+            )
+            .await
+        {
+            Ok(response) => typed_reply(response),
+            Err(error) => typed_reply(error),
+        }
     }
 
     #[tool(
@@ -6302,7 +6255,7 @@ mod tests {
         .unwrap();
         assert_eq!(contract.timing.mode, TimingContractMode::ExactTransitions);
         assert_eq!(
-            optimization_contract_json(contract)["timing"]["mode"],
+            serde_json::to_value(OptimizationContractView(contract)).unwrap()["timing"]["mode"],
             "exact_transitions"
         );
     }
