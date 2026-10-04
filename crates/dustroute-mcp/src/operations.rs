@@ -1,6 +1,7 @@
 pub mod construction;
 pub mod mutation;
 pub mod piston;
+pub mod preview;
 mod result;
 pub mod transition;
 pub use result::OperationResult;

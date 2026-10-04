@@ -928,3 +928,49 @@ workspace全targetとMCPの`--no-default-features`全targetのClippyは
 formattingと差分の空白検査も成功した。
 実機接続・ワールド変更・保存schema・依存version・Voxrig source/vendorの変更はない。
 他の計画・preview・解析等には未移行JSONが残り、統合ゴールは継続する。
+
+### 電気編集・grounded配置・建築ジョブの型付き計画
+
+電気編集の候補・表示・保存済み履歴と、建築ジョブの作成・読取り・観測・取消し・
+次区画/逆順undo/明示的復旧の計画をRustの記録型へ接続した。
+`ElectricalEditPreview`、`GroundedRevisionPreview`、`JobStagePreview`、`JobSummary`、
+`JobObservation`、`ElectricalEditHistory`を用途ごとに分ける。
+これらの応答型にDeserializeや記録からfresh proofへ戻すAPIを追加しない。
+建築ジョブは操作IDをJSON応答から読み戻さず、生成側のUuidを直接保持する。
+
+履歴のregistryには型付き候補と`DiscardedJobStage`を格納する。候補の作成完了、
+破棄済みの候補、実際の実行進捗と操作消費を別々に扱い、候補や取消しからzero writesや
+worldの確認済み状態を作らない。保存済み編集履歴とrequest-local activityも型で別々に
+公開入口へ渡す。過去のreadback・保存済みintentから現在のactivityを作らない。
+
+状態・手順・batchの表示射影を`operations::preview`に置いた。
+完全表示/要約の512件・8192件の記録数による条件、差分や履歴境界の64件の表示上限を維持する。
+要約表示は完全な期待状態を実行器から削除しない。ジョブの明示的な全表示も診断専用。
+state content IDは内容識別であり、観測のfreshnessや所有権を付与しない。
+元の境界値を報告し、保存済みの事実を表示時に正規化しない。
+
+grounded配置の認可は既存の共通player層を呼び、拒否をJSON文字列へ包み直さず
+admissionの原因として保持する。構造化した拒否のSerializeは原因の応答射影を使い、
+自身がJSONへencodeした原因を再解析することを要求しない。
+認可、モデルレビュー、直前の再観測、書込み、保存、候補破棄の順序と判定条件は維持する。
+保存schema・依存version・Voxrig source/vendorと実機・ワールドは変更しない。
+Assembly全体の計画・修復候補・解析等には未移行JSONが残り、統合ゴールは継続する。
+
+#### 編集・ジョブ計画の回帰検証
+
+関連47件が成功した。結果・registry等の25件では、完全表示と要約の切替え、
+繰返し期待状態の記録上限、候補破棄の未取得の進捗、全表示でも生まれない実行権限、
+取消済み履歴の保存事実、構造化した認可原因の直接表示を検査した。
+電気編集の公開MCP9件と建築ジョブの9件は、apply/undo、保存・再起動、部分書込みと
+応答喪失、同じ操作の再送拒否、明示的な復旧、保護状態の変化、自然更新で達成された
+区画のzero-write確認を含む。未来の区画を確認済みへ変更しない。
+
+grounded配置・採用・認可等の4件では、採用済みsourceの再検証、累積差分と周囲の
+再観測、古いplan・read-only・post mismatch・応答喪失の拒否を維持した。
+認可拒否はsourceの読込みやtransportより先に起き、実行進捗を作らない。
+実機用・計測用テストは実行せず、接続先はofflineのmockとMCPテストtransportだけ。
+
+workspace全targetとMCPの`--no-default-features`全targetのClippyは
+`-D warnings`で成功した。Cargoは単独・offline/locked・`-j1`、テストは単一threadで実行。
+この移行は保存schema・依存version・Voxrig source/vendorを変更しない。
+formattingと差分の空白検査も成功した。

@@ -1,17 +1,18 @@
 //! Existing-world modifications are fresh capabilities, separate from adoption
 //! and from durable historical records. All live steps use the shared executor.
-mod presentation;
 mod retention;
 use super::*;
 use crate::assembly_registry::{TargetServer, now_ms};
 use crate::construction_jobs::{JobAttempt, JobRegistry, JobStageBinding, JobState};
 use crate::edit_registry::{EditAttempt, EditRecord, EditRegistry, EditState, SCHEMA};
 use crate::operations::construction::ElectricalEditResult;
+use crate::operations::preview::{
+    DiscardedJobStage, ElectricalEditHistory, ElectricalEditPreview, ShownElectricalEdit,
+};
 use crate::performance::{Phase, current, span};
 use crate::piston_assembly::ValidatedAssemblyPlacement;
 use dustroute_translate::piston_construction::ElectricalModification;
 use dustroute_translate::snapshot::MinecraftSnapshot;
-pub(super) use presentation::state_summary;
 
 pub(super) struct EditOrigin {
     pub revision_id: uuid::Uuid,
@@ -34,35 +35,23 @@ pub(super) struct ElectricalEditPlan {
     retained_bytes: usize,
 }
 impl ElectricalEditPlan {
-    fn preview(&self, id: uuid::Uuid, read_only: bool) -> Value {
-        let mut result = json!({"schema_version":"dustroute.electrical-edit-preview.v2",
-            "ok":true,"operation_id":id,"kind":"electrical_revision_modification",
-            "source":self.source,"revision_id":self.revision_id,"read_only":read_only,"job_stage":self.job,
-            "bounds":{"min":self.proof.before().min,"max":self.proof.before().max},
-            "edit_scope":self.proof.scope(),
-            "execution_batches":construction_executor::batch_summary(self.proof.steps(false)),
-            "undo_execution_batches":construction_executor::batch_summary(self.proof.steps(true)),
-            "conditions":{"stationary_observation_required":true,"model_initial_queue":"assumed_empty",
-                "runtime_history_reconstructed":false,"functional_behavior_verified":false,
-                "protected_state_checked":"every modeled committed microstep, forward and undo; live full-region readback at batch boundaries",
-                "outside_editable":"all other observed cells are protected; no ownership inferred",
-                "fixed_environment":"enclosed source water only; source or containment changes are unsupported",
-                "natural_growth":"not modeled; live state drift stops execution",
-                "operator_requirement":"finish prior motion and keep external inputs/edits out of the work region"},
-            "validation_scope":"complete declared state and per-command physics; live readback at batch boundaries; no flying/harvest contract implied",
-            "next_step":"show_operation then confirm invoke_operation; no automatic retry/rollback"});
-        result.as_object_mut().expect("preview object").extend(
-            presentation::states(&self.proof)
-                .as_object()
-                .expect("state object")
-                .clone(),
-        );
-        result
+    fn preview(&self, id: uuid::Uuid, read_only: bool) -> ElectricalEditPreview {
+        ElectricalEditPreview::new(
+            id,
+            self.source.clone(),
+            self.revision_id,
+            self.job,
+            read_only,
+            &self.proof,
+        )
     }
 }
 
 impl DustRouteMcp {
-    pub(super) fn electrical_edit_history(&self, id: uuid::Uuid) -> Result<Option<Value>, String> {
+    pub(super) fn electrical_edit_history(
+        &self,
+        id: uuid::Uuid,
+    ) -> Result<Option<ElectricalEditHistory>, String> {
         if !crate::storage::record_exists(
             &self
                 .state_store
@@ -78,14 +67,13 @@ impl DustRouteMcp {
             .authorize_player(&player)
             .map_err(|e| e.to_string())?;
         let registry = EditRegistry::acquire(&self.state_store)?;
-        Ok(registry.load(id, &player)?.map(|record| {
-            json!({"ok":true,"operation_id":id,
-            "kind":"electrical_revision_modification","record":record,"historical":true,
-            "saved_record_is_validation_proof":false,"executable_plan_restored":false})
-        }))
+        Ok(registry.load(id, &player)?.map(ElectricalEditHistory::new))
     }
 
-    pub(super) async fn electrical_edit_view(&self, id: uuid::Uuid) -> Result<Value, String> {
+    pub(super) async fn electrical_edit_view(
+        &self,
+        id: uuid::Uuid,
+    ) -> Result<ElectricalEditPreview, String> {
         Ok(self
             .owned_edit(id, None)
             .await?
@@ -99,7 +87,7 @@ impl DustRouteMcp {
         after: MinecraftSnapshot,
         status: crate::bridge::BotStatus,
         origin: EditOrigin,
-    ) -> Result<Value, String> {
+    ) -> Result<ElectricalEditPreview, String> {
         let player = self.resolve_player(params.player.as_deref())?;
         self.policy
             .authorize_player(&player)
@@ -135,7 +123,7 @@ impl DustRouteMcp {
         status: crate::bridge::BotStatus,
         origin: EditOrigin,
         proof: ElectricalModification,
-    ) -> Result<Value, String> {
+    ) -> Result<ElectricalEditPreview, String> {
         let player = self.resolve_player(params.player.as_deref())?;
         self.policy
             .authorize_player(&player)
@@ -217,11 +205,16 @@ impl DustRouteMcp {
         plans.insert(id, plan);
         drop(plans);
         for old in superseded {
-            self.operations.record_unmigrated(old,OperationKind::PlacementPreview,
-                json!({"ok":false,"status":"job_stage_capability_discarded","next_step":"freshly plan the job stage"})).await;
+            self.operations
+                .record_completed(
+                    old,
+                    OperationKind::PlacementPreview,
+                    DiscardedJobStage::superseded().into(),
+                )
+                .await;
         }
         self.operations
-            .record_unmigrated(id, OperationKind::PlacementPreview, response.clone())
+            .record_completed(id, OperationKind::PlacementPreview, response.clone().into())
             .await;
         Ok(response)
     }
@@ -308,8 +301,12 @@ impl DustRouteMcp {
         Ok(receipts)
     }
 
-    pub(super) async fn show_electrical_edit(&self, id: uuid::Uuid, player: Option<&str>) -> Value {
-        let result: Result<Value, FailureCause> = async {
+    pub(super) async fn show_electrical_edit(
+        &self,
+        id: uuid::Uuid,
+        player: Option<&str>,
+    ) -> Result<ShownElectricalEdit, FailureCause> {
+        async {
             let plan = self.owned_edit(id, player).await?;
             if plan.state != PistonPlacementState::Planned || plan.expires_at <= Instant::now() {
                 return Err(FailureCause::new(
@@ -342,12 +339,12 @@ impl DustRouteMcp {
                 .get_mut(&id)
                 .ok_or("edit unavailable")?
                 .previewed = true;
-            let mut response = plan.preview(id, self.policy.read_only);
-            response["preview"] = json!(preview);
-            Ok(response)
+            Ok(ShownElectricalEdit {
+                response: plan.preview(id, self.policy.read_only),
+                preview,
+            })
         }
-        .await;
-        result.unwrap_or_else(|error| json!({"ok":false,"error":error}))
+        .await
     }
 
     pub(super) async fn mutate_electrical_edit(

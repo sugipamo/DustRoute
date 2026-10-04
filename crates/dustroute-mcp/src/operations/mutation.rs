@@ -59,17 +59,34 @@ impl UnrecordedFailure {
         })
     }
 }
+impl From<String> for UnrecordedFailure {
+    fn from(message: String) -> Self {
+        Self::message(message)
+    }
+}
+impl From<&str> for UnrecordedFailure {
+    fn from(message: &str) -> Self {
+        Self::message(message)
+    }
+}
+impl From<FailureCause> for UnrecordedFailure {
+    fn from(cause: FailureCause) -> Self {
+        Self::Cause(Box::new(cause))
+    }
+}
 impl Serialize for UnrecordedFailure {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         if let Self::Coded(error) = self {
             return error.serialize(serializer);
         }
+        if let Self::Cause(cause) = self {
+            return cause.as_response().serialize(serializer);
+        }
         let mut record = serializer.serialize_struct("UnrecordedFailure", 2)?;
         record.serialize_field("ok", &false)?;
         match self {
             Self::Message(message) => record.serialize_field("error", message)?,
-            Self::Cause(cause) => record.serialize_field("error", cause)?,
-            Self::Coded(_) => unreachable!(),
+            Self::Cause(_) | Self::Coded(_) => unreachable!(),
         }
         record.end()
     }
@@ -282,6 +299,21 @@ impl Serialize for SemanticVerification {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn structured_refusal_exposes_diagnosis_without_reencoding_a_cause_as_error_data() {
+        let refusal = UnrecordedFailure::from(
+            FailureCause::new(crate::failure::CauseKind::PermissionDenied, "player denied")
+                .at(crate::failure::FailurePhase::Admission),
+        );
+        let wire = serde_json::to_value(refusal).unwrap();
+        assert_eq!(wire["ok"], false);
+        assert_eq!(wire["error"], "player denied");
+        assert_eq!(wire["error_code"], "permission_denied");
+        assert_eq!(wire["failure"]["primary"]["phase"], "admission");
+        assert!(wire["failure"]["progress"].is_null());
+        assert_eq!(wire["recovery"]["same_operation_replay_allowed"], false);
+    }
+
     use crate::failure::{CauseKind, FailurePhase, PersistenceOutcome};
     use serde_json::json;
 

@@ -23,16 +23,10 @@ pub(super) enum StageProgress {
     WriteIntent(ExecutionProgress),
 }
 
-pub(super) fn batch_summary(steps: &[ElectricalConstructionStep]) -> serde_json::Value {
-    serde_json::json!(
-        construction_batches(steps)
-            .map(|batch| serde_json::json!({
-                "first_step":batch.first_step(),"last_step":batch.last_step(),
-                "changed_blocks":batch.steps().len(),"wait_ticks":batch.wait_ticks(),
-                "full_region_readback_before_and_after":true,
-            }))
-            .collect::<Vec<_>>()
-    )
+pub(super) fn batch_summary(
+    steps: &[ElectricalConstructionStep],
+) -> Vec<crate::operations::preview::BatchSummary> {
+    crate::operations::preview::batch_summary(steps)
 }
 
 pub(super) struct ConstructionExecutor<'a> {

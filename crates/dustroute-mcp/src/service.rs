@@ -2802,11 +2802,12 @@ impl DustRouteMcp {
             }
         };
         if self.plans.kind(&operation_id).await == Some(PlanKind::ElectricalEdit) {
-            return json_reply(
-                self.electrical_edit_view(operation_id)
-                    .await
-                    .unwrap_or_else(|error| json!({"ok":false,"error":error})),
-            );
+            return match self.electrical_edit_view(operation_id).await {
+                Ok(response) => typed_reply(response),
+                Err(error) => typed_reply(crate::operations::mutation::UnrecordedFailure::message(
+                    error,
+                )),
+            };
         }
         if self.plans.kind(&operation_id).await == Some(PlanKind::Assembly) {
             return json_reply(
@@ -3576,7 +3577,8 @@ impl DustRouteMcp {
     }
 
     async fn plan_revision_placement(&self, params: PreviewPlacementParams) -> CallToolResult {
-        let result: Result<Value, String> = async {
+        use crate::operations::mutation::UnrecordedFailure;
+        let result: Result<crate::operations::preview::GroundedPlacementPreview, UnrecordedFailure> = async {
             if !params.circuit.is_empty()
                 || params.optimize.unwrap_or(false)
                 || params.assembly_revision_id.is_some()
@@ -3584,23 +3586,27 @@ impl DustRouteMcp {
                 return Err("revision_id cannot be combined with a built-in circuit, Assembly Revision or optimization".into());
             }
             let player=self.resolve_player(params.player.as_deref())?;
-            if let Some(error)=self.authorize_player(&player) {return Err(error);}
+            self.player_scope().authorize(&player).map_err(|error| error.at(FailurePhase::Admission))?;
             let revision=self.load_revision(params.revision_id.as_deref().ok_or("revision_id required")?,&player)?;
             self.plan_grounded_revision_placement(
                 &params,
                 player,
                 revision.clone(),
                 crate::placement_source::PlacementSource::CircuitRevision { revision_id:revision.revision_id },
-            ).await
+            ).await.map_err(UnrecordedFailure::message)
         }.await;
-        json_reply(result.unwrap_or_else(|error| json!({"ok":false,"error":error})))
+        match result {
+            Ok(response) => typed_reply(response),
+            Err(error) => typed_reply(error),
+        }
     }
 
     async fn plan_adopted_assembly_placement(
         &self,
         params: PreviewPlacementParams,
     ) -> CallToolResult {
-        let result: Result<Value, String> = async {
+        use crate::operations::mutation::UnrecordedFailure;
+        let result: Result<crate::operations::preview::GroundedPlacementPreview, UnrecordedFailure> = async {
             if !params.circuit.is_empty()
                 || params.revision_id.is_some()
                 || params.optimize.unwrap_or(false)
@@ -3608,9 +3614,7 @@ impl DustRouteMcp {
                 return Err("assembly_revision_id cannot be combined with a built-in circuit, circuit revision or optimization".into());
             }
             let player = self.resolve_player(params.player.as_deref())?;
-            if let Some(error) = self.authorize_player(&player) {
-                return Err(error);
-            }
+            self.player_scope().authorize(&player).map_err(|error| error.at(FailurePhase::Admission))?;
             let assembly_id = params
                 .assembly_revision_id
                 .clone()
@@ -3658,10 +3662,13 @@ impl DustRouteMcp {
                     candidate_interpretation:crate::placement_source::CandidateInterpretation::RecordAssembly,
                 },
             )
-            .await
+            .await.map_err(UnrecordedFailure::message)
         }
         .await;
-        json_reply(result.unwrap_or_else(|error| json!({"ok":false,"error":error})))
+        match result {
+            Ok(response) => typed_reply(response),
+            Err(error) => typed_reply(error),
+        }
     }
 
     async fn plan_grounded_revision_placement(
@@ -3670,7 +3677,7 @@ impl DustRouteMcp {
         player: String,
         revision: crate::revision::CircuitRevision,
         source: crate::placement_source::PlacementSource,
-    ) -> Result<Value, String> {
+    ) -> Result<crate::operations::preview::GroundedPlacementPreview, String> {
         if !revision.complete {
             return Err("incomplete source observation cannot authorize placement".into());
         }
@@ -3736,7 +3743,10 @@ impl DustRouteMcp {
         if params.work_regions.is_some() {
             return self
                 .create_construction_job(params, &revision, before, after, status, source)
-                .await;
+                .await
+                .map(|response| {
+                    crate::operations::preview::GroundedPlacementPreview::Job(Box::new(response))
+                });
         }
         let old = world_from_snapshot(&before).map_err(|e| e.to_string())?;
         let new = world_from_snapshot(&after).map_err(|e| e.to_string())?;
@@ -3759,7 +3769,12 @@ impl DustRouteMcp {
                         job: None,
                     },
                 )
-                .await;
+                .await
+                .map(|response| {
+                    crate::operations::preview::GroundedPlacementPreview::Electrical(Box::new(
+                        response,
+                    ))
+                });
         }
         dustroute_translate::world::ValidatedWorld::try_from(old.clone())
             .map_err(|e| format!("baseline is invalid or unsupported: {e}"))?;
@@ -3860,7 +3875,14 @@ impl DustRouteMcp {
                     revision,
                 }),
         };
-        let response = json!({"ok":true,"operation_id":id,"source":source,"revision_id":revision.revision_id,"base_observation_id":revision.base_observation_id,"bounds":bounds_json(bounds),"plan":plan,"read_only":self.policy.read_only,"next_step":"show_operation then invoke_operation(confirm=true)","validation_scope":"fresh model review when declared, modeled placement, exact live base and surrounding context; not general functional equivalence"});
+        let response = crate::operations::preview::GroundedRevisionPreview::new(
+            source,
+            revision.revision_id,
+            revision.base_observation_id,
+            bounds,
+            plan.clone(),
+            self.policy.read_only,
+        );
         self.plans.placements().lock().await.insert(
             plan,
             revision.dimension.clone(),
@@ -3875,9 +3897,9 @@ impl DustRouteMcp {
             }),
         );
         self.operations
-            .record_unmigrated(id, OperationKind::PlacementPreview, response.clone())
+            .record_completed(id, OperationKind::PlacementPreview, response.clone().into())
             .await;
-        Ok(response)
+        Ok(crate::operations::preview::GroundedPlacementPreview::Ordinary(Box::new(response)))
     }
 
     async fn plan_piston_placement(&self, params: PreviewPlacementParams) -> CallToolResult {
@@ -5241,11 +5263,12 @@ impl DustRouteMcp {
         &self,
         Parameters(params): Parameters<construction_job::ManageConstructionJobParams>,
     ) -> CallToolResult {
-        json_reply(
-            self.manage_construction_job_inner(params)
-                .await
-                .unwrap_or_else(|error| json!({"ok":false,"error":error})),
-        )
+        match self.manage_construction_job_inner(params).await {
+            Ok(response) => typed_reply(response),
+            Err(error) => typed_reply(crate::operations::mutation::UnrecordedFailure::message(
+                error,
+            )),
+        }
     }
 
     #[tool(
@@ -5264,10 +5287,13 @@ impl DustRouteMcp {
         };
         let plan_kind = self.plans.kind(&operation_id).await;
         if plan_kind == Some(PlanKind::ElectricalEdit) {
-            return json_reply(
-                self.show_electrical_edit(operation_id, params.player.as_deref())
-                    .await,
-            );
+            return match self
+                .show_electrical_edit(operation_id, params.player.as_deref())
+                .await
+            {
+                Ok(response) => typed_reply(response),
+                Err(error) => typed_reply(error.as_response()),
+            };
         }
         if plan_kind == Some(PlanKind::Assembly) {
             return json_reply(
@@ -5573,35 +5599,50 @@ impl DustRouteMcp {
         };
         let activity = self.operations.activity(operation_id).await;
         // Live activity is separate from archived facts, including a saved intent.
-        let mut result = match self.electrical_edit_history(operation_id) {
-            Ok(Some(record)) => record,
-            Err(error) => json!({"ok":false,"error":error}),
-            Ok(None) => match self.operations.get(operation_id).await {
-                Some(operation) => json!({"ok":true,"operation":operation}),
-                None if activity.is_some() && self.plans.kind(&operation_id).await.is_some() => {
+        #[derive(Serialize)]
+        struct WithActivity<T> {
+            #[serde(flatten)]
+            response: T,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            activity: Option<crate::operations::ActivitySnapshot>,
+        }
+        match self.electrical_edit_history(operation_id) {
+            Ok(Some(record)) => {
+                return typed_reply(WithActivity {
+                    response: record,
+                    activity,
+                });
+            }
+            Err(error) => {
+                return typed_reply(WithActivity {
+                    response: crate::operations::mutation::UnrecordedFailure::message(error),
+                    activity,
+                });
+            }
+            Ok(None) => {}
+        }
+        let mut result = match self.operations.get(operation_id).await {
+            Some(operation) => json!({"ok":true,"operation":operation}),
+            None if activity.is_some() && self.plans.kind(&operation_id).await.is_some() => {
+                json!({"ok":true,"operation_id":operation_id})
+            }
+            None => {
+                if let Some(response) = self
+                    .blueprint_command(
+                        crate::blueprint_mcp::Command::Get(operation_id),
+                        None,
+                        false,
+                    )
+                    .await
+                {
+                    return typed_reply(blueprints::ResponseWithActivity { response, activity });
+                }
+                if activity.is_some() {
                     json!({"ok":true,"operation_id":operation_id})
+                } else {
+                    workflow_error(McpErrorCode::NotFound, "unknown operation ID", false)
                 }
-                None => {
-                    if let Some(response) = self
-                        .blueprint_command(
-                            crate::blueprint_mcp::Command::Get(operation_id),
-                            None,
-                            false,
-                        )
-                        .await
-                    {
-                        return typed_reply(blueprints::ResponseWithActivity {
-                            response,
-                            activity,
-                        });
-                    }
-                    if activity.is_some() {
-                        json!({"ok":true,"operation_id":operation_id})
-                    } else {
-                        workflow_error(McpErrorCode::NotFound, "unknown operation ID", false)
-                    }
-                }
-            },
+            }
         };
         if let Some(activity) = activity {
             result["activity"] = json!(activity);
@@ -5718,6 +5759,46 @@ impl ServerHandler for DustRouteMcp {
 
 #[cfg(test)]
 mod tests {
+    #[tokio::test]
+    async fn grounded_planning_denial_keeps_admission_cause_before_loading_or_transport() {
+        use super::*;
+        let service = DustRouteMcp::with_test_transport_and_player(
+            "127.0.0.1:1",
+            McpPolicy {
+                allowed_players: ["AnotherPlayer".to_owned()].into(),
+                ..Default::default()
+            },
+            "Tester",
+        );
+        for adopted in [false, true] {
+            let params = if adopted {
+                PreviewPlacementParams {
+                    assembly_revision_id: Some(
+                        dustroute_library::blueprint::AssemblyRevisionId::new("missing-source")
+                            .unwrap(),
+                    ),
+                    ..Default::default()
+                }
+            } else {
+                PreviewPlacementParams {
+                    revision_id: Some("invalid-source".into()),
+                    ..Default::default()
+                }
+            };
+            let reply = if adopted {
+                service.plan_adopted_assembly_placement(params).await
+            } else {
+                service.plan_revision_placement(params).await
+            };
+            assert_eq!(reply.is_error, Some(true));
+            let response = test_support::decode_reply(&reply).unwrap();
+            assert_eq!(response["error_code"], "permission_denied");
+            assert_eq!(response["failure"]["primary"]["phase"], "admission");
+            assert!(response["failure"]["progress"].is_null());
+            assert!(response["error"].as_str().unwrap().contains("Tester"));
+        }
+    }
+
     #[test]
     fn mcp_reply_outcome_is_set_before_text_encoding() {
         for (value, failed) in [
