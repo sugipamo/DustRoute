@@ -2,25 +2,25 @@
 use super::*;
 
 impl DustRouteMcp {
-    pub(super) async fn start_survival(&self, id: uuid::Uuid, confirmed: bool) -> Value {
+    pub(super) async fn start_survival(&self, id: uuid::Uuid, confirmed: bool) -> Reply {
         if !confirmed {
             return failure(
-                "confirmation_required",
+                ServiceCode::ConfirmationRequired,
                 "review the generated preview and authorize its scope/materials",
             );
         }
         if let Err(e) = self.policy.authorize_mutation() {
-            return failure("permission_denied", e);
+            return failure(ServiceCode::PermissionDenied, e);
         }
         let mut jobs = self.survival.entries.lock().await;
         let Some(entry) = jobs.get_mut(&id) else {
             return failure(
-                "plan_not_live",
+                ServiceCode::PlanNotLive,
                 "saved plans are diagnosis-only; generate a fresh plan",
             );
         };
         if let Err(e) = self.policy.authorize_player(&entry.owner) {
-            return failure("permission_denied", e);
+            return failure(ServiceCode::PermissionDenied, e);
         }
         match entry.start_readiness() {
             StartReadiness::ExpiredOrCancelled => {
@@ -33,22 +33,25 @@ impl DustRouteMcp {
                         .join("status.store"),
                     &entry.status(),
                 ) {
-                    return failure("journal_io", e);
+                    return failure(ServiceCode::JournalIo, e);
                 }
-                return failure("plan_expired_or_cancelled", "generate a fresh plan");
+                return failure(ServiceCode::PlanExpiredOrCancelled, "generate a fresh plan");
             }
             StartReadiness::AlreadyStarted => {
-                return failure("job_already_started", "use get; no automatic replay");
+                return failure(
+                    ServiceCode::JobAlreadyStarted,
+                    "use get; no automatic replay",
+                );
             }
             StartReadiness::Ready => {}
         }
         let native = match self.bridge.survival_bridge() {
             Ok(n) => n,
-            Err(e) => return failure("backend_unavailable", e),
+            Err(e) => return failure(ServiceCode::BackendUnavailable, e),
         };
         let lease = match native.lease_survival() {
             Ok(l) => l,
-            Err(e) => return failure("source_busy", e),
+            Err(e) => return failure(ServiceCode::SourceBusy, e),
         };
         let (plan, parent) = entry.take_preview().expect("checked live preview");
         let source = entry.source.clone();
@@ -69,7 +72,7 @@ impl DustRouteMcp {
                 failure: JobFailure::boundary(JobRefusalCode::JournalIo, &e),
                 construction_dispatched: false,
             });
-            return failure("journal_io", e);
+            return failure(ServiceCode::JournalIo, e);
         }
         drop(jobs);
         let service = self.clone();
@@ -105,7 +108,7 @@ impl DustRouteMcp {
                     .await;
             }
         });
-        json!({"ok":true,"job_id":id,"state":"admitting","completed":false,"next_step":"action=get; admission can still refuse before any edits"})
+        Reply::started(id)
     }
 
     async fn run_survival(&self, input: ExecutionInput) {

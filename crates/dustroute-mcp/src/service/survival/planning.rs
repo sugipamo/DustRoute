@@ -7,7 +7,7 @@ impl DustRouteMcp {
         owner: &str,
         input: PlanningInput,
         bot: &voxrig::Client,
-    ) -> Value {
+    ) -> Reply {
         let PlanningInput {
             source,
             site,
@@ -24,18 +24,18 @@ impl DustRouteMcp {
                     scope.observed.max,
                 ))
         {
-            return failure("permission_denied", e);
+            return failure(ServiceCode::PermissionDenied, e);
         }
         let ops = match bot.survival() {
             Ok(o) => o,
-            Err(e) => return failure("native_refused", e),
+            Err(e) => return failure(ServiceCode::NativeRefused, e),
         };
         let scene = match ops.capture_survival_scene(region(scope.observed)).await {
             Ok(s) => s,
-            Err(e) => return failure("observation_unavailable", e),
+            Err(e) => return failure(ServiceCode::ObservationUnavailable, e),
         };
         if let Err(e) = policy_scope(&self.policy, &scope, &scene.source().dimension) {
-            return failure("permission_denied", e);
+            return failure(ServiceCode::PermissionDenied, e);
         }
         let result = generate_construction_plan_async(
             scene,
@@ -48,7 +48,7 @@ impl DustRouteMcp {
         let generated = match result {
             Ok(r) => r,
             Err(e) => {
-                return json!({"ok":false,"error":{"code":"generation_refused","cause":e},"writes_minecraft":false});
+                return Reply::generation(e, None);
             }
         };
         self.publish_survival_plan(
@@ -63,6 +63,7 @@ impl DustRouteMcp {
             None,
         )
         .await
+        .into()
     }
 
     pub(super) async fn publish_survival_plan(
@@ -72,20 +73,20 @@ impl DustRouteMcp {
         generated: crate::survival_construction::generation::GeneratedConstructionPlan,
         construction: ConstructionSpecification,
         parent: Option<ContinuationParent>,
-    ) -> Value {
+    ) -> Publication {
         if self.survival.entries.lock().await.len() >= 32 {
-            return failure("job_capacity", "at most 32 process-local jobs");
+            return Refusal::new(ServiceCode::JobCapacity, "at most 32 process-local jobs").into();
         }
         if let Err(e) = self
             .policy
             .validate_placement_size(generated.plan.steps().len())
         {
-            return failure("permission_denied", e);
+            return Refusal::new(ServiceCode::PermissionDenied, e).into();
         }
         let id = uuid::Uuid::new_v4();
         let path = self.state_store.survival_job_root().join(id.to_string());
         if let Err(e) = std::fs::create_dir_all(&path) {
-            return failure("journal_io", e);
+            return Refusal::new(ServiceCode::JournalIo, e).into();
         }
         let manifest = JobManifest {
             schema: JobSchema::V1,
@@ -98,11 +99,10 @@ impl DustRouteMcp {
             execution_authority_restorable: crate::survival_execution::diagnostic::DiagnosticOnly,
         };
         if let Err(e) = save(&path.join("manifest.store"), &manifest) {
-            return failure("journal_io", e);
+            return Refusal::new(ServiceCode::JournalIo, e).into();
         }
-        let response = json!({"ok":true,"schema_version":"dustroute.survival-job.v1","job_id":id,
-            "state":"planned","preview":generated,"writes_minecraft":false,"inventory_receipt":false,
-            "expires_after_seconds":900,"next_step":"review plan, then action=start with confirmed=true; current inventory/site/source will be rechecked"});
+        let response =
+            Publication::Published(Box::new(PublishedPlan::new(id, (&generated).into())));
         self.survival.entries.lock().await.insert(
             id,
             Entry::planned(

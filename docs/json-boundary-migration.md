@@ -1337,3 +1337,53 @@ in-flight scanのnormalization失敗と取消し、遅れた結果による上�
 最終版でworkspace全targetとMCPの`--no-default-features`全targetのClippyが
 `-D warnings`で成功した。`cargo fmt --all -- --check`と`git diff --check`も成功した。
 Cargoは一つずつoffline/locked・`-j1`、試験は単一threadで実行した。
+
+### サバイバルworkflowの型付き応答接続
+
+`service/survival/replies`に、計画公開、現在のstatus、保存履歴、実行開始、取消し/
+checkpoint要求、継続、生成失敗と拒否の用途別Rust応答を置いた。計画・実行・履歴・
+継続の内部関数はこれらを返し、Value、JSON生成、objectへの後付け、JSON再解析を行わない。
+サービスの拒否コードも閉じたRust enumとし、下位層のSurvivalErrorCodeとはnativeのまま
+区別する。公開toolの最後だけでexecution_contractを型付きで付け、MCP codecへ渡す。
+
+応答型はSerializeのみで、Entry、executor、lease、native session、実行planを復元しない。
+公開プレビューは既存のRecordedConstructionPreviewへ直接投影し、元のnative planは
+従来通りprocess-local Entryへ渡す。公開プレビュー/manifestを新しい実行の根拠にしない。
+JobFailure/JobStatus/manifest/claimの保存schemaと、native resourceの所有者は変更しない。
+
+従来の応答にはいくつかの重要な形の違いがあるため、共通の任意payloadにまとめない。
+現在の短いstatus表示では履歴のfieldを省略し、保存履歴表示では未取得のcompleted_steps/
+status/continuationをnullとして残す。include_record=trueで診断が存在しない時は診断を
+nullとして明示する。知らない完了数をzeroへ変換しない。サーバー停止確認と独立観測の
+有無、位置誤差の未取得を、model-based motionの宣言と分ける。
+
+継続時の公開結果はPublished/Refusedのnative enumで、公開が失敗した場合でも、
+parent_job_id・site diagnosis・現在の材料・execution_authority_restored=falseを残す。
+生成自体の拒否、外部のsite変更、普通の境界拒否は従来の別の公開field集合を維持する。
+消費済みcheckpointのlinkと古いexecution recordの最終eventもnativeのまま保持し、
+過去の事実を現在のjobやreadyなexecutorへ変換しない。
+
+#### サバイバル応答の回帰検証
+
+関連13件のoffline試験が成功した。既存のjob再実行拒否、状態/保存拒否3件、公開MCPの
+採用/source拒否と履歴/不正identity2件、試験用evidenceの上限2件に、応答の5件を追加した。
+実機の屋根・別processによるidle continuationの2件はignoreを維持し、実行していない。
+
+新しいserialization-only native fixtureで、GeneratedConstructionPlanと診断用previewの
+公開表現が一致することを確認する。clientを作らず、作業・native admissionを行わない。
+さらに公開後の進め方、公開拒否にも残す継続診断、生成拒否にだけ存在するfield、
+未知/zero、省略/null、開始/取消し/checkpoint要求と実際の完了の分離を検証した。
+消費済みのlinkと履歴を含む拒否は、旧JSON境界を通した公開応答全体とも一致する。
+
+認可・adoption/source整合性・容量32件・期限900秒・状態のstart readiness・
+checkpointの一度だけのclaim・lease解放/保持・保存失敗の扱いと検査順序は維持した。
+read_survival_recordでは元から読む保存物を同じ条件で読み、進捗pollの短い経路は
+引き続きplan/journalの読込みを行わない。定常状態/物理/移動/材料の正当性条件は変えない。
+
+同期解析の追加表示、残る応答正規化・認可text、全体の境界監査は未完了である。
+JSON除去ゴールを継続する。新しいJSON例外、依存・pin・Voxrig source/vendorの変更、
+保存形式やライブラリ責務の移動、Minecraft接続・ワールド変更は追加していない。
+
+workspace全targetとMCPの`--no-default-features`全targetのClippyは最終版で
+`-D warnings`に成功した。`cargo fmt --all -- --check`と`git diff --check`も成功した。
+Cargoは単独offline/locked・`-j1`、試験は単一threadで実行した。

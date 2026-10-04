@@ -88,9 +88,8 @@ struct ExecutionInput {
     checkpoint: Arc<AtomicBool>,
     parent: Option<ContinuationParent>,
 }
-fn failure(code: impl serde::Serialize, detail: impl std::fmt::Display) -> Value {
-    json!({"ok":false,"schema_version":"dustroute.survival-job.v1",
-        "error":{"code":code,"detail":detail.to_string()},"automatic_replay":false})
+fn failure(code: impl Into<replies::RefusalCode>, detail: impl std::fmt::Display) -> Reply {
+    Refusal::new(code, detail).into()
 }
 fn region(r: dustroute_translate::world::Region) -> voxrig::Region {
     voxrig::Region {
@@ -195,7 +194,7 @@ impl DustRouteMcp {
         Ok(self)
     }
 
-    pub(super) async fn survival_request(&self, request: Request) -> Value {
+    async fn survival_request(&self, request: Request) -> Reply {
         match request.action {
             Action::Plan {
                 player,
@@ -208,14 +207,14 @@ impl DustRouteMcp {
             } => {
                 let owner = match self.resolve_player(player.as_deref()) {
                     Ok(p) => p,
-                    Err(e) => return failure("player_required", e),
+                    Err(e) => return failure(ServiceCode::PlayerRequired, e),
                 };
                 if let Err(e) = self.policy.authorize_player(&owner) {
-                    return failure("permission_denied", e);
+                    return failure(ServiceCode::PermissionDenied, e);
                 }
                 if self.survival.entries.lock().await.len() >= 32 {
                     return failure(
-                        "job_capacity",
+                        ServiceCode::JobCapacity,
                         "at most 32 process-local jobs; retain records before restarting",
                     );
                 }
@@ -240,16 +239,16 @@ impl DustRouteMcp {
                 .await;
                 let (source, site) = match checked {
                     Ok(Ok(v)) => v,
-                    Ok(Err(e)) => return failure("source_not_adopted_or_mismatched", e),
-                    Err(e) => return failure("planning_task_failed", e),
+                    Ok(Err(e)) => return failure(ServiceCode::SourceNotAdoptedOrMismatched, e),
+                    Err(e) => return failure(ServiceCode::PlanningTaskFailed, e),
                 };
                 let native = match self.bridge.survival_bridge() {
                     Ok(n) => n,
-                    Err(e) => return failure("backend_unavailable", e),
+                    Err(e) => return failure(ServiceCode::BackendUnavailable, e),
                 };
                 let lease = match native.lease_survival() {
                     Ok(l) => l,
-                    Err(e) => return failure("source_busy", e),
+                    Err(e) => return failure(ServiceCode::SourceBusy, e),
                 };
                 let bot = lease.source();
                 let result = self
@@ -280,32 +279,32 @@ impl DustRouteMcp {
                 let jobs = self.survival.entries.lock().await;
                 let Some(entry) = jobs.get(&job_id) else {
                     return failure(
-                        "job_not_live",
+                        ServiceCode::JobNotLive,
                         "only a live executor can establish a safe checkpoint",
                     );
                 };
                 if let Err(e) = self.policy.authorize_player(&entry.owner) {
-                    return failure("permission_denied", e);
+                    return failure(ServiceCode::PermissionDenied, e);
                 }
                 if !entry.allows_checkpoint() {
                     return failure(
-                        "checkpoint_not_running",
+                        ServiceCode::CheckpointNotRunning,
                         "no running executor; inspect the saved record",
                     );
                 }
                 entry.checkpoint.store(true, Ordering::SeqCst);
-                json!({"ok":true,"job_id":job_id,"checkpoint_requested":true,"idle_confirmed":false,"next_step":"get until checkpointed; pending mining must settle first"})
+                Reply::checkpoint_requested(job_id)
             }
             Action::Cancel { job_id } => {
                 let mut jobs = self.survival.entries.lock().await;
                 let Some(entry) = jobs.get_mut(&job_id) else {
                     return failure(
-                        "job_not_live",
+                        ServiceCode::JobNotLive,
                         "get the persisted diagnosis; jobs cannot resume from disk",
                     );
                 };
                 if let Err(e) = self.policy.authorize_player(&entry.owner) {
-                    return failure("permission_denied", e);
+                    return failure(ServiceCode::PermissionDenied, e);
                 }
                 if entry.request_cancel() {
                     if let Err(e) = save(
@@ -316,10 +315,10 @@ impl DustRouteMcp {
                             .join("status.store"),
                         &entry.status(),
                     ) {
-                        return failure("journal_io", e);
+                        return failure(ServiceCode::JournalIo, e);
                     }
                 }
-                json!({"ok":true,"job_id":job_id,"cancel_requested":true,"immediate_native_abort":false,"next_step":"get job; outstanding operations may still require inspection"})
+                Reply::cancel_requested(job_id)
             }
         }
     }
@@ -341,6 +340,10 @@ mod continuation;
 mod execution;
 mod planning;
 mod records;
+mod replies;
+use crate::operations::mutation::Success;
+use crate::survival_execution::diagnostic::DiagnosticOnly;
+use replies::{Publication, PublishedPlan, Refusal, Reply, ServiceCode};
 
 #[tool_router(router = survival_tool_router, vis = "pub(super)")]
 impl DustRouteMcp {
@@ -351,15 +354,9 @@ impl DustRouteMcp {
         &self,
         Parameters(params): Parameters<Request>,
     ) -> CallToolResult {
-        let mut result = self.survival_request(params).await;
-        if let Some(object) = result.as_object_mut() {
-            object.insert(
-                "execution_contract".into(),
-                json!({"motion":"predicted_dry_cube_v1",
-                "world_evidence":"builder_received","independent_observer_required":false,
-                "server_stop_acknowledged":false,"server_position_error_bound":null}),
-            );
-        }
-        json_reply(result)
+        typed_reply(replies::PublicReply {
+            response: self.survival_request(params).await,
+            execution_contract: replies::ExecutionContract::default(),
+        })
     }
 }

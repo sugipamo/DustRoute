@@ -2,7 +2,7 @@
 use super::*;
 
 impl DustRouteMcp {
-    pub(super) async fn get_survival(&self, id: uuid::Uuid, include_record: bool) -> Value {
+    pub(super) async fn get_survival(&self, id: uuid::Uuid, include_record: bool) -> Reply {
         // Progress polling must not repeatedly deserialize the entire plan and
         // journal or hold the registry mutex across filesystem I/O.
         let live = self
@@ -14,13 +14,21 @@ impl DustRouteMcp {
             .map(|e| (e.owner.clone(), e.status()));
         if let Some((owner, status)) = &live {
             if let Err(e) = self.policy.authorize_player(owner) {
-                return failure("permission_denied", e);
+                return failure(ServiceCode::PermissionDenied, e);
             }
             if !include_record {
-                return json!({"ok":true,"schema_version":"dustroute.survival-job.v1","job_id":id,"owner":owner,
-                    "process_local_job_present":true,"historical_only":false,"execution_authority_restored":false,
-                    "completed_steps":status.completed_steps(),"status":status,
-                    "next_step":"inspect status; stopped jobs never automatically replay"});
+                return Reply::Live(Box::new(replies::LiveDisplay {
+                    ok: Success,
+                    schema_version: JobSchema::V1,
+                    job_id: id,
+                    owner: owner.clone(),
+                    process_local_job_present: true,
+                    historical_only: false,
+                    execution_authority_restored: DiagnosticOnly,
+                    completed_steps: status.completed_steps(),
+                    status: status.clone(),
+                    next_step: "inspect status; stopped jobs never automatically replay",
+                }));
             }
         }
         let service = self.clone();
@@ -30,7 +38,7 @@ impl DustRouteMcp {
         .await
         {
             Ok(result) => result,
-            Err(e) => failure("journal_unavailable", e),
+            Err(e) => failure(ServiceCode::JournalUnavailable, e),
         }
     }
 
@@ -39,30 +47,33 @@ impl DustRouteMcp {
         id: uuid::Uuid,
         include_record: bool,
         live: Option<(String, JobStatus)>,
-    ) -> Value {
+    ) -> Reply {
         let path = self.state_store.survival_job_root().join(id.to_string());
         let manifest: JobManifest = match load(&path.join("manifest.store")) {
             Ok(m) => m,
-            Err(e) => return failure("job_unavailable", e),
+            Err(e) => return failure(ServiceCode::JobUnavailable, e),
         };
         if let Err(error) = manifest.validate_identity(id) {
-            return failure("invalid_record", error);
+            return failure(ServiceCode::InvalidRecord, error);
         }
         let owner = &manifest.owner;
         if let Err(e) = self.policy.authorize_player(owner) {
-            return failure("permission_denied", e);
+            return failure(ServiceCode::PermissionDenied, e);
         }
         if live
             .as_ref()
             .is_some_and(|(live_owner, _)| live_owner != owner)
         {
-            return failure("invalid_record", "saved owner differs from live job");
+            return failure(
+                ServiceCode::InvalidRecord,
+                "saved owner differs from live job",
+            );
         }
         let historical_status =
             if crate::storage::record_exists(&path.join("status.store")).unwrap_or(true) {
                 match load::<JobStatus>(&path.join("status.store")) {
                     Ok(v) => Some(v),
-                    Err(e) => return failure("invalid_record", e),
+                    Err(e) => return failure(ServiceCode::InvalidRecord, e),
                 }
             } else {
                 None
@@ -72,31 +83,50 @@ impl DustRouteMcp {
             if crate::storage::record_exists(&directory.join("record.store")).unwrap_or(true) {
                 match crate::survival_execution::diagnose(&directory) {
                     Ok(d) => Some(d),
-                    Err(e) => return failure("journal_unavailable", e),
+                    Err(e) => return failure(ServiceCode::JournalUnavailable, e),
                 }
             } else {
                 None
             };
-        let record = diagnosis.as_ref().map(|d| &d.record);
-        let mut response = json!({"ok":true,"schema_version":"dustroute.survival-job.v1","job_id":id,"owner":owner,
-            "process_local_job_present":live.is_some(),"status":live.as_ref().map(|(_,s)|s).or(historical_status.as_ref()),
-            "historical_only":live.is_none(),"execution_authority_restored":false,
-            "completed_steps":record.map(|r|r.completed_steps),"recorded_continuation":record.map(|r|&r.continuation),
-            "next_step":if live.is_none(){"historical diagnosis only; reobserve and resolve outstanding operations before any new plan"}else{"inspect status; stopped jobs never automatically replay"}});
-        if include_record {
-            response["manifest"] = json!(manifest);
-            response["diagnosis"] = json!(diagnosis);
-            if crate::storage::record_exists(&directory.join("continuation-claim.store"))
+        let completed_steps = diagnosis.as_ref().map(|d| d.record.completed_steps);
+        let recorded_continuation = diagnosis.as_ref().map(|d| d.record.continuation.clone());
+        let continuation_job_id = if include_record
+            && crate::storage::record_exists(&directory.join("continuation-claim.store"))
                 .unwrap_or(true)
-            {
-                match load::<crate::survival_execution::diagnostic::CheckpointClaim>(
-                    &directory.join("continuation-claim.store"),
-                ) {
-                    Ok(claim) => response["continuation_job_id"] = json!(claim.new_job),
-                    Err(e) => return failure("invalid_continuation_claim", e),
-                }
+        {
+            match load::<crate::survival_execution::diagnostic::CheckpointClaim>(
+                &directory.join("continuation-claim.store"),
+            ) {
+                Ok(claim) => Some(claim.new_job),
+                Err(e) => return failure(ServiceCode::InvalidContinuationClaim, e),
             }
-        }
-        response
+        } else {
+            None
+        };
+        let present = live.is_some();
+        Reply::Record(Box::new(replies::RecordDisplay {
+            ok: Success,
+            schema_version: JobSchema::V1,
+            job_id: id,
+            owner: manifest.owner.clone(),
+            process_local_job_present: present,
+            historical_only: !present,
+            execution_authority_restored: DiagnosticOnly,
+            completed_steps,
+            status: live.map(|(_, status)| status).or(historical_status),
+            recorded_continuation,
+            next_step: if present {
+                "inspect status; stopped jobs never automatically replay"
+            } else {
+                "historical diagnosis only; reobserve and resolve outstanding operations before any new plan"
+            },
+            manifest: include_record.then_some(manifest),
+            diagnosis: if include_record {
+                Some(diagnosis)
+            } else {
+                None
+            },
+            continuation_job_id,
+        }))
     }
 }

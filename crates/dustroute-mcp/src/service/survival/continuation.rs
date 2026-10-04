@@ -10,66 +10,66 @@ struct Preparation {
     construction: ConstructionSpecification,
     boundary: checkpoint::SafeCheckpoint,
 }
-fn preparation(service: &DustRouteMcp, id: uuid::Uuid) -> Result<Preparation, Value> {
+fn preparation(service: &DustRouteMcp, id: uuid::Uuid) -> Result<Preparation, Refusal> {
     let directory = service.state_store.survival_job_root().join(id.to_string());
-    let manifest: JobManifest =
-        load(&directory.join("manifest.store")).map_err(|e| failure("job_unavailable", e))?;
+    let manifest: JobManifest = load(&directory.join("manifest.store"))
+        .map_err(|e| Refusal::new(ServiceCode::JobUnavailable, e))?;
     manifest
         .validate_identity(id)
-        .map_err(|e| failure("invalid_record", e))?;
+        .map_err(|e| Refusal::new(ServiceCode::InvalidRecord, e))?;
     let owner = manifest.owner;
     service
         .policy
         .authorize_player(&owner)
-        .map_err(|e| failure("permission_denied", e))?;
+        .map_err(|e| Refusal::new(ServiceCode::PermissionDenied, e))?;
     let boundary = checkpoint::read(&directory.join("execution")).map_err(|e| {
-        let mut response = failure(e.code, &e.detail);
+        let mut response = Refusal::new(e.code, &e.detail);
         if e.code == SurvivalErrorCode::CheckpointConsumed {
-            if let Ok(claim) = load::<crate::survival_execution::diagnostic::CheckpointClaim>(&directory.join("execution/continuation-claim.store")) {
-                response["continuation_job_id"] = json!(claim.new_job);
-                response["next_step"] = json!("get the linked new job; do not replay the old checkpoint");
+            if let Ok(claim) = load::<crate::survival_execution::diagnostic::CheckpointClaim>(
+                &directory.join("execution/continuation-claim.store"),
+            ) {
+                response.linked_job(claim.new_job);
             }
         }
         if let Ok(diagnosis) = crate::survival_execution::diagnose(&directory.join("execution")) {
-            let record = diagnosis.record;
-            response["historical_diagnosis"] = json!({"execution_id":record.id,"completed_steps":record.completed_steps,"outcome":record.outcome,"recorded_continuation":record.continuation,"last_event":record.events.last(),"execution_authority_restored":false});
+            response.recorded_diagnosis(diagnosis.record);
         }
         response
     })?;
     let saved = manifest
         .source
-        .ok_or_else(|| failure("invalid_record", "missing adopted source"))?;
+        .ok_or_else(|| Refusal::new(ServiceCode::InvalidRecord, "missing adopted source"))?;
     let current =
         crate::blueprint_mcp::construction_source(&service.state_store, &owner, &saved.record.id)
-            .map_err(|e| failure("source_changed", e))?;
+            .map_err(|e| Refusal::new(ServiceCode::SourceChanged, e))?;
     if !saved.matches(&current) {
-        return Err(failure(
-            "source_changed",
+        return Err(Refusal::new(
+            ServiceCode::SourceChanged,
             "adopted source differs from checkpoint job",
         ));
     }
     let construction = manifest.construction.ok_or_else(|| {
-        failure(
-            "continuation_specification_missing",
+        Refusal::new(
+            ServiceCode::ContinuationSpecificationMissing,
             "missing construction specification",
         )
     })?;
     let specification = construction.specification.clone();
     let design = dustroute_translate::building::generate_grounded_building_design(specification)
-        .map_err(|e| failure("specification_invalid", e))?;
+        .map_err(|e| Refusal::new(ServiceCode::SpecificationInvalid, e))?;
     validate_design(&current, &design)
-        .map_err(|e| failure("source_not_adopted_or_mismatched", e))?;
+        .map_err(|e| Refusal::new(ServiceCode::SourceNotAdoptedOrMismatched, e))?;
     let scope = construction.scope.clone();
     if scope != boundary.scope {
-        return Err(failure(
-            "invalid_checkpoint",
+        return Err(Refusal::new(
+            ServiceCode::InvalidCheckpoint,
             "stored scope differs from checkpoint",
         ));
     }
-    let site =
-        ConstructionSite::from_grounded(&design, scope).map_err(|e| failure(e.code, e.detail))?;
+    let site = ConstructionSite::from_grounded(&design, scope)
+        .map_err(|e| Refusal::new(e.code, e.detail))?;
     policy_scope(&service.policy, site.scope(), &boundary.dimension)
-        .map_err(|e| failure("permission_denied", e))?;
+        .map_err(|e| Refusal::new(ServiceCode::PermissionDenied, e))?;
     Ok(Preparation {
         owner,
         source: current,
@@ -107,30 +107,30 @@ pub(super) fn validate_design(
 }
 
 impl DustRouteMcp {
-    pub(super) async fn continue_survival(&self, id: uuid::Uuid, limits: SearchLimits) -> Value {
+    pub(super) async fn continue_survival(&self, id: uuid::Uuid, limits: SearchLimits) -> Reply {
         if self.survival.entries.lock().await.len() >= 32 {
-            return failure("job_capacity", "at most 32 process-local jobs");
+            return failure(ServiceCode::JobCapacity, "at most 32 process-local jobs");
         }
         let service = self.clone();
         let prepared = tokio::task::spawn_blocking(move || preparation(&service, id)).await;
         let prepared = match prepared {
             Ok(Ok(v)) => v,
-            Ok(Err(e)) => return e,
-            Err(e) => return failure("continuation_preparation_failed", e),
+            Ok(Err(e)) => return e.into(),
+            Err(e) => return failure(ServiceCode::ContinuationPreparationFailed, e),
         };
         let native = match self.bridge.survival_bridge() {
             Ok(n) => n,
-            Err(e) => return failure("backend_unavailable", e),
+            Err(e) => return failure(ServiceCode::BackendUnavailable, e),
         };
         let lease = match native.lease_survival() {
             Ok(l) => l,
-            Err(e) => return failure("source_busy", e),
+            Err(e) => return failure(ServiceCode::SourceBusy, e),
         };
         let bot = lease.source();
         if prepared.boundary.endpoint != checkpoint::endpoint(&lease.reconnect()) {
             lease.release(bot);
             return failure(
-                "checkpoint_endpoint_changed",
+                ServiceCode::CheckpointEndpointChanged,
                 "continuation requires the original endpoint and builder profile",
             );
         }
@@ -144,7 +144,7 @@ impl DustRouteMcp {
         parent: uuid::Uuid,
         limits: SearchLimits,
         bot: &voxrig::Client,
-    ) -> Result<Value, Value> {
+    ) -> Result<Reply, Reply> {
         let Preparation {
             owner,
             source,
@@ -152,14 +152,16 @@ impl DustRouteMcp {
             construction,
             boundary,
         } = prepared;
-        let ops = bot.survival().map_err(|e| failure("native_refused", e))?;
+        let ops = bot
+            .survival()
+            .map_err(|e| failure(ServiceCode::NativeRefused, e))?;
         let scene = ops
             .capture_survival_scene(region(original.scope().observed))
             .await
-            .map_err(|e| failure("observation_unavailable", e))?;
+            .map_err(|e| failure(ServiceCode::ObservationUnavailable, e))?;
         if scene.source().dimension != boundary.dimension {
             return Err(failure(
-                "checkpoint_dimension_changed",
+                ServiceCode::CheckpointDimensionChanged,
                 "builder is in a different dimension",
             ));
         }
@@ -167,22 +169,38 @@ impl DustRouteMcp {
         let diagnosis = assess(&original, &boundary.snapshot, &boundary.temporary, &fresh)
             .map_err(|e| failure(e.code, e.detail))?;
         if !diagnosis.conflicts.is_empty() {
-            return Err(
-                json!({"ok":false,"error":{"code":"checkpoint_site_changed","detail":"external differences require inspection; no automatic removal"},"diagnosis":diagnosis,"writes_minecraft":false}),
-            );
+            return Err(Reply::site_changed(diagnosis));
         }
         let (site, diagnosis) = rebase(original, &boundary.snapshot, &boundary.temporary, fresh)
             .map_err(|e| failure(e.code, e.detail))?;
         let supplied = received_materials(
             &ops.player_state()
                 .await
-                .map_err(|e| failure("inventory_unavailable", e))?,
+                .map_err(|e| failure(ServiceCode::InventoryUnavailable, e))?,
         )
         .map_err(|e| failure(e.code, e.detail))?;
         let temporary_material = construction.temporary_material.clone();
-        let generated = generate_construction_plan_async(scene,site,supplied.clone(),temporary_material,limits).await
-                .map_err(|e|json!({"ok":false,"error":{"code":"generation_refused","cause":e},"diagnosis":diagnosis,"received_materials":supplied,"writes_minecraft":false}))?;
-        let mut response = self
+        let generated = match generate_construction_plan_async(
+            scene,
+            site,
+            supplied.clone(),
+            temporary_material,
+            limits,
+        )
+        .await
+        {
+            Ok(generated) => generated,
+            Err(error) => {
+                return Err(Reply::generation(
+                    error,
+                    Some(replies::GenerationContinuation {
+                        diagnosis,
+                        received_materials: supplied,
+                    }),
+                ));
+            }
+        };
+        let publication = self
             .publish_survival_plan(
                 &owner,
                 source,
@@ -194,10 +212,6 @@ impl DustRouteMcp {
                 }),
             )
             .await;
-        response["parent_job_id"] = json!(parent);
-        response["diagnosis"] = json!(diagnosis);
-        response["received_materials"] = json!(supplied);
-        response["execution_authority_restored"] = json!(false);
-        Ok(response)
+        Ok(Reply::continued(publication, parent, diagnosis, supplied))
     }
 }

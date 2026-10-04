@@ -250,3 +250,43 @@ fn malformed_public_contracts_and_excessive_scopes_refuse_before_iteration() {
     g.expected.blocks.push(g.expected.blocks[0].clone());
     assert!(ConstructionSite::from_grounded(&g, scope()).is_err());
 }
+
+/// Serialization-only fixture. It never supplies a live client or execution authority.
+pub(crate) fn generated_wire_fixture() -> generation::GeneratedConstructionPlan {
+    let source = voxrig::checked_survival::StandingContext {
+        connection_id: 0,
+        receive_sequence: 0,
+        client_tick: 0,
+        world_revision: 0,
+        dimension: "minecraft:overworld".into(),
+        position_basis: voxrig::checked_survival::StandingPositionBasis::Received {
+            receive_sequence: 0,
+        },
+        position: [0.5, 1.0, 0.5],
+        eye_position: [0.5, 2.62, 0.5],
+        bounds: [0.2, 1.0, 0.2, 0.8, 2.8, 0.8],
+        on_ground: true,
+        support: vec![[0, 0, 0]],
+        submerged: false,
+        player: Default::default(),
+    };
+    let snapshot = MinecraftSnapshot {
+        min: pos([-1, -1, -1]),
+        max: pos([1, 2, 1]),
+        blocks: vec![],
+    };
+    generation::GeneratedConstructionPlan {
+        plan: HypotheticalConstructionPlan {
+            motion_contract: SurvivalMotionContract::Predicted,
+            source,
+            scope: scope(),
+            baseline: snapshot.clone(),
+            expected: snapshot,
+            steps: vec![],
+            materials: Default::default(),
+            final_position: [0.5, 1.0, 0.5],
+            initial_temporary: vec![],
+        },
+        search: Default::default(),
+    }
+}
