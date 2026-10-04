@@ -2,6 +2,7 @@ pub mod construction;
 pub mod mutation;
 pub mod piston;
 mod result;
+pub mod transition;
 pub use result::OperationResult;
 #[path = "operation_activity.rs"]
 mod activity;

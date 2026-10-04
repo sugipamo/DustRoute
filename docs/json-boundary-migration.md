@@ -868,3 +868,40 @@ workspace全targetとMCPの`--no-default-features`全targetのClippyは
 Cargoは単独・offline/locked・`-j1`、テストは単一thread。実機接続、ワールド変更、
 保存schema、依存version、Voxrig source/vendorへの変更はない。
 計画・transition・解析等の未移行JSONは残っており、統合ゴールは継続する。
+
+### 遷移試験・復元の型付き結果
+
+遷移試験と明示的な復元の結果を、`TransitionRunResult` /
+`TransitionRestoreResult`で操作履歴へ接続した。実行側でJSONを組み立てず、
+記録、実機trace、シミュレーション結果、比較、復元の事実とfailureをRust型で保持する。
+シミュレーションの失敗や比較未取得を、実機操作の失敗や不一致の証明へ読み替えない。
+結果は診断用で、実行planや観測権限を復元するdecode入口を持たない。
+
+表示時は既存の`TransitionTraceResponse`を使い、座標をkeyに持つ最終状態を配列へ投影する。
+この経路が生成するScenarioの期待値は従来どおりdefaultの空集合・空mapであり、
+workflow内のJSON encodeと成功判定を撤去してMCP境界でだけencodeする。
+任意の座標付き期待値を受け入れる新しいauthoring機能は追加していない。
+
+実行前の拒否もRustの応答型に接続した。既存のpreview・確認・policy・状態の条件は
+維持し、実行しなかった拒否から進捗や履歴を作らない。cleanupを含む実行後の進捗は
+実行側から直接通知する。履歴の表示や再送拒否が過去の進捗を現在のactivityへ流さない。
+操作の消費、復元、失敗のphase、原因の順序、write/readbackの順序を変えていない。
+
+#### 遷移結果の回帰検証
+
+関連24件が成功した。型付き結果・registry等の20件、遷移workflowの3件、
+座標付きtraceの表示の1件。遷移workflowは通常終了、記録打切り、記録の応答喪失と
+cleanup失敗、復元後の待機エラー、追加の復元書込み、書込み応答喪失を検査した。
+復元済みでも記録が欠ければ失敗が残り、worldが確認済みでも待機エラーを消さない。
+不確かな書込みは提出数をunknownのまま保持し、自動で再送しない。
+
+実行前の未preview、消費済み状態、preview-onlyの拒否では、MCPの失敗flag、
+診断code、safetyの詳細を保持し、activityの進捗と操作履歴を新しく作らない。
+早期failureは未取得の詳細を省略し、復元結果の未取得と既知のfalseを区別する。
+成功応答の既存のfield有無も維持する。
+
+workspace全targetとMCPの`--no-default-features`全targetのClippyは
+`-D warnings`で成功し、formattingと差分の空白検査も成功した。
+Cargoは単独・offline/locked・`-j1`、テストは単一threadで実行した。
+実機接続・ワールド変更・保存schema・依存version・Voxrig source/vendorの変更はない。
+計画・preview・解析等に未移行JSONが残るため、内部JSON除去の統合ゴールは継続する。
