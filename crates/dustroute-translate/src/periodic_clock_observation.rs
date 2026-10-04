@@ -2,6 +2,12 @@
 //! This is a finite block-state comparison, not proof of infinite live behavior.
 use std::collections::BTreeMap;
 
+use crate::behavior_type::{BehaviorBudget, BehaviorModel};
+use crate::physical_behavior::{
+    PhysicalBehaviorModel, PhysicalBehaviorSelection, PhysicalFiniteBurstReport, PhysicalOutput,
+    PhysicalPeriodicReport,
+};
+use crate::snapshot::{MinecraftSnapshot, MinecraftSnapshotBlock, assembly_from_snapshot};
 use dustroute_library::assembly::AssemblyRevision;
 use dustroute_library::behavior_type::{FiniteBurst, Periodic, PhysicalBehaviorProfile};
 use dustroute_library::blueprint::{
@@ -9,77 +15,144 @@ use dustroute_library::blueprint::{
 };
 use dustroute_library::builtin_laws::{DUST_LAW_REVISION, TORCH_LAW_REVISION, builtin_laws};
 use dustroute_minecraft::{Pos, Region};
-use dustroute_translate::behavior_type::{BehaviorBudget, BehaviorModel};
-use dustroute_translate::physical_behavior::{
-    PhysicalBehaviorModel, PhysicalBehaviorSelection, PhysicalOutput,
-};
-use dustroute_translate::snapshot::{
-    MinecraftSnapshot, MinecraftSnapshotBlock, assembly_from_snapshot,
-};
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
 
-#[derive(Deserialize)]
-struct Capture {
-    schema: String,
-    minecraft_version: String,
-    evidence: String,
-    clock: String,
-    sampling: String,
-    construction: String,
-    external_inputs: Vec<Value>,
-    diagnostic: Option<String>,
-    internal_callback_order: String,
-    server_jar_sha1: String,
-    complete: bool,
-    observation_complete: bool,
-    cleanup: BTreeMap<String, bool>,
-    duration_game_ticks: usize,
-    placement: Value,
-    known_region: Region,
-    samples: Vec<Sample>,
+#[derive(Clone, Debug, Deserialize)]
+pub struct ClockCapture {
+    pub schema: String,
+    pub minecraft_version: String,
+    pub evidence: String,
+    pub clock: String,
+    pub sampling: String,
+    pub construction: String,
+    pub external_inputs: Vec<ExternalInput>,
+    pub diagnostic: Option<String>,
+    pub internal_callback_order: String,
+    pub server_jar_sha1: String,
+    pub complete: bool,
+    pub observation_complete: bool,
+    pub cleanup: BTreeMap<String, bool>,
+    pub duration_game_ticks: usize,
+    pub placement: Vec<PlacementCell>,
+    pub known_region: Region,
+    pub samples: Vec<ClockSample>,
 }
 
-#[derive(Deserialize, Serialize)]
-struct Sample {
-    game_tick: usize,
-    torch_lit: bool,
-    torch_facing: String,
-    dust_power: u8,
-    dust_connections: BTreeMap<String, String>,
-    supports_intact: bool,
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct ClockSample {
+    pub game_tick: usize,
+    pub torch_lit: bool,
+    pub torch_facing: String,
+    pub dust_power: u8,
+    pub dust_connections: BTreeMap<String, String>,
+    pub supports_intact: bool,
 }
 
-pub fn compare(input: &str) -> Result<Value, String> {
+/// Exact stimulus and placement metadata: additional fields would change the
+/// fixed capture scope and are refused rather than silently discarded.
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct ExternalInput {
+    pub game_tick: usize,
+    pub kind: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct PlacementCell {
+    #[serde(deserialize_with = "exact_position")]
+    pub position: Pos,
+    pub state: String,
+}
+
+fn exact_position<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<Pos, D::Error> {
+    #[derive(Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct Position {
+        x: i32,
+        y: i32,
+        z: i32,
+    }
+    let position = Position::deserialize(deserializer)?;
+    Ok(Pos::new(position.x, position.y, position.z))
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+pub struct TorchEdge {
+    pub game_tick: usize,
+    pub lit: bool,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct ModeledClockSample {
+    pub torch_lit: bool,
+    pub dust_power: u8,
+    pub dust_connections: BTreeMap<String, String>,
+    pub torch_facing: &'static str,
+    pub supports_intact: bool,
+    pub torch_hidden_state: dustroute_minecraft::law::LawState,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct ClockDifference {
+    pub game_tick: usize,
+    pub observed: ClockSample,
+    pub model: ModeledClockSample,
+}
+
+/// Finite comparison evidence. Its model diagnostics cannot restore a running
+/// world, certify infinite recurrence, or authorize a placement/adoption.
+#[derive(Clone, Debug, Serialize)]
+pub struct ClockComparison {
+    pub schema: &'static str,
+    pub samples_compared: usize,
+    pub profile: &'static str,
+    pub autonomous_observation: bool,
+    pub scope: &'static str,
+    pub all_sampled_block_states_match: bool,
+    pub difference_count: usize,
+    pub differences: Vec<ClockDifference>,
+    pub observed_torch_edges: Vec<TorchEdge>,
+    pub modeled_torch_edges: Vec<TorchEdge>,
+    pub model_proof: PhysicalPeriodicReport,
+    pub finite_burst_model_proof: Option<PhysicalFiniteBurstReport>,
+    pub restartability_verified: bool,
+    pub live_infinite_recurrence_proven: bool,
+    pub internal_callback_order_verified: bool,
+}
+
+pub fn compare(capture: &ClockCapture) -> Result<ClockComparison, String> {
     compare_with_profile(
-        input,
+        capture,
         PhysicalBehaviorProfile::DustSingleTorchBlockEffectsV1,
     )
 }
 
 pub fn compare_with_profile(
-    input: &str,
+    capture: &ClockCapture,
     profile: PhysicalBehaviorProfile,
-) -> Result<Value, String> {
-    compare_capture(input, profile, false)
+) -> Result<ClockComparison, String> {
+    compare_capture(capture, profile, false)
 }
 
-pub fn compare_recovery(input: &str) -> Result<Value, String> {
+pub fn compare_recovery(capture: &ClockCapture) -> Result<ClockComparison, String> {
     compare_capture(
-        input,
+        capture,
         PhysicalBehaviorProfile::DustSingleTorchBlockEffectsV1,
         true,
     )
 }
 
 fn compare_capture(
-    input: &str,
+    capture: &ClockCapture,
     profile: PhysicalBehaviorProfile,
     recovery: bool,
-) -> Result<Value, String> {
-    let capture: Capture = serde_json::from_str(input).map_err(|e| e.to_string())?;
+) -> Result<ClockComparison, String> {
     let expected_stimuli = if recovery {
-        vec![json!({"game_tick":220,"kind":"adjacent_glass_place_remove_neighbor_notification"})]
+        vec![ExternalInput {
+            game_tick: 220,
+            kind: "adjacent_glass_place_remove_neighbor_notification".into(),
+        }]
     } else {
         vec![]
     };
@@ -114,12 +187,24 @@ fn compare_capture(
         return Err("unsupported or incomplete capture provenance, scope or coverage".into());
     }
     if capture.placement
-        != json!([
-            {"position":{"x":0,"y":0,"z":0},"state":"minecraft:stone"},
-            {"position":{"x":1,"y":1,"z":0},"state":"minecraft:stone"},
-            {"position":{"x":0,"y":1,"z":0},"state":"minecraft:redstone_wire"},
-            {"position":{"x":1,"y":0,"z":0},"state":"minecraft:redstone_wall_torch[facing=east,lit=true]"}
-        ])
+        != [
+            PlacementCell {
+                position: Pos::new(0, 0, 0),
+                state: "minecraft:stone".into(),
+            },
+            PlacementCell {
+                position: Pos::new(1, 1, 0),
+                state: "minecraft:stone".into(),
+            },
+            PlacementCell {
+                position: Pos::new(0, 1, 0),
+                state: "minecraft:redstone_wire".into(),
+            },
+            PlacementCell {
+                position: Pos::new(1, 0, 0),
+                state: "minecraft:redstone_wall_torch[facing=east,lit=true]".into(),
+            },
+        ]
         || capture.known_region != Region::new(Pos::new(-2, -2, -2), Pos::new(3, 3, 2))
     {
         return Err(
@@ -262,10 +347,16 @@ fn compare_capture(
         let lit = local.register("lit") == Some(1);
         let power = model.electrical_state(&state)?.signal(Pos::new(0, 1, 0));
         if previous_model.is_some_and(|old| old != lit) {
-            modeled_edges.push(json!({"game_tick":sample.game_tick,"lit":lit}));
+            modeled_edges.push(TorchEdge {
+                game_tick: sample.game_tick,
+                lit,
+            });
         }
         if previous_observed.is_some_and(|old| old != sample.torch_lit) {
-            observed_edges.push(json!({"game_tick":sample.game_tick,"lit":sample.torch_lit}));
+            observed_edges.push(TorchEdge {
+                game_tick: sample.game_tick,
+                lit: sample.torch_lit,
+            });
         }
         if lit != sample.torch_lit
             || power != sample.dust_power
@@ -273,7 +364,18 @@ fn compare_capture(
             || sample.torch_facing != "east"
             || !sample.supports_intact
         {
-            differences.push(json!({"game_tick":sample.game_tick,"observed":sample,"model":{"torch_lit":lit,"dust_power":power,"dust_connections":initial.dust_connections,"torch_facing":"east","supports_intact":true,"torch_hidden_state":local}}));
+            differences.push(ClockDifference {
+                game_tick: sample.game_tick,
+                observed: sample.clone(),
+                model: ModeledClockSample {
+                    torch_lit: lit,
+                    dust_power: power,
+                    dust_connections: initial.dust_connections.clone(),
+                    torch_facing: "east",
+                    supports_intact: true,
+                    torch_hidden_state: local.clone(),
+                },
+            });
         }
         previous_model = Some(lit);
         previous_observed = Some(sample.torch_lit);
@@ -284,40 +386,21 @@ fn compare_capture(
             state = model.step(&state)?;
         }
     }
-    Ok(json!({
-        "schema":"dustroute.periodic-clock-comparison.v1", "samples_compared":capture.samples.len(),
-        "profile":profile.as_str(), "autonomous_observation":!recovery,
-        "scope":"fixed_four_block_clock_after_each_game_tick_only",
-        "all_sampled_block_states_match":differences.is_empty(), "difference_count":differences.len(),
-        "differences":differences, "observed_torch_edges":observed_edges, "modeled_torch_edges":modeled_edges,
-        "model_proof": model.verify_periodic(BehaviorBudget::default()),
-        "finite_burst_model_proof":finite_burst_proof, "restartability_verified":false,
-        "live_infinite_recurrence_proven":false, "internal_callback_order_verified":false,
-    }))
-}
-
-#[cfg(not(test))]
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut args = std::env::args_os().skip(1);
-    let path = args
-        .next()
-        .ok_or("usage: compare_periodic_clock <capture.json> [--legacy|--recovery]")?;
-    let input = std::fs::read_to_string(path)?;
-    let report = match args.next().as_deref().and_then(|arg| arg.to_str()) {
-        None => compare(&input)?,
-        Some("--legacy") => compare_with_profile(
-            &input,
-            PhysicalBehaviorProfile::DustTorchSynchronousGameTickV1,
-        )?,
-        Some("--recovery") => compare_recovery(&input)?,
-        _ => return Err("unknown comparison mode".into()),
-    };
-    if args.next().is_some() {
-        return Err("unexpected comparison argument".into());
-    }
-    println!("{}", serde_json::to_string_pretty(&report)?);
-    if report["all_sampled_block_states_match"] != true {
-        std::process::exit(1);
-    }
-    Ok(())
+    Ok(ClockComparison {
+        schema: "dustroute.periodic-clock-comparison.v1",
+        samples_compared: capture.samples.len(),
+        profile: profile.as_str(),
+        autonomous_observation: !recovery,
+        scope: "fixed_four_block_clock_after_each_game_tick_only",
+        all_sampled_block_states_match: differences.is_empty(),
+        difference_count: differences.len(),
+        differences,
+        observed_torch_edges: observed_edges,
+        modeled_torch_edges: modeled_edges,
+        model_proof: model.verify_periodic(BehaviorBudget::default()),
+        finite_burst_model_proof: finite_burst_proof,
+        restartability_verified: false,
+        live_infinite_recurrence_proven: false,
+        internal_callback_order_verified: false,
+    })
 }

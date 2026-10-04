@@ -123,7 +123,7 @@ async fn transition_retains_original_failure_and_cleanup_errors_without_replay()
                     lifecycle: InvocationState::Previewed,
                 },
             );
-        let result: Value = serde_json::from_str(
+        let result: Value = super::test_support::decode_reply(
             &service
                 .invoke_transition_test(Parameters(RunTransitionParams {
                     operation_id: id.to_string(),
@@ -164,7 +164,7 @@ async fn transition_retains_original_failure_and_cleanup_errors_without_replay()
             }
         }
         let before = activations.load(Ordering::SeqCst);
-        let replay: Value = serde_json::from_str(
+        let replay: Value = super::test_support::decode_reply(
             &service
                 .invoke_transition_test(Parameters(RunTransitionParams {
                     operation_id: id.to_string(),

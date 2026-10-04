@@ -135,26 +135,30 @@ No third-party runtime bytecode or world files are copied into these fixtures.
 All three runs removed their blocks and force-load tickets, stopped the server
 and restored its properties.
 
-Offline comparison defaults to the repaired profile and exits **0** for matching
-samples. Its `model_proof` retains the periodic result (`failed` for this circuit).
-For autonomous captures, `finite_burst_model_proof` reports `passed`, with eight
-falling edges and OFF from step 30. Complete-state recurrence starts at step 91
-with period 1 (92 distinct states). Diagnostic `--recovery` reports no finite-burst
-proof (`null`); `restartability_verified` remains false in every mode:
+Offline comparison uses the typed Rust API in
+`dustroute_translate::periodic_clock_observation`. `compare(&ClockCapture)`
+defaults to the repaired profile, `compare_with_profile` retains the historical
+profile comparison, and `compare_recovery` checks the diagnostic stimulus. The
+JSON command-line example has been retired; independent Minecraft capture files
+are decoded only at the regression-test input boundary.
+
+The typed `ClockComparison.model_proof` retains the periodic result (`failed`
+for this circuit). For autonomous captures, `finite_burst_model_proof` reports
+`passed`, with eight falling edges and OFF from step 30. Complete-state recurrence
+starts at step 91 with period 1 (92 distinct states). Recovery comparison reports
+no finite-burst proof (`None`); `restartability_verified` remains false.
 
 ```bash
-cargo run -p dustroute-translate --example compare_periodic_clock -- \
-  crates/dustroute-translate/tests/fixtures/periodic_clock_1_21_11.json
-cargo run -p dustroute-translate --example compare_periodic_clock -- \
-  crates/dustroute-translate/tests/fixtures/periodic_clock_recovery_1_21_11.json --recovery
-cargo test -p dustroute-translate --test periodic_clock_observation
+cargo test --offline --locked -j1 -p dustroute-translate --test periodic_clock_observation -- --test-threads=1
 ```
 
-Adding `--legacy` to the autonomous comparison reproduces the original mismatch
-and exits **1**. The regression requires exact agreement for the new profile,
-preserves the legacy mismatch, and rejects incomplete or unsuitable captures.
-Finite sample agreement does not establish infinite live recurrence or full
-world conformance.
+The regression compares Rust results directly: exact agreement for the repaired
+profile, the original 48-sample counterexample for the historical profile, and
+refusal of incomplete or unsuitable captures. Additional fields in placement,
+placement coordinates or stimuli are rejected, preserving the previous exact
+scope gate. Finite sample agreement does not establish infinite live recurrence
+or full world conformance. The returned hidden-state diagnostics cannot restore
+an executable simulator state or authorize placement/adoption.
 
 New captures require the existing stopped private server with its EULA already
 accepted. Choose an unused coordinate and a new output filename for every run:

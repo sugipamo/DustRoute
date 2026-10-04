@@ -347,7 +347,10 @@ impl DustRouteMcp {
     #[tool(
         description = "Plan and run bounded non-OP survival construction from a uniquely adopted grounded Blueprint. Supply materials to the source bot. action=plan requires matching specification, edit/temporary/travel/retreat scopes and material budget; returns a complete preview without world edits. action=start requires job_id and confirmed=true and freshly checks source/site/inventory; execution continues in background. action=get reports progress or durable diagnosis. action=checkpoint requests a sealed idle stop after any pending mining settles and retires; poll get until checkpointed. action=continue with that old job_id reobserves the site and current materials and generates a NEW preview, also after process restart; review and explicitly start its new job_id. External changes or unresolved lost actions refuse continuation. A checkpoint is consumed once on new admission. action=cancel stops at the next boundary and may retain uncertainty. Uses builder-received world evidence and explicit model-based motion continuation; no independent position error bound or server stop acknowledgement. No observation bot required. No gathering, native-token restoration, command placement or automatic replay."
     )]
-    async fn survival_construction(&self, Parameters(params): Parameters<Request>) -> String {
+    async fn survival_construction(
+        &self,
+        Parameters(params): Parameters<Request>,
+    ) -> CallToolResult {
         let mut result = self.survival_request(params).await;
         if let Some(object) = result.as_object_mut() {
             object.insert(
@@ -357,6 +360,6 @@ impl DustRouteMcp {
                 "server_stop_acknowledged":false,"server_position_error_bound":null}),
             );
         }
-        json_text(result)
+        json_reply(result)
     }
 }

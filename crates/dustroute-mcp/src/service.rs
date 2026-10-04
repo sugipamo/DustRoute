@@ -84,7 +84,10 @@ use rmcp::{
         router::{prompt::PromptRouter, tool::ToolRouter},
         wrapper::Parameters,
     },
-    model::{GetPromptResult, Implementation, PromptMessage, Role, ServerCapabilities, ServerInfo},
+    model::{
+        CallToolResult, ContentBlock, GetPromptResult, Implementation, PromptMessage, Role,
+        ServerCapabilities, ServerInfo,
+    },
     prompt, prompt_handler, prompt_router, tool, tool_handler, tool_router,
 };
 use serde::{Deserialize, Serialize};
@@ -446,14 +449,31 @@ fn contract_assessment_json(assessment: &OptimizationContractAssessment) -> Valu
     })
 }
 
-fn typed_text(value: impl Serialize) -> String {
+fn typed_reply(value: impl Serialize) -> CallToolResult {
     match serde_json::to_value(value) {
-        Ok(value) => json_text(value),
-        Err(error) => json_text(FailureCause::from(error).response()),
+        Ok(value) => json_reply(value),
+        Err(error) => json_reply(FailureCause::from(error).response()),
     }
 }
 
-fn json_text(mut value: Value) -> String {
+fn json_reply(value: Value) -> CallToolResult {
+    let response = encode_response(value);
+    let content = vec![ContentBlock::text(response.text)];
+    if response.failed {
+        CallToolResult::error(content)
+    } else {
+        CallToolResult::success(content)
+    }
+}
+
+/// Outcome stays separate from its final MCP text representation. Legacy
+/// authorization paths still consume the text until their workflows are typed.
+struct EncodedResponse {
+    text: String,
+    failed: bool,
+}
+
+fn encode_response(mut value: Value) -> EncodedResponse {
     let measurement = crate::performance::span(crate::performance::Phase::ResponseEncode);
     if value.get("ok") == Some(&Value::Bool(false))
         && let Some(object) = value.as_object_mut()
@@ -504,10 +524,13 @@ fn json_text(mut value: Value) -> String {
             object.insert("recovery".into(),json!({"reobserve_required":null,"replan_required":null,"inspect_saved_record":null,"same_operation_replay_allowed":false}));
         }
     }
-    let text = serde_json::to_string_pretty(&value)
-        .unwrap_or_else(|error| FailureCause::from(error).response().to_string());
+    let failed = value.get("ok") == Some(&Value::Bool(false));
+    let (text, failed) = match serde_json::to_string_pretty(&value) {
+        Ok(text) => (text, failed),
+        Err(error) => (FailureCause::from(error).response().to_string(), true),
+    };
     drop(measurement.bytes(text.len()));
-    text
+    EncodedResponse { text, failed }
 }
 
 /// Convert an already decoded bridge snapshot directly into the simulator
@@ -588,8 +611,8 @@ fn workflow_error(code: McpErrorCode, message: impl Into<String>, retryable: boo
         .unwrap_or_else(|e| json!({"ok":false,"error":format!("failed to encode error: {e}")}))
 }
 
-fn error_text(code: McpErrorCode, message: impl Into<String>, retryable: bool) -> String {
-    json_text(workflow_error(code, message, retryable))
+fn error_reply(code: McpErrorCode, message: impl Into<String>, retryable: bool) -> CallToolResult {
+    json_reply(workflow_error(code, message, retryable))
 }
 
 fn scenario_trace_json(trace: &dustroute_translate::scenario::ScenarioTrace) -> Value {
@@ -926,7 +949,7 @@ impl DustRouteMcp {
         self.policy
             .authorize_player(player)
             .err()
-            .map(|error| json_text(json!({ "ok": false, "error": FailureCause::from(error).at(FailurePhase::Admission) })))
+            .map(|error| encode_response(json!({ "ok": false, "error": FailureCause::from(error).at(FailurePhase::Admission) })).text)
     }
 
     async fn placement_view(&self, id: uuid::Uuid) -> Result<PlacementPlan, String> {
@@ -948,8 +971,12 @@ impl DustRouteMcp {
             .ok_or_else(|| "unknown operation ID".into())
     }
 
-    async fn mutate_placement(&self, params: ConfirmedOperationParams, undo: bool) -> String {
-        json_text(
+    async fn mutate_placement(
+        &self,
+        params: ConfirmedOperationParams,
+        undo: bool,
+    ) -> CallToolResult {
+        json_reply(
             placement_workflow::PlacementWorkflow {
                 bridge: &self.bridge,
                 policy: &self.policy,
@@ -963,8 +990,8 @@ impl DustRouteMcp {
         )
     }
 
-    async fn mutate_repair(&self, params: ConfirmedOperationParams, undo: bool) -> String {
-        json_text(
+    async fn mutate_repair(&self, params: ConfirmedOperationParams, undo: bool) -> CallToolResult {
+        json_reply(
             repair_workflow::RepairWorkflow {
                 bridge: &self.bridge,
                 policy: &self.policy,
@@ -1455,9 +1482,9 @@ impl DustRouteMcp {
         description = "Get the visible Minecraft bot connection status",
         annotations(read_only_hint = true, destructive_hint = false)
     )]
-    async fn get_bot_status(&self) -> String {
+    async fn get_bot_status(&self) -> CallToolResult {
         match self.bridge.status().await {
-            Ok(status) => json_text(json!({
+            Ok(status) => json_reply(json!({
                 "ok": true,
                 "bot": status,
                 "configured_server": self.server_address,
@@ -1465,7 +1492,7 @@ impl DustRouteMcp {
                 "policy": self.policy,
                 "observation_capabilities": self.bridge.observation_capabilities()
             })),
-            Err(error) => json_text(json!({ "ok": false, "error": FailureCause::from(error) })),
+            Err(error) => json_reply(json!({ "ok": false, "error": FailureCause::from(error) })),
         }
     }
 
@@ -1473,7 +1500,7 @@ impl DustRouteMcp {
         description = "List players visible to the Minecraft bot. If the configured assist player is outside tracking range, move only the bot to that player and retry.",
         annotations(read_only_hint = true, destructive_hint = false)
     )]
-    async fn get_visible_player(&self) -> String {
+    async fn get_visible_player(&self) -> CallToolResult {
         match self.bridge.visible_players().await {
             Ok(mut players) => {
                 let mut reacquire_error = None;
@@ -1508,9 +1535,9 @@ impl DustRouteMcp {
                 if let Some(cause) = reacquire_error {
                     result["error"] = json!(cause);
                 }
-                json_text(result)
+                json_reply(result)
             }
-            Err(error) => json_text(json!({ "ok": false, "error": FailureCause::from(error) })),
+            Err(error) => json_reply(json!({ "ok": false, "error": FailureCause::from(error) })),
         }
     }
 
@@ -1518,13 +1545,16 @@ impl DustRouteMcp {
         description = "Observe a player's eye position, gaze direction, and targeted block",
         annotations(read_only_hint = true, destructive_hint = false)
     )]
-    async fn get_player_gaze(&self, Parameters(params): Parameters<ObserveParams>) -> String {
+    async fn get_player_gaze(
+        &self,
+        Parameters(params): Parameters<ObserveParams>,
+    ) -> CallToolResult {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
-            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
         };
         if let Some(error) = self.authorize_player(&player) {
-            return error;
+            return CallToolResult::error(vec![ContentBlock::text(error)]);
         }
         match self
             .bridge
@@ -1532,10 +1562,12 @@ impl DustRouteMcp {
             .await
         {
             Ok(observation) => match self.policy.authorize_dimension(&observation.dimension) {
-                Ok(()) => json_text(json!({ "ok": true, "observation": observation })),
-                Err(error) => json_text(json!({ "ok": false, "error": FailureCause::from(error) })),
+                Ok(()) => json_reply(json!({ "ok": true, "observation": observation })),
+                Err(error) => {
+                    json_reply(json!({ "ok": false, "error": FailureCause::from(error) }))
+                }
             },
-            Err(error) => json_text(json!({ "ok": false, "error": FailureCause::from(error) })),
+            Err(error) => json_reply(json!({ "ok": false, "error": FailureCause::from(error) })),
         }
     }
 
@@ -1546,16 +1578,16 @@ impl DustRouteMcp {
     async fn get_world(
         &self,
         Parameters(params): Parameters<InspectLookedAtWorldParams>,
-    ) -> String {
+    ) -> CallToolResult {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
-            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
         };
         if let Some(error) = self.authorize_player(&player) {
-            return error;
+            return CallToolResult::error(vec![ContentBlock::text(error)]);
         }
         if let Some(region) = params.region {
-            return json_text(
+            return json_reply(
                 self.capture_work_region(&player, region, &params)
                     .await
                     .unwrap_or_else(
@@ -1574,24 +1606,24 @@ impl DustRouteMcp {
             ("max_listed_blocks", max_listed_blocks as f64, 1.0, 2048.0),
         ] {
             if !(min..=max).contains(&actual) {
-                return json_text(FailureCause::input_range(name, actual, min, max).response());
+                return json_reply(FailureCause::input_range(name, actual, min, max).response());
             }
         }
         let observation = match self.bridge.observe_player(&player, max_distance).await {
             Ok(observation) => observation,
             Err(error) => {
-                return json_text(json!({ "ok": false, "error": FailureCause::from(error) }));
+                return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
             }
         };
         let Some(target) = observation.targeted_block else {
-            return json_text(json!({
+            return json_reply(json!({
                 "ok": false,
                 "error": FailureCause::new(CauseKind::NotFound, "the player is not looking at a block"),
                 "observation": observation
             }));
         };
         if let Err(error) = self.policy.authorize_dimension(&observation.dimension) {
-            return json_text(json!({ "ok": false, "error": FailureCause::from(error) }));
+            return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
         }
         let scan = match (CircuitCapture {
             bridge: &self.bridge,
@@ -1607,7 +1639,7 @@ impl DustRouteMcp {
         {
             Ok(scan) => scan,
             Err(error) => {
-                return json_text(json!({
+                return json_reply(json!({
                     "ok": false,
                     "error": error,
                     "observation": observation,
@@ -1662,19 +1694,19 @@ impl DustRouteMcp {
                 }),
             );
         }
-        json_text(result)
+        json_reply(result)
     }
 
     #[tool(
         description = "Mark the first or second region corner at the block a player is looking at"
     )]
-    async fn set_region(&self, Parameters(params): Parameters<MarkCornerParams>) -> String {
+    async fn set_region(&self, Parameters(params): Parameters<MarkCornerParams>) -> CallToolResult {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
-            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
         };
         if let Some(error) = self.authorize_player(&player) {
-            return error;
+            return CallToolResult::error(vec![ContentBlock::text(error)]);
         }
         let observation = match self
             .bridge
@@ -1683,16 +1715,16 @@ impl DustRouteMcp {
         {
             Ok(observation) => observation,
             Err(error) => {
-                return json_text(json!({ "ok": false, "error": FailureCause::from(error) }));
+                return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
             }
         };
         let Some(target) = observation.targeted_block else {
-            return json_text(
+            return json_reply(
                 json!({ "ok": false, "error": "the player is not looking at a block" }),
             );
         };
         if let Err(error) = self.policy.authorize_dimension(&observation.dimension) {
-            return json_text(json!({ "ok": false, "error": FailureCause::from(error) }));
+            return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
         }
         let mut selections = self.selections.lock().await;
         let selected = selections
@@ -1721,7 +1753,7 @@ impl DustRouteMcp {
             },
             _ => json!({ "ok": false, "error": "corner must be first or second" }),
         };
-        json_text(result)
+        json_reply(result)
     }
 
     #[tool(
@@ -1730,13 +1762,13 @@ impl DustRouteMcp {
     async fn resolve_looked_at_circuit(
         &self,
         Parameters(params): Parameters<DiscoverCircuitParams>,
-    ) -> String {
+    ) -> CallToolResult {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
-            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
         };
         if let Some(error) = self.authorize_player(&player) {
-            return error;
+            return CallToolResult::error(vec![ContentBlock::text(error)]);
         }
         match self
             .discover_selection(
@@ -1747,8 +1779,8 @@ impl DustRouteMcp {
             )
             .await
         {
-            Ok(discovery) => typed_text(discovery.response()),
-            Err(error) => json_text(json!({"ok": false, "error": error})),
+            Ok(discovery) => typed_reply(discovery.response()),
+            Err(error) => json_reply(json!({"ok": false, "error": error})),
         }
     }
 
@@ -1756,10 +1788,13 @@ impl DustRouteMcp {
         description = "Capture or reuse an immutable circuit snapshot and return a compact health summary with shared diagnostic findings and bounded focused_explanation (local role, directed edges, terminal candidates, paths, and timing caveats). Omit circuit_id to capture the current gaze; pass the returned circuit_id to keep later analysis on the same circuit",
         annotations(read_only_hint = true, destructive_hint = false)
     )]
-    async fn test_circuit(&self, Parameters(params): Parameters<DiagnoseLookedAtParams>) -> String {
+    async fn test_circuit(
+        &self,
+        Parameters(params): Parameters<DiagnoseLookedAtParams>,
+    ) -> CallToolResult {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
-            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
         };
         let (circuit_id, circuit) = match self
             .resolve_circuit_snapshot(
@@ -1771,7 +1806,7 @@ impl DustRouteMcp {
             .await
         {
             Ok(circuit) => circuit,
-            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
         };
         let target = circuit.target;
         let bounds = circuit.bounds;
@@ -1783,7 +1818,7 @@ impl DustRouteMcp {
         let world = match world_from_snapshot_for_service(&snapshot) {
             Ok(world) => world,
             Err(error) => {
-                return json_text(
+                return json_reply(
                     json!({ "ok": false, "error": error, "circuit_id": circuit_id, "mechanisms": mechanisms }),
                 );
             }
@@ -1800,7 +1835,7 @@ impl DustRouteMcp {
             );
             focused_explanation_json(&focused, target, complete)
         });
-        json_text(json!({
+        json_reply(json!({
             "ok": true,
             "schema_version": DIAGNOSTIC_SCHEMA_V1,
             "analysis_mode": "focused_fast",
@@ -1829,10 +1864,10 @@ impl DustRouteMcp {
     async fn get_circuit_ir(
         &self,
         Parameters(params): Parameters<GetLookedAtCircuitIrParams>,
-    ) -> String {
+    ) -> CallToolResult {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
-            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
         };
         let (circuit_id, circuit) = match self
             .resolve_circuit_snapshot(
@@ -1844,7 +1879,7 @@ impl DustRouteMcp {
             .await
         {
             Ok(circuit) => circuit,
-            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
         };
         let target = circuit.target;
         let bounds = circuit.bounds;
@@ -1864,7 +1899,7 @@ impl DustRouteMcp {
         )
         .to_string();
         if params.node_id.is_some() && params.analysis_id.as_deref() != Some(analysis_id.as_str()) {
-            return json_text(json!({
+            return json_reply(json!({
                 "ok": false,
                 "error": if params.analysis_id.is_some() {
                     "the circuit, model, or analysis conditions no longer match the mixed-IR summary; request a new summary before expanding a node"
@@ -1878,7 +1913,7 @@ impl DustRouteMcp {
         }
         let world = match world_from_snapshot_for_service(&snapshot) {
             Ok(world) => world,
-            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
         };
         let mut analysis = dustroute_translate::world_reverse::analyze_world_region(&world, bounds);
         analysis.scene.observation.dimension = dimension;
@@ -1886,14 +1921,14 @@ impl DustRouteMcp {
         let mixed_ir = match mixed_ir_json(&hierarchy, params.node_id) {
             Ok(mixed_ir) => mixed_ir,
             Err(error) => {
-                return json_text(json!({
+                return json_reply(json!({
                     "ok": false,
                     "error": error,
                     "available_node_count": dustroute_ir::build_mixed_ir(&hierarchy).nodes.len(),
                 }));
             }
         };
-        json_text(json!({
+        json_reply(json!({
             "ok": true,
             "analysis_mode": "mixed_ir",
             "circuit_id": circuit_id,
@@ -1921,14 +1956,14 @@ impl DustRouteMcp {
     async fn test_circuit_change(
         &self,
         Parameters(params): Parameters<TestCircuitChangeParams>,
-    ) -> String {
+    ) -> CallToolResult {
         if let Some(write) = params.blueprint {
             if !params.changes.is_empty()
                 || params.simulation_ticks.is_some()
                 || params.circuit_id.is_some()
                 || params.revision_id.is_some()
             {
-                return typed_text(crate::blueprint_mcp::failure(
+                return typed_reply(crate::blueprint_mcp::failure(
                     "blueprint operations cannot be combined with circuit block-edit parameters",
                 ));
             }
@@ -1938,10 +1973,10 @@ impl DustRouteMcp {
             {
                 let player = match self.resolve_player(params.player.as_deref()) {
                     Ok(p) => p,
-                    Err(e) => return typed_text(crate::blueprint_mcp::failure(e)),
+                    Err(e) => return typed_reply(crate::blueprint_mcp::failure(e)),
                 };
                 if let Some(error) = self.authorize_player(&player) {
-                    return error;
+                    return CallToolResult::error(vec![ContentBlock::text(error)]);
                 }
                 let (record, grounding) = match self.load_revision(&revision_id, &player).and_then(|r| {
                     let record = r.assembly.clone().ok_or_else(|| "revision has no decodable Assembly".to_owned())?;
@@ -1956,7 +1991,7 @@ impl DustRouteMcp {
                     }))
                 }) {
                     Ok(value) => value,
-                    Err(e) => return typed_text(crate::blueprint_mcp::failure(e)),
+                    Err(e) => return typed_reply(crate::blueprint_mcp::failure(e)),
                 };
                 crate::blueprint_mcp::Command::Capture {
                     record: Box::new(record),
@@ -1965,7 +2000,7 @@ impl DustRouteMcp {
             } else {
                 crate::blueprint_mcp::Command::Write(write)
             };
-            return typed_text(
+            return typed_reply(
                 self.blueprint_command(command, params.player.as_deref(), true)
                     .await
                     .expect("explicit blueprint response"),
@@ -2024,7 +2059,7 @@ impl DustRouteMcp {
             self.state_store.save(PlanRecordKind::CircuitRevisions,revision.revision_id,&revision)?;
             Ok(revision_json(&revision,false))
         }.await;
-        json_text(result.unwrap_or_else(|error| json!({"ok":false,"error":error})))
+        json_reply(result.unwrap_or_else(|error| json!({"ok":false,"error":error})))
     }
 
     fn load_revision(
@@ -2064,14 +2099,14 @@ impl DustRouteMcp {
     async fn get_circuit_revision(
         &self,
         Parameters(params): Parameters<GetCircuitRevisionParams>,
-    ) -> String {
+    ) -> CallToolResult {
         if let Some(query) = params.blueprint {
             if !params.revision_id.is_empty() || params.include_snapshot.is_some() {
-                return typed_text(crate::blueprint_mcp::failure(
+                return typed_reply(crate::blueprint_mcp::failure(
                     "blueprint queries cannot be combined with revision_id/include_snapshot",
                 ));
             }
-            return typed_text(
+            return typed_reply(
                 self.blueprint_command(crate::blueprint_mcp::Command::Read(query), None, true)
                     .await
                     .expect("explicit blueprint response"),
@@ -2088,7 +2123,7 @@ impl DustRouteMcp {
                 params.include_snapshot.unwrap_or(false),
             ))
         })();
-        json_text(result.unwrap_or_else(|error| json!({"ok":false,"error":error})))
+        json_reply(result.unwrap_or_else(|error| json!({"ok":false,"error":error})))
     }
 
     #[tool(
@@ -2098,12 +2133,12 @@ impl DustRouteMcp {
     async fn convert_from_circuit(
         &self,
         Parameters(params): Parameters<AnalyzeLookedAtParams>,
-    ) -> String {
+    ) -> CallToolResult {
         match params.scope.as_deref() {
             None | Some("gaze") => {}
             Some("selected_region") => return self.convert_from_selected_region(params).await,
             Some(_) => {
-                return error_text(
+                return error_reply(
                     McpErrorCode::InvalidArgument,
                     "scope must be gaze or selected_region",
                     false,
@@ -2112,7 +2147,7 @@ impl DustRouteMcp {
         }
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
-            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
         };
         let (circuit_id, circuit) = match self
             .resolve_circuit_snapshot(
@@ -2124,7 +2159,7 @@ impl DustRouteMcp {
             .await
         {
             Ok(circuit) => circuit,
-            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
         };
         let target = circuit.target;
         let bounds = circuit.bounds;
@@ -2136,7 +2171,7 @@ impl DustRouteMcp {
         let world = match world_from_snapshot_for_service(&snapshot) {
             Ok(world) => world,
             Err(error) => {
-                return json_text(
+                return json_reply(
                     json!({ "ok": false, "error": error, "circuit_id": circuit_id, "mechanisms": mechanisms }),
                 );
             }
@@ -2155,7 +2190,7 @@ impl DustRouteMcp {
             },
         ) {
             Ok(request) => request,
-            Err(error) => return error_text(McpErrorCode::InvalidArgument, error, false),
+            Err(error) => return error_reply(McpErrorCode::InvalidArgument, error, false),
         }
         .with_observation_complete(circuit.complete);
         if discovered_components > MAX_FLAT_ANALYSIS_COMPONENTS && !request.infer_truth_table {
@@ -2193,7 +2228,7 @@ impl DustRouteMcp {
                     }),
                 );
             }
-            return json_text(result);
+            return json_reply(result);
         }
         let mut staged = self.app.analyze_physical(&world, request);
         staged.reverse.analysis.scene.observation.dimension = dimension.clone();
@@ -2481,7 +2516,7 @@ impl DustRouteMcp {
                 }.to_owned()),
             );
         }
-        json_text(result)
+        json_reply(result)
     }
 
     #[tool(
@@ -2490,7 +2525,7 @@ impl DustRouteMcp {
     async fn new_placement(
         &self,
         Parameters(params): Parameters<PreviewPlacementParams>,
-    ) -> String {
+    ) -> CallToolResult {
         if params.work_regions.is_some()
             && (params.revision_id.is_none()
                 || params.assembly_revision_id.is_some()
@@ -2498,7 +2533,7 @@ impl DustRouteMcp {
                 || !params.circuit.is_empty()
                 || params.optimize.unwrap_or(false))
         {
-            return json_text(
+            return json_reply(
                 json!({"ok":false,"error":"work_regions requires a literal revision_id at its captured site"}),
             );
         }
@@ -2506,12 +2541,12 @@ impl DustRouteMcp {
             && (params.assembly_target.is_some()
                 || (params.revision_id.is_none() && params.assembly_revision_id.is_none()))
         {
-            return json_text(
+            return json_reply(
                 json!({"ok":false,"error":"edit_scope requires a captured revision or grounded Assembly at its original site; fresh Assembly construction requires an empty target"}),
             );
         }
         if params.assembly_target.is_some() {
-            return json_text(
+            return json_reply(
                 self.assembly_service()
                     .plan_assembly_construction(params)
                     .await,
@@ -2528,24 +2563,24 @@ impl DustRouteMcp {
         }
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
-            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
         };
         if let Some(error) = self.authorize_player(&player) {
-            return error;
+            return CallToolResult::error(vec![ContentBlock::text(error)]);
         }
         let observation = match self.bridge.observe_player(&player, 64.0).await {
             Ok(observation) => observation,
             Err(error) => {
-                return json_text(json!({ "ok": false, "error": FailureCause::from(error) }));
+                return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
             }
         };
         let Some(origin) = observation.targeted_block else {
-            return json_text(
+            return json_reply(
                 json!({ "ok": false, "error": "the player is not looking at a block" }),
             );
         };
         if let Err(error) = self.policy.authorize_dimension(&observation.dimension) {
-            return json_text(json!({ "ok": false, "error": FailureCause::from(error) }));
+            return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
         }
         let translated = match self
             .app
@@ -2553,12 +2588,12 @@ impl DustRouteMcp {
         {
             Ok(Some(result)) => result,
             Ok(None) => {
-                return json_text(json!({
+                return json_reply(json!({
                     "ok": false,
                     "error": "unknown circuit; expected half-adder, half-subtractor, mux2, decoder1to2, full-adder, or piston-door-1x2"
                 }));
             }
-            Err(error) => return json_text(json!({ "ok": false, "error": error.to_string() })),
+            Err(error) => return json_reply(json!({ "ok": false, "error": error.to_string() })),
         };
         let (proposed_world, assembly, optimization) = if params.optimize.unwrap_or(false) {
             let optimization_plan = OptimizationPlan::directional_then_global(
@@ -2575,7 +2610,7 @@ impl DustRouteMcp {
             ) {
                 Ok(realized) => realized,
                 Err(error) => {
-                    return json_text(json!({
+                    return json_reply(json!({
                         "ok": false,
                         "error": format!("placement optimization failed: {error}")
                     }));
@@ -2592,7 +2627,7 @@ impl DustRouteMcp {
                 OptimizationSafety::Verified { .. } => "verified",
                 OptimizationSafety::PreviewOnly { .. } => "preview_only",
                 OptimizationSafety::Rejected { .. } => {
-                    return json_text(json!({
+                    return json_reply(json!({
                         "ok": false,
                         "error": format!("optimized placement was rejected: {safety:?}"),
                         "optimization": {
@@ -2618,7 +2653,7 @@ impl DustRouteMcp {
             let assembly = match realized.capture_assembly() {
                 Ok(assembly) => assembly,
                 Err(error) => {
-                    return json_text(
+                    return json_reply(
                         json!({"ok":false,"error":format!("cannot capture optimized blueprint state: {error}")}),
                     );
                 }
@@ -2638,7 +2673,7 @@ impl DustRouteMcp {
             let assembly = match translated.compiled.capture_assembly(&params.circuit) {
                 Ok(assembly) => assembly,
                 Err(error) => {
-                    return json_text(
+                    return json_reply(
                         json!({"ok":false,"error":format!("cannot capture compiled blueprint state: {error}")}),
                     );
                 }
@@ -2653,12 +2688,12 @@ impl DustRouteMcp {
             dustroute_library::builtin_blueprints::builtin_blueprints(),
             &assembly,
         ) {
-            return json_text(
+            return json_reply(
                 json!({"ok":false,"error":format!("proposed assembly failed validation: {error}")}),
             );
         }
         let Some((local_min, local_max)) = proposed_world.bounds() else {
-            return json_text(json!({ "ok": false, "error": "compiled circuit is empty" }));
+            return json_reply(json!({ "ok": false, "error": "compiled circuit is empty" }));
         };
         let min = Pos::new(
             local_min.x + origin.x,
@@ -2672,11 +2707,11 @@ impl DustRouteMcp {
         );
         let placement_bounds = dustroute_translate::world_reverse::RegionBounds::new(min, max);
         if let Err(error) = self.policy.validate_region(placement_bounds) {
-            return json_text(json!({ "ok": false, "error": FailureCause::from(error) }));
+            return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
         }
         let proposed_blocks = proposed_world.iter().count();
         if let Err(error) = self.policy.validate_placement_size(proposed_blocks) {
-            return json_text(json!({ "ok": false, "error": FailureCause::from(error) }));
+            return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
         }
         let snapshot = match self
             .bridge
@@ -2685,18 +2720,18 @@ impl DustRouteMcp {
         {
             Ok(snapshot) => snapshot,
             Err(error) => {
-                return json_text(json!({ "ok": false, "error": FailureCause::from(error) }));
+                return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
             }
         };
         let existing = match world_from_snapshot_for_service(&snapshot) {
             Ok(world) => world,
-            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
         };
         let proposed_world =
             match dustroute_translate::world::ValidatedWorld::try_from(proposed_world) {
                 Ok(world) => world,
                 Err(error) => {
-                    return json_text(
+                    return json_reply(
                         json!({ "ok": false, "error": error.to_string(), "validation": error }),
                     );
                 }
@@ -2712,7 +2747,7 @@ impl DustRouteMcp {
         ) {
             Ok(plan) => plan,
             Err(error) => {
-                return json_text(json!({ "ok": false, "error": FailureCause::from(error) }));
+                return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
             }
         };
         let operation_id = plan.operation_id;
@@ -2771,7 +2806,7 @@ impl DustRouteMcp {
                 response.clone(),
             )
             .await;
-        json_text(response)
+        json_reply(response)
     }
 
     #[tool(
@@ -2781,22 +2816,22 @@ impl DustRouteMcp {
     async fn get_circuit_placement(
         &self,
         Parameters(params): Parameters<OperationParams>,
-    ) -> String {
+    ) -> CallToolResult {
         let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
             Ok(id) => id,
             Err(error) => {
-                return error_text(McpErrorCode::InvalidArgument, error.to_string(), false);
+                return error_reply(McpErrorCode::InvalidArgument, error.to_string(), false);
             }
         };
         if self.plans.kind(&operation_id).await == Some(PlanKind::ElectricalEdit) {
-            return json_text(
+            return json_reply(
                 self.electrical_edit_view(operation_id)
                     .await
                     .unwrap_or_else(|error| json!({"ok":false,"error":error})),
             );
         }
         if self.plans.kind(&operation_id).await == Some(PlanKind::Assembly) {
-            return json_text(
+            return json_reply(
                 self.assembly_service()
                     .get_assembly_construction(operation_id)
                     .await,
@@ -2811,45 +2846,45 @@ impl DustRouteMcp {
         {
             let player = match self.resolve_player(None) {
                 Ok(player) => player,
-                Err(error) => return json_text(json!({"ok":false,"error":error})),
+                Err(error) => return json_reply(json!({"ok":false,"error":error})),
             };
             if let Some(error) = self.authorize_player(&player) {
-                return error;
+                return CallToolResult::error(vec![ContentBlock::text(error)]);
             }
             if plan.player != player {
-                return json_text(
+                return json_reply(
                     json!({"ok":false,"error":"placement belongs to another player"}),
                 );
             }
-            return json_text(
+            return json_reply(
                 json!({"ok":true,"read_only":self.policy.read_only,"plan":{"operation_id":operation_id,"origin":plan.proof.origin(),"bounds":bounds_json(plan.proof.bounds()),"changes":plan.proof.writes(false),"undo_changes":plan.proof.writes(true),"previewed":plan.previewed,"state":format!("{:?}",plan.state)}}),
             );
         }
         match self.placement_view(operation_id).await {
             Ok(plan) => {
-                json_text(json!({"ok": true, "read_only": self.policy.read_only, "plan": plan}))
+                json_reply(json!({"ok": true, "read_only": self.policy.read_only, "plan": plan}))
             }
-            Err(error) => json_text(json!({"ok": false, "error": error})),
+            Err(error) => json_reply(json!({"ok": false, "error": error})),
         }
     }
 
     #[tool(
         description = "Show the player's selected region in the Minecraft world before analysis or mutation"
     )]
-    async fn show_region(&self, Parameters(params): Parameters<PlayerParams>) -> String {
+    async fn show_region(&self, Parameters(params): Parameters<PlayerParams>) -> CallToolResult {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
-            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
         };
         if let Some(error) = self.authorize_player(&player) {
-            return error;
+            return CallToolResult::error(vec![ContentBlock::text(error)]);
         }
         let (bounds, dimension) = match self.selected_region(&player).await {
             Ok(region) => region,
-            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
         };
         if let Err(error) = self.policy.validate_region(bounds) {
-            return json_text(json!({ "ok": false, "error": FailureCause::from(error) }));
+            return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
         }
         match self
             .bridge
@@ -2864,7 +2899,7 @@ impl DustRouteMcp {
                 {
                     Ok(snapshot) => snapshot,
                     Err(error) => {
-                        return json_text(
+                        return json_reply(
                             json!({ "ok": false, "error": FailureCause::from(error) }),
                         );
                     }
@@ -2886,7 +2921,7 @@ impl DustRouteMcp {
                         expires_at: Instant::now() + CIRCUIT_SNAPSHOT_TTL,
                     })
                     .await;
-                json_text(json!({
+                json_reply(json!({
                     "ok": true,
                     "circuit_id": circuit_id,
                     "circuit_expires_in_seconds": CIRCUIT_SNAPSHOT_TTL.as_secs(),
@@ -2896,24 +2931,24 @@ impl DustRouteMcp {
                     "mechanisms": mechanisms
                 }))
             }
-            Err(error) => json_text(json!({ "ok": false, "error": FailureCause::from(error) })),
+            Err(error) => json_reply(json!({ "ok": false, "error": FailureCause::from(error) })),
         }
     }
 
-    async fn convert_from_selected_region(&self, params: AnalyzeLookedAtParams) -> String {
+    async fn convert_from_selected_region(&self, params: AnalyzeLookedAtParams) -> CallToolResult {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
-            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
         };
         if let Some(error) = self.authorize_player(&player) {
-            return error;
+            return CallToolResult::error(vec![ContentBlock::text(error)]);
         }
         let (bounds, dimension) = match self.selected_region(&player).await {
             Ok(region) => region,
-            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
         };
         if let Err(error) = self.policy.validate_region(bounds) {
-            return json_text(json!({ "ok": false, "error": FailureCause::from(error) }));
+            return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
         }
         let snapshot = match self
             .bridge
@@ -2922,7 +2957,7 @@ impl DustRouteMcp {
         {
             Ok(snapshot) => snapshot,
             Err(error) => {
-                return json_text(json!({ "ok": false, "error": FailureCause::from(error) }));
+                return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
             }
         };
         let circuit_id = self
@@ -2950,7 +2985,7 @@ impl DustRouteMcp {
         let world = match world_from_snapshot_for_service(&snapshot) {
             Ok(world) => world,
             Err(error) => {
-                return json_text(
+                return json_reply(
                     json!({ "ok": false, "error": error, "circuit_id": circuit_id, "mechanisms": mechanisms }),
                 );
             }
@@ -2968,7 +3003,7 @@ impl DustRouteMcp {
             },
         ) {
             Ok(request) => request,
-            Err(error) => return error_text(McpErrorCode::InvalidArgument, error, false),
+            Err(error) => return error_reply(McpErrorCode::InvalidArgument, error, false),
         }
         .with_observation_complete(true);
         if redstone_components > MAX_FLAT_ANALYSIS_COMPONENTS && !request.infer_truth_table {
@@ -2991,7 +3026,7 @@ impl DustRouteMcp {
                 object.insert("mechanisms".into(), mechanisms.clone());
                 object.insert("circuit_id".to_owned(), json!(circuit_id));
             }
-            return json_text(result);
+            return json_reply(result);
         }
         let mut staged = self.app.analyze_physical(&world, request);
         staged.reverse.analysis.scene.observation.dimension = dimension;
@@ -3000,34 +3035,37 @@ impl DustRouteMcp {
             object.insert("mechanisms".into(), mechanisms.clone());
             object.insert("circuit_id".to_owned(), json!(circuit_id));
         }
-        json_text(result)
+        json_reply(result)
     }
 
     #[tool(
         description = "Create ranked, non-mutating partial repair plans from the supplied immutable circuit_id, with shared diagnostic evidence and report-local finding references"
     )]
-    async fn new_repair(&self, Parameters(params): Parameters<ProposeRepairsParams>) -> String {
+    async fn new_repair(
+        &self,
+        Parameters(params): Parameters<ProposeRepairsParams>,
+    ) -> CallToolResult {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
-            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
         };
         if let Some(error) = self.authorize_player(&player) {
-            return error;
+            return CallToolResult::error(vec![ContentBlock::text(error)]);
         }
         let max_gap = params.max_gap.unwrap_or(2);
         if !(1..=8).contains(&max_gap) {
-            return json_text(json!({ "ok": false, "error": "max_gap must be 1..8" }));
+            return json_reply(json!({ "ok": false, "error": "max_gap must be 1..8" }));
         }
         let (circuit_id, circuit) = match self.load_circuit(&params.circuit_id, &player).await {
             Ok(circuit) => circuit,
-            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
         };
         let bounds = circuit.bounds;
         let dimension = circuit.dimension;
         let snapshot = circuit.snapshot;
         let world = match world_from_snapshot_for_service(&snapshot) {
             Ok(world) => world,
-            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
         };
         let analysis = dustroute_translate::world_reverse::analyze_world_region(&world, bounds);
         let fragments_before = analysis.scene.fragments.len();
@@ -3065,7 +3103,7 @@ impl DustRouteMcp {
                 )
                 .await
             {
-                return json_text(json!({ "ok": false, "error": error }));
+                return json_reply(json!({ "ok": false, "error": error }));
             }
             self.operations
                 .record_completed(
@@ -3086,7 +3124,7 @@ impl DustRouteMcp {
                 "impact": proposal.impact,
             }));
         }
-        json_text(json!({
+        json_reply(json!({
             "schema_version": REPAIR_SCHEMA_V1,
             "ok": true,
             "circuit_id": circuit_id,
@@ -3106,25 +3144,25 @@ impl DustRouteMcp {
     async fn get_repair_context(
         &self,
         Parameters(params): Parameters<GetRepairContextParams>,
-    ) -> String {
+    ) -> CallToolResult {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
-            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
         };
         if let Some(error) = self.authorize_player(&player) {
-            return error;
+            return CallToolResult::error(vec![ContentBlock::text(error)]);
         }
         let max_gap = params.max_gap.unwrap_or(2);
         if !(1..=8).contains(&max_gap) {
-            return error_text(McpErrorCode::InvalidArgument, "max_gap must be 1..8", false);
+            return error_reply(McpErrorCode::InvalidArgument, "max_gap must be 1..8", false);
         }
         let (circuit_id, circuit) = match self.load_circuit(&params.circuit_id, &player).await {
             Ok(circuit) => circuit,
-            Err(error) => return error_text(McpErrorCode::NotFound, error, false),
+            Err(error) => return error_reply(McpErrorCode::NotFound, error, false),
         };
         let world = match world_from_snapshot_for_service(&circuit.snapshot) {
             Ok(world) => world,
-            Err(error) => return error_text(McpErrorCode::SerializationFailed, error, false),
+            Err(error) => return error_reply(McpErrorCode::SerializationFailed, error, false),
         };
         let analysis =
             dustroute_translate::world_reverse::analyze_world_region(&world, circuit.bounds);
@@ -3147,7 +3185,7 @@ impl DustRouteMcp {
             Some(value) => match uuid::Uuid::parse_str(value) {
                 Ok(id) => Some(id),
                 Err(error) => {
-                    return error_text(McpErrorCode::InvalidArgument, error.to_string(), false);
+                    return error_reply(McpErrorCode::InvalidArgument, error.to_string(), false);
                 }
             },
             None => None,
@@ -3156,12 +3194,16 @@ impl DustRouteMcp {
             let plan = match self.repair_plan(operation_id).await {
                 Ok(Some(plan)) => plan,
                 Ok(None) => {
-                    return error_text(McpErrorCode::NotFound, "repair operation not found", false);
+                    return error_reply(
+                        McpErrorCode::NotFound,
+                        "repair operation not found",
+                        false,
+                    );
                 }
-                Err(error) => return error_text(McpErrorCode::Internal, error, false),
+                Err(error) => return error_reply(McpErrorCode::Internal, error, false),
             };
             if plan.dimension != circuit.dimension || plan.analysis_bounds != circuit.bounds {
-                return error_text(
+                return error_reply(
                     McpErrorCode::InvalidArgument,
                     "operation_id does not belong to this circuit snapshot",
                     false,
@@ -3306,7 +3348,7 @@ impl DustRouteMcp {
                     .to_owned(),
             );
         }
-        json_text(json!({
+        json_reply(json!({
             "schema_version": REPAIR_CONTEXT_SCHEMA_V1,
             "ok": true,
             "circuit_id": circuit_id,
@@ -3341,23 +3383,23 @@ impl DustRouteMcp {
     async fn new_macro_optimization(
         &self,
         Parameters(params): Parameters<NewMacroOptimizationParams>,
-    ) -> String {
+    ) -> CallToolResult {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
-            Err(error) => return error_text(McpErrorCode::InvalidArgument, error, false),
+            Err(error) => return error_reply(McpErrorCode::InvalidArgument, error, false),
         };
         if let Some(error) = self.authorize_player(&player) {
-            return error;
+            return CallToolResult::error(vec![ContentBlock::text(error)]);
         }
         let contract = match optimization_contract_from_param(params.contract) {
             Ok(contract) => contract,
-            Err(error) => return error_text(McpErrorCode::InvalidArgument, error, false),
+            Err(error) => return error_reply(McpErrorCode::InvalidArgument, error, false),
         };
         let (circuit_id, circuit) = match self.load_circuit(&params.circuit_id, &player).await {
             Ok(circuit) => circuit,
-            Err(error) => return error_text(McpErrorCode::NotFound, error, false),
+            Err(error) => return error_reply(McpErrorCode::NotFound, error, false),
         };
-        json_text(
+        json_reply(
             self.optimization_workflow()
                 .propose_macro(circuit_id, circuit, params.component_id, contract)
                 .await,
@@ -3371,19 +3413,19 @@ impl DustRouteMcp {
     async fn new_optimization(
         &self,
         Parameters(params): Parameters<NewOptimizationParams>,
-    ) -> String {
+    ) -> CallToolResult {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
-            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
         };
         if let Some(error) = self.authorize_player(&player) {
-            return error;
+            return CallToolResult::error(vec![ContentBlock::text(error)]);
         }
         if !matches!(
             params.objective.as_str(),
             "wire_length" | "density_then_wire_length"
         ) {
-            return error_text(
+            return error_reply(
                 McpErrorCode::InvalidArgument,
                 "objective must be wire_length or density_then_wire_length",
                 false,
@@ -3391,21 +3433,21 @@ impl DustRouteMcp {
         }
         let contract = match optimization_contract_from_param(params.contract) {
             Ok(contract) => contract,
-            Err(error) => return error_text(McpErrorCode::InvalidArgument, error, false),
+            Err(error) => return error_reply(McpErrorCode::InvalidArgument, error, false),
         };
         let search_budget = match optimization_search_budget(params.search) {
             Ok(budget) => budget,
-            Err(error) => return error_text(McpErrorCode::InvalidArgument, error, false),
+            Err(error) => return error_reply(McpErrorCode::InvalidArgument, error, false),
         };
         let (circuit_id, circuit) = match self.load_circuit(&params.circuit_id, &player).await {
             Ok(circuit) => circuit,
-            Err(error) => return error_text(McpErrorCode::NotFound, error, false),
+            Err(error) => return error_reply(McpErrorCode::NotFound, error, false),
         };
         let focus = dustroute_translate::world_reverse::RegionBounds::new(
             Pos::new(params.focus.min.x, params.focus.min.y, params.focus.min.z),
             Pos::new(params.focus.max.x, params.focus.max.y, params.focus.max.z),
         );
-        json_text(
+        json_reply(
             self.optimization_workflow()
                 .propose_wire(
                     circuit_id,
@@ -3425,26 +3467,26 @@ impl DustRouteMcp {
     async fn new_component_removal_plan(
         &self,
         Parameters(params): Parameters<PlayerParams>,
-    ) -> String {
+    ) -> CallToolResult {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
-            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
         };
         let observation = match self.bridge.observe_player(&player, 64.0).await {
             Ok(observation) => observation,
             Err(error) => {
-                return json_text(json!({ "ok": false, "error": FailureCause::from(error) }));
+                return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
             }
         };
         let Some(target) = observation.targeted_block else {
-            return json_text(json!({ "ok": false, "error": "player is not looking at a block" }));
+            return json_reply(json!({ "ok": false, "error": "player is not looking at a block" }));
         };
         let (bounds, dimension) = match self.selected_region(&player).await {
             Ok(region) => region,
-            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
         };
         if !bounds.contains(target) {
-            return json_text(
+            return json_reply(
                 json!({ "ok": false, "error": "target is outside the selected region" }),
             );
         }
@@ -3455,12 +3497,12 @@ impl DustRouteMcp {
         {
             Ok(snapshot) => snapshot,
             Err(error) => {
-                return json_text(json!({ "ok": false, "error": FailureCause::from(error) }));
+                return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
             }
         };
         let world = match world_from_snapshot_for_service(&snapshot) {
             Ok(world) => world,
-            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
         };
         let analysis = dustroute_translate::world_reverse::analyze_world_region(&world, bounds);
         let Some(proposal) = dustroute_translate::repair::propose_scene_component_removal(
@@ -3468,7 +3510,7 @@ impl DustRouteMcp {
             &analysis.scene,
             target,
         ) else {
-            return json_text(
+            return json_reply(
                 json!({ "ok": false, "error": "target is not a removable redstone component" }),
             );
         };
@@ -3489,9 +3531,9 @@ impl DustRouteMcp {
             )
             .await
         {
-            return json_text(json!({ "ok": false, "error": error }));
+            return json_reply(json!({ "ok": false, "error": error }));
         }
-        json_text(json!({
+        json_reply(json!({
             "schema_version": REPAIR_SCHEMA_V1,
             "ok": true,
             "operation_id": operation_id,
@@ -3504,15 +3546,15 @@ impl DustRouteMcp {
     async fn show_repair_plan(
         &self,
         Parameters(params): Parameters<PreviewRepairParams>,
-    ) -> String {
+    ) -> CallToolResult {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
-            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
         };
         let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
             Ok(id) => id,
             Err(error) => {
-                return error_text(McpErrorCode::InvalidArgument, error.to_string(), false);
+                return error_reply(McpErrorCode::InvalidArgument, error.to_string(), false);
             }
         };
         // Serialize preview persistence with attempts, so a delayed preview
@@ -3521,12 +3563,12 @@ impl DustRouteMcp {
         let plan = match self.repair_plan(operation_id).await {
             Ok(Some(plan)) => plan,
             Ok(None) => {
-                return json_text(json!({ "ok": false, "error": "unknown or expired repair ID" }));
+                return json_reply(json!({ "ok": false, "error": "unknown or expired repair ID" }));
             }
-            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
         };
         let Some(bounds) = bounds_for_changes(&plan.patch.changes) else {
-            return json_text(json!({ "ok": false, "error": "repair has no changes" }));
+            return json_reply(json!({ "ok": false, "error": "repair has no changes" }));
         };
         match self
             .bridge
@@ -3536,12 +3578,12 @@ impl DustRouteMcp {
             Ok(preview) => {
                 let mut previewed = plan.clone();
                 if let Err(error) = previewed.lifecycle.preview() {
-                    return error_text(McpErrorCode::InvalidState, error, false);
+                    return error_reply(McpErrorCode::InvalidState, error, false);
                 }
                 if let Err(error) = self.store_repair_plan(operation_id, previewed).await {
-                    return json_text(json!({ "ok": false, "error": error }));
+                    return json_reply(json!({ "ok": false, "error": error }));
                 }
-                json_text(json!({
+                json_reply(json!({
                     "schema_version": REPAIR_SCHEMA_V1,
                     "ok": true,
                     "operation_id": operation_id,
@@ -3551,11 +3593,11 @@ impl DustRouteMcp {
                     "next_step": "obtain explicit player confirmation before invoke_operation"
                 }))
             }
-            Err(error) => json_text(json!({ "ok": false, "error": FailureCause::from(error) })),
+            Err(error) => json_reply(json!({ "ok": false, "error": FailureCause::from(error) })),
         }
     }
 
-    async fn plan_revision_placement(&self, params: PreviewPlacementParams) -> String {
+    async fn plan_revision_placement(&self, params: PreviewPlacementParams) -> CallToolResult {
         let result: Result<Value, String> = async {
             if !params.circuit.is_empty()
                 || params.optimize.unwrap_or(false)
@@ -3573,10 +3615,13 @@ impl DustRouteMcp {
                 crate::placement_source::PlacementSource::CircuitRevision { revision_id:revision.revision_id },
             ).await
         }.await;
-        json_text(result.unwrap_or_else(|error| json!({"ok":false,"error":error})))
+        json_reply(result.unwrap_or_else(|error| json!({"ok":false,"error":error})))
     }
 
-    async fn plan_adopted_assembly_placement(&self, params: PreviewPlacementParams) -> String {
+    async fn plan_adopted_assembly_placement(
+        &self,
+        params: PreviewPlacementParams,
+    ) -> CallToolResult {
         let result: Result<Value, String> = async {
             if !params.circuit.is_empty()
                 || params.revision_id.is_some()
@@ -3638,7 +3683,7 @@ impl DustRouteMcp {
             .await
         }
         .await;
-        json_text(result.unwrap_or_else(|error| json!({"ok":false,"error":error})))
+        json_reply(result.unwrap_or_else(|error| json!({"ok":false,"error":error})))
     }
 
     async fn plan_grounded_revision_placement(
@@ -3857,7 +3902,7 @@ impl DustRouteMcp {
         Ok(response)
     }
 
-    async fn plan_piston_placement(&self, params: PreviewPlacementParams) -> String {
+    async fn plan_piston_placement(&self, params: PreviewPlacementParams) -> CallToolResult {
         let result: Result<Value,String> = async {
             if params.optimize.unwrap_or(false) { return Err("the pinned piston-door layout cannot be optimized".into()); }
             let player = self.resolve_player(params.player.as_deref())?;
@@ -3888,10 +3933,10 @@ impl DustRouteMcp {
             self.operations.record_completed(id,OperationKind::PlacementPreview,response.clone()).await;
             Ok(response)
         }.await;
-        json_text(result.unwrap_or_else(|error| json!({"ok":false,"error":error})))
+        json_reply(result.unwrap_or_else(|error| json!({"ok":false,"error":error})))
     }
 
-    async fn show_piston_placement(&self, id: uuid::Uuid, player: Option<&str>) -> String {
+    async fn show_piston_placement(&self, id: uuid::Uuid, player: Option<&str>) -> CallToolResult {
         let result: Result<Value,String> = async {
             let player = self.resolve_player(player)?;
             if let Some(error)=self.authorize_player(&player) { return Err(error); }
@@ -3904,10 +3949,15 @@ impl DustRouteMcp {
             self.plans.table::<StoredPistonPlacement>().lock().await.get_mut(&id).ok_or("placement not found")?.previewed=true;
             Ok(json!({"ok":true,"operation_id":id,"preview":preview,"bounds":bounds_json(bounds),"changes":plan.proof.writes(false),"undo_changes":plan.proof.writes(true),"initial_state":"open"}))
         }.await;
-        json_text(result.unwrap_or_else(|error| json!({"ok":false,"error":error})))
+        json_reply(result.unwrap_or_else(|error| json!({"ok":false,"error":error})))
     }
 
-    async fn mutate_piston_placement(&self, id: uuid::Uuid, confirm: bool, undo: bool) -> String {
+    async fn mutate_piston_placement(
+        &self,
+        id: uuid::Uuid,
+        confirm: bool,
+        undo: bool,
+    ) -> CallToolResult {
         let mut progress = ExecutionProgress::default();
         let result: Result<Value,FailureCause> = async {
             if !confirm { return Err("confirm=true is required".into()); }
@@ -3964,7 +4014,7 @@ impl DustRouteMcp {
         }.await;
         let mut response = result.unwrap_or_else(|error| progress.cause(error).response());
         response["operation_id"] = json!(id);
-        json_text(response)
+        json_reply(response)
     }
 
     async fn observed_mechanisms(
@@ -4017,7 +4067,7 @@ impl DustRouteMcp {
     async fn new_piston_door_operation(
         &self,
         Parameters(params): Parameters<NewPistonDoorParams>,
-    ) -> String {
+    ) -> CallToolResult {
         let result: Result<Value,String> = async {
             let player=self.resolve_player(None)?;
             if let Some(error)=self.authorize_player(&player) { return Err(error); }
@@ -4042,10 +4092,10 @@ impl DustRouteMcp {
             self.operations.record_completed(id,OperationKind::PistonDoorProposal,result.clone()).await;
             Ok(result)
         }.await;
-        json_text(result.unwrap_or_else(|error| json!({"ok":false,"error":error})))
+        json_reply(result.unwrap_or_else(|error| json!({"ok":false,"error":error})))
     }
 
-    async fn show_piston_door(&self, id: uuid::Uuid, player: Option<&str>) -> String {
+    async fn show_piston_door(&self, id: uuid::Uuid, player: Option<&str>) -> CallToolResult {
         let result:Result<Value,String>=async {
             let player=self.resolve_player(player)?;
             if let Some(error)=self.authorize_player(&player) { return Err(error); }
@@ -4057,10 +4107,10 @@ impl DustRouteMcp {
             if let Some(p)=self.plans.table::<StoredDoorPlan>().lock().await.get_mut(&id) { p.lifecycle.preview()?; }
             Ok(json!({"ok":true,"operation_id":id,"state":plan.door.state(),"target":plan.target,"preview":preview,"warning":"Normal lever activation changes this door and leaves it in the requested state. Failure requires fresh inspection; no automatic retry or rollback."}))
         }.await;
-        json_text(result.unwrap_or_else(|error| json!({"ok":false,"error":error})))
+        json_reply(result.unwrap_or_else(|error| json!({"ok":false,"error":error})))
     }
 
-    async fn invoke_piston_door(&self, id: uuid::Uuid, confirm: bool) -> String {
+    async fn invoke_piston_door(&self, id: uuid::Uuid, confirm: bool) -> CallToolResult {
         let mut progress = ExecutionProgress::default();
         let result:Result<Value,FailureCause>=async {
             if !confirm { return Err("confirm=true is required".into()); }
@@ -4135,7 +4185,7 @@ impl DustRouteMcp {
         }.await;
         let mut response = result.unwrap_or_else(|error| progress.cause(error).response());
         response["operation_id"] = json!(id);
-        json_text(response)
+        json_reply(response)
     }
     #[tool(
         description = "Discover single-lever transition scenarios in the supplied immutable circuit_id without changing the world",
@@ -4144,18 +4194,18 @@ impl DustRouteMcp {
     async fn new_transition_test(
         &self,
         Parameters(params): Parameters<ProposeTransitionParams>,
-    ) -> String {
+    ) -> CallToolResult {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
-            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
         };
         if let Some(error) = self.authorize_player(&player) {
-            return error;
+            return CallToolResult::error(vec![ContentBlock::text(error)]);
         }
         let observation_ticks = params.observation_ticks.unwrap_or(20);
         let max_events = params.max_events.unwrap_or(16_384);
         if !(1..=200).contains(&observation_ticks) || !(1..=65_536).contains(&max_events) {
-            return error_text(
+            return error_reply(
                 McpErrorCode::InvalidArgument,
                 "observation_ticks must be 1..200 and max_events must be 1..65536",
                 false,
@@ -4163,12 +4213,12 @@ impl DustRouteMcp {
         }
         let (circuit_id, circuit) = match self.load_circuit(&params.circuit_id, &player).await {
             Ok(circuit) => circuit,
-            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
         };
         let bounds = circuit.bounds;
         let dimension = circuit.dimension;
         if let Err(error) = self.policy.validate_region(bounds) {
-            return json_text(json!({ "ok": false, "error": FailureCause::from(error) }));
+            return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
         }
         let snapshot = circuit.snapshot;
         let (safety, proposals) = self
@@ -4182,13 +4232,13 @@ impl DustRouteMcp {
             )
             .await;
         if safety.safety == TransitionSafety::Rejected {
-            return json_text(json!({
+            return json_reply(json!({
                 "ok": false,
                 "safety": safety,
                 "error": "the observed region is not eligible for an automatic transition scenario"
             }));
         }
-        json_text(json!({
+        json_reply(json!({
             "schema_version": TRANSITION_SCHEMA_V1,
             "ok": true,
             "circuit_id": circuit_id,
@@ -4202,16 +4252,16 @@ impl DustRouteMcp {
     async fn show_transition_test(
         &self,
         Parameters(params): Parameters<PreviewTransitionParams>,
-    ) -> String {
+    ) -> CallToolResult {
         let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
             Ok(id) => id,
             Err(error) => {
-                return error_text(McpErrorCode::InvalidArgument, error.to_string(), false);
+                return error_reply(McpErrorCode::InvalidArgument, error.to_string(), false);
             }
         };
         let plans = self.plans.table::<StoredTransitionPlan>().lock().await;
         let Some(plan) = plans.get(&operation_id).cloned() else {
-            return error_text(
+            return error_reply(
                 McpErrorCode::NotFound,
                 "transition scenario not found",
                 false,
@@ -4220,10 +4270,10 @@ impl DustRouteMcp {
         drop(plans);
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
-            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
         };
         if player != plan.player {
-            return json_text(
+            return json_reply(
                 json!({ "ok": false, "error": "scenario belongs to another player" }),
             );
         }
@@ -4234,7 +4284,7 @@ impl DustRouteMcp {
         {
             Ok(preview) => preview,
             Err(error) => {
-                return json_text(json!({ "ok": false, "error": FailureCause::from(error) }));
+                return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
             }
         };
         if let Some(stored) = self
@@ -4245,10 +4295,10 @@ impl DustRouteMcp {
             .get_mut(&operation_id)
         {
             if let Err(error) = stored.lifecycle.preview() {
-                return json_text(json!({"ok":false,"error":error}));
+                return json_reply(json!({"ok":false,"error":error}));
             }
         }
-        json_text(json!({
+        json_reply(json!({
             "schema_version": TRANSITION_SCHEMA_V1,
             "ok": true,
             "operation_id": operation_id,
@@ -4263,22 +4313,22 @@ impl DustRouteMcp {
     async fn invoke_transition_test(
         &self,
         Parameters(params): Parameters<RunTransitionParams>,
-    ) -> String {
+    ) -> CallToolResult {
         if !params.confirm {
-            return error_text(
+            return error_reply(
                 McpErrorCode::InvalidArgument,
                 "confirm=true is required",
                 false,
             );
         }
         if let Err(error) = self.policy.authorize_mutation() {
-            return json_text(json!({ "ok": false, "error": FailureCause::from(error) }));
+            return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
         }
         let _mutation_guard = self.mutation_lock.lock().await;
         let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
             Ok(id) => id,
             Err(error) => {
-                return error_text(McpErrorCode::InvalidArgument, error.to_string(), false);
+                return error_reply(McpErrorCode::InvalidArgument, error.to_string(), false);
             }
         };
         let plan = match self
@@ -4291,7 +4341,7 @@ impl DustRouteMcp {
         {
             Some(plan) => plan,
             None => {
-                return error_text(
+                return error_reply(
                     McpErrorCode::NotFound,
                     "transition scenario not found",
                     false,
@@ -4299,14 +4349,14 @@ impl DustRouteMcp {
             }
         };
         if self.policy.preview_required && !plan.lifecycle.is_previewed() {
-            return error_text(
+            return error_reply(
                 McpErrorCode::InvalidState,
                 "show_operation is required first",
                 false,
             );
         }
         if plan.lifecycle.attempted() {
-            return json_text(json!({
+            return json_reply(json!({
                 "ok": false,
                 "error": "scenario was already executed; create and preview a new scenario"
             }));
@@ -4319,22 +4369,22 @@ impl DustRouteMcp {
             )) {
                 Ok(value) => value,
                 Err(error) => {
-                    return error_text(McpErrorCode::Internal, error.to_string(), false);
+                    return error_reply(McpErrorCode::Internal, error.to_string(), false);
                 }
             };
             let safety = match serde_json::to_value(&plan.safety) {
                 Ok(value) => value,
-                Err(error) => return error_text(McpErrorCode::Internal, error.to_string(), false),
+                Err(error) => return error_reply(McpErrorCode::Internal, error.to_string(), false),
             };
             if let Some(object) = response.as_object_mut() {
                 object.insert("safety".to_owned(), safety);
             }
-            return json_text(response);
+            return json_reply(response);
         }
         let current = match self.bridge.get_block(plan.lever, &plan.dimension).await {
             Ok(block) => block,
             Err(error) => {
-                return json_text(json!({ "ok": false, "error": FailureCause::from(error) }));
+                return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
             }
         };
         let current_powered = current
@@ -4344,7 +4394,7 @@ impl DustRouteMcp {
             .and_then(|value| value.parse::<bool>().ok());
         if current.state.name != "minecraft:lever" || current_powered != Some(plan.original_powered)
         {
-            return json_text(json!({
+            return json_reply(json!({
                 "ok": false,
                 "error": "lever state changed since proposal; create a new scenario"
             }));
@@ -4356,22 +4406,22 @@ impl DustRouteMcp {
         {
             Ok(snapshot) => snapshot,
             Err(error) => {
-                return json_text(json!({ "ok": false, "error": FailureCause::from(error) }));
+                return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
             }
         };
         if current_snapshot != plan.initial_snapshot {
-            return json_text(
+            return json_reply(
                 json!({ "ok": false, "error": "transition region changed since preview; create a new scenario" }),
             );
         }
         let world = match world_from_snapshot_for_service(&current_snapshot) {
             Ok(world) => world,
-            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
         };
         let world = match dustroute_translate::world::ValidatedWorld::try_from(world) {
             Ok(world) => world,
             Err(error) => {
-                return json_text(
+                return json_reply(
                     json!({ "ok": false, "error": error.to_string(), "validation": error }),
                 );
             }
@@ -4381,7 +4431,7 @@ impl DustRouteMcp {
         analysis.scene.observation.dimension = plan.dimension.clone();
         let contracts = match transition_contracts(params.contracts.as_deref(), &analysis.scene) {
             Ok(contracts) => contracts,
-            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
         };
         let approach = match self
             .bridge
@@ -4390,7 +4440,7 @@ impl DustRouteMcp {
         {
             Ok(approach) => approach,
             Err(error) => {
-                return json_text(json!({ "ok": false, "error": FailureCause::from(error) }));
+                return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
             }
         };
         let started = match self
@@ -4405,16 +4455,16 @@ impl DustRouteMcp {
         {
             Ok(started) => started,
             Err(error) => {
-                return json_text(json!({ "ok": false, "error": FailureCause::from(error) }));
+                return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
             }
         };
         {
             let mut plans = self.plans.table::<StoredTransitionPlan>().lock().await;
             let Some(stored) = plans.get_mut(&operation_id) else {
-                return error_text(McpErrorCode::NotFound, "scenario missing", false);
+                return error_reply(McpErrorCode::NotFound, "scenario missing", false);
             };
             if let Err(error) = stored.lifecycle.begin(self.policy.preview_required) {
-                return error_text(McpErrorCode::InvalidState, error, false);
+                return error_reply(McpErrorCode::InvalidState, error, false);
             }
         }
         let mut progress = ExecutionProgress {
@@ -4444,7 +4494,7 @@ impl DustRouteMcp {
                 self.operations
                     .record_completed(operation_id, OperationKind::TransitionRun, response.clone())
                     .await;
-                return json_text(response);
+                return json_reply(response);
             }
         };
         progress.submitted(1);
@@ -4575,7 +4625,7 @@ impl DustRouteMcp {
                 self.operations
                     .record_completed(operation_id, OperationKind::TransitionRun, response.clone())
                     .await;
-                return json_text(response);
+                return json_reply(response);
             }
         };
         progress.phase = FailurePhase::PostAnalysis;
@@ -4642,7 +4692,7 @@ impl DustRouteMcp {
                 self.operations
                     .record_completed(operation_id, OperationKind::TransitionRun, response.clone())
                     .await;
-                return json_text(response);
+                return json_reply(response);
             }
         };
         let simulated = match &simulated {
@@ -4706,28 +4756,28 @@ impl DustRouteMcp {
         self.operations
             .record_completed(operation_id, OperationKind::TransitionRun, result.clone())
             .await;
-        json_text(result)
+        json_reply(result)
     }
 
     async fn restore_transition_test(
         &self,
         Parameters(params): Parameters<RunTransitionParams>,
-    ) -> String {
+    ) -> CallToolResult {
         if !params.confirm {
-            return error_text(
+            return error_reply(
                 McpErrorCode::InvalidArgument,
                 "confirm=true is required",
                 false,
             );
         }
         if let Err(error) = self.policy.authorize_mutation() {
-            return json_text(json!({ "ok": false, "error": FailureCause::from(error) }));
+            return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
         }
         let _mutation_guard = self.mutation_lock.lock().await;
         let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
             Ok(id) => id,
             Err(error) => {
-                return error_text(McpErrorCode::InvalidArgument, error.to_string(), false);
+                return error_reply(McpErrorCode::InvalidArgument, error.to_string(), false);
             }
         };
         let plan = match self
@@ -4740,7 +4790,7 @@ impl DustRouteMcp {
         {
             Some(plan) => plan,
             None => {
-                return error_text(
+                return error_reply(
                     McpErrorCode::NotFound,
                     "transition scenario not found",
                     false,
@@ -4748,7 +4798,7 @@ impl DustRouteMcp {
             }
         };
         if !plan.lifecycle.attempted() {
-            return error_text(
+            return error_reply(
                 McpErrorCode::InvalidState,
                 "scenario has not been attempted",
                 false,
@@ -4757,7 +4807,7 @@ impl DustRouteMcp {
         let current = match self.bridge.get_block(plan.lever, &plan.dimension).await {
             Ok(block) => block,
             Err(error) => {
-                return json_text(json!({ "ok": false, "error": FailureCause::from(error) }));
+                return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
             }
         };
         let powered = current
@@ -4972,7 +5022,7 @@ impl DustRouteMcp {
                 result.clone(),
             )
             .await;
-        json_text(result)
+        json_reply(result)
     }
 
     #[tool(
@@ -4981,20 +5031,20 @@ impl DustRouteMcp {
     async fn start_selected_region_conversion(
         &self,
         Parameters(params): Parameters<StartSelectedRegionConversionParams>,
-    ) -> String {
+    ) -> CallToolResult {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
-            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
         };
         if let Some(error) = self.authorize_player(&player) {
-            return error;
+            return CallToolResult::error(vec![ContentBlock::text(error)]);
         }
         let (bounds, dimension) = match self.selected_region(&player).await {
             Ok(region) => region,
-            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
         };
         if let Err(error) = self.policy.validate_region(bounds) {
-            return json_text(json!({ "ok": false, "error": FailureCause::from(error) }));
+            return json_reply(json!({ "ok": false, "error": FailureCause::from(error) }));
         }
         let request = match reverse_request_for_truth_table(
             bounds,
@@ -5009,7 +5059,7 @@ impl DustRouteMcp {
             },
         ) {
             Ok(request) => request,
-            Err(error) => return error_text(McpErrorCode::InvalidArgument, error, false),
+            Err(error) => return error_reply(McpErrorCode::InvalidArgument, error, false),
         }
         .with_observation_complete(true);
         let operation_id = self
@@ -5147,7 +5197,7 @@ impl DustRouteMcp {
             })
             .await;
         });
-        json_text(json!({
+        json_reply(json!({
             "ok": true,
             "operation_id": operation_id,
             "status": "queued",
@@ -5162,8 +5212,8 @@ impl DustRouteMcp {
     async fn manage_assembly(
         &self,
         Parameters(params): Parameters<assembly_placement::ManageAssemblyParams>,
-    ) -> String {
-        json_text(self.assembly_service().manage_placed_assembly(params).await)
+    ) -> CallToolResult {
+        json_reply(self.assembly_service().manage_placed_assembly(params).await)
     }
 
     #[tool(
@@ -5173,8 +5223,8 @@ impl DustRouteMcp {
     async fn manage_construction_job(
         &self,
         Parameters(params): Parameters<construction_job::ManageConstructionJobParams>,
-    ) -> String {
-        json_text(
+    ) -> CallToolResult {
+        json_reply(
             self.manage_construction_job_inner(params)
                 .await
                 .unwrap_or_else(|error| json!({"ok":false,"error":error})),
@@ -5185,22 +5235,25 @@ impl DustRouteMcp {
         description = "Show an operation. Blueprint updates return the full diff and a fresh independent parent/child/shared review; this does not adopt them or contact Minecraft. World placement, repair, piston-door and transition-test operations retain their preview path.",
         annotations(read_only_hint = false, destructive_hint = false)
     )]
-    async fn show_operation(&self, Parameters(params): Parameters<ShowOperationParams>) -> String {
+    async fn show_operation(
+        &self,
+        Parameters(params): Parameters<ShowOperationParams>,
+    ) -> CallToolResult {
         let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
             Ok(id) => id,
             Err(error) => {
-                return error_text(McpErrorCode::InvalidArgument, error.to_string(), false);
+                return error_reply(McpErrorCode::InvalidArgument, error.to_string(), false);
             }
         };
         let plan_kind = self.plans.kind(&operation_id).await;
         if plan_kind == Some(PlanKind::ElectricalEdit) {
-            return json_text(
+            return json_reply(
                 self.show_electrical_edit(operation_id, params.player.as_deref())
                     .await,
             );
         }
         if plan_kind == Some(PlanKind::Assembly) {
-            return json_text(
+            return json_reply(
                 self.assembly_service()
                     .show_assembly_construction(operation_id, params.player.as_deref())
                     .await,
@@ -5226,16 +5279,16 @@ impl DustRouteMcp {
         if let Some(context) = revision_context {
             let player = match self.resolve_player(params.player.as_deref()) {
                 Ok(player) => player,
-                Err(error) => return json_text(json!({"ok":false,"error":error})),
+                Err(error) => return json_reply(json!({"ok":false,"error":error})),
             };
             if let Some(error) = self.authorize_player(&player) {
-                return error;
+                return CallToolResult::error(vec![ContentBlock::text(error)]);
             }
             if context.player != player
                 || !context.lifecycle.can_begin(false)
                 || context.expires_at <= Instant::now()
             {
-                return json_text(
+                return json_reply(
                     json!({"ok":false,"error":"revision placement expired, consumed or owned by another player"}),
                 );
             }
@@ -5255,7 +5308,7 @@ impl DustRouteMcp {
                         plan.previewed = true;
                     }
                 }
-                Err(error) => return json_text(json!({"ok":false,"error":error.to_string()})),
+                Err(error) => return json_reply(json!({"ok":false,"error":error.to_string()})),
             }
             return self
                 .get_circuit_placement(Parameters(OperationParams {
@@ -5268,15 +5321,15 @@ impl DustRouteMcp {
                 plan.previewed = true;
             }
             return match self.placement_view(operation_id).await {
-                Ok(plan) => {
-                    json_text(json!({"ok": true, "read_only": self.policy.read_only, "plan": plan}))
-                }
+                Ok(plan) => json_reply(
+                    json!({"ok": true, "read_only": self.policy.read_only, "plan": plan}),
+                ),
                 Err(error) => {
                     if let Some(plan) = self.plans.placements().lock().await.get_mut(&operation_id)
                     {
                         plan.previewed = false;
                     }
-                    json_text(json!({"ok": false, "error": error}))
+                    json_reply(json!({"ok": false, "error": error}))
                 }
             };
         }
@@ -5290,7 +5343,7 @@ impl DustRouteMcp {
                     .await;
             }
             Ok(None) => {}
-            Err(error) => return error_text(McpErrorCode::Internal, error, false),
+            Err(error) => return error_reply(McpErrorCode::Internal, error, false),
         }
         if plan_kind == Some(PlanKind::Transition) {
             return self
@@ -5308,9 +5361,9 @@ impl DustRouteMcp {
             )
             .await
         {
-            return typed_text(result);
+            return typed_reply(result);
         }
-        error_text(McpErrorCode::NotFound, "operation not found", false)
+        error_reply(McpErrorCode::NotFound, "operation not found", false)
     }
 
     #[tool(
@@ -5320,20 +5373,20 @@ impl DustRouteMcp {
     async fn invoke_operation(
         &self,
         Parameters(params): Parameters<InvokeOperationParams>,
-    ) -> String {
+    ) -> CallToolResult {
         let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
             Ok(id) => id,
             Err(error) => {
-                return error_text(McpErrorCode::InvalidArgument, error.to_string(), false);
+                return error_reply(McpErrorCode::InvalidArgument, error.to_string(), false);
             }
         };
         if let Some(decision) = params.blueprint_decision {
             if params.contracts.is_some() {
-                return typed_text(crate::blueprint_mcp::failure(
+                return typed_reply(crate::blueprint_mcp::failure(
                     "transition contracts are not Blueprint decision parameters",
                 ));
             }
-            return typed_text(
+            return typed_reply(
                 self.blueprint_command(
                     crate::blueprint_mcp::Command::Decide(
                         operation_id,
@@ -5349,13 +5402,13 @@ impl DustRouteMcp {
         }
         let plan_kind = self.plans.kind(&operation_id).await;
         if plan_kind == Some(PlanKind::ElectricalEdit) {
-            return json_text(
+            return json_reply(
                 self.mutate_electrical_edit(operation_id, params.confirm, false)
                     .await,
             );
         }
         if plan_kind == Some(PlanKind::Assembly) {
-            return json_text(
+            return json_reply(
                 self.assembly_service()
                     .mutate_assembly_construction(operation_id, params.confirm, false)
                     .await,
@@ -5393,7 +5446,7 @@ impl DustRouteMcp {
                     .await;
             }
             Ok(None) => {}
-            Err(error) => return error_text(McpErrorCode::Internal, error, false),
+            Err(error) => return error_reply(McpErrorCode::Internal, error, false),
         }
         if plan_kind == Some(PlanKind::Transition) {
             return self
@@ -5412,9 +5465,9 @@ impl DustRouteMcp {
             )
             .await
         {
-            return typed_text(result);
+            return typed_reply(result);
         }
-        error_text(McpErrorCode::NotFound, "operation not found", false)
+        error_reply(McpErrorCode::NotFound, "operation not found", false)
     }
 
     #[tool(
@@ -5424,22 +5477,22 @@ impl DustRouteMcp {
     async fn undo_operation(
         &self,
         Parameters(params): Parameters<ConfirmedOperationParams>,
-    ) -> String {
+    ) -> CallToolResult {
         let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
             Ok(id) => id,
             Err(error) => {
-                return error_text(McpErrorCode::InvalidArgument, error.to_string(), false);
+                return error_reply(McpErrorCode::InvalidArgument, error.to_string(), false);
             }
         };
         let plan_kind = self.plans.kind(&operation_id).await;
         if plan_kind == Some(PlanKind::ElectricalEdit) {
-            return json_text(
+            return json_reply(
                 self.mutate_electrical_edit(operation_id, params.confirm, true)
                     .await,
             );
         }
         if plan_kind == Some(PlanKind::Assembly) {
-            return json_text(
+            return json_reply(
                 self.assembly_service()
                     .mutate_assembly_construction(operation_id, params.confirm, true)
                     .await,
@@ -5451,7 +5504,7 @@ impl DustRouteMcp {
                 .await;
         }
         if plan_kind == Some(PlanKind::Door) {
-            return error_text(
+            return error_reply(
                 McpErrorCode::InvalidState,
                 "door operations require fresh observation and a new target-state plan; automatic undo is unsupported",
                 false,
@@ -5463,7 +5516,7 @@ impl DustRouteMcp {
         match self.repair_plan(operation_id).await {
             Ok(Some(_)) => return self.mutate_repair(params, true).await,
             Ok(None) => {}
-            Err(error) => return error_text(McpErrorCode::Internal, error, false),
+            Err(error) => return error_reply(McpErrorCode::Internal, error, false),
         }
         if plan_kind == Some(PlanKind::Transition) {
             return self
@@ -5482,20 +5535,23 @@ impl DustRouteMcp {
             )
             .await
         {
-            return typed_text(result);
+            return typed_reply(result);
         }
-        error_text(McpErrorCode::NotFound, "operation not found", false)
+        error_reply(McpErrorCode::NotFound, "operation not found", false)
     }
 
     #[tool(
         description = "Read operation status/results, including persisted Blueprint decisions and existing-machine edit history. Edit attempts retain verified steps and readback evidence after restart without restoring executable plans. Saved records are historical diagnostics, never fresh proof. The separate activity field reports request-local active phase and elapsed time during invoke/undo and asynchronous analysis; execution_progress distinguishes submission, verification and durable checkpoints. Activity is not persisted and gives no ETA or mutation cancellation guarantee.",
         annotations(read_only_hint = true, destructive_hint = false)
     )]
-    async fn get_operation(&self, Parameters(params): Parameters<OperationParams>) -> String {
+    async fn get_operation(
+        &self,
+        Parameters(params): Parameters<OperationParams>,
+    ) -> CallToolResult {
         let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
             Ok(id) => id,
             Err(error) => {
-                return error_text(McpErrorCode::InvalidArgument, error.to_string(), false);
+                return error_reply(McpErrorCode::InvalidArgument, error.to_string(), false);
             }
         };
         let activity = self.operations.activity(operation_id).await;
@@ -5517,7 +5573,10 @@ impl DustRouteMcp {
                         )
                         .await
                     {
-                        return typed_text(blueprints::ResponseWithActivity { response, activity });
+                        return typed_reply(blueprints::ResponseWithActivity {
+                            response,
+                            activity,
+                        });
                     }
                     if activity.is_some() {
                         json!({"ok":true,"operation_id":operation_id})
@@ -5530,37 +5589,40 @@ impl DustRouteMcp {
         if let Some(activity) = activity {
             result["activity"] = json!(activity);
         }
-        json_text(result)
+        json_reply(result)
     }
 
     #[tool(
         description = "Request cancellation of queued/running region analysis. In-flight observation or model work may finish; mutations cannot be cancelled through this tool."
     )]
-    async fn stop_operation(&self, Parameters(params): Parameters<OperationParams>) -> String {
+    async fn stop_operation(
+        &self,
+        Parameters(params): Parameters<OperationParams>,
+    ) -> CallToolResult {
         let operation_id = match uuid::Uuid::parse_str(&params.operation_id) {
             Ok(id) => id,
             Err(error) => {
-                return error_text(McpErrorCode::InvalidArgument, error.to_string(), false);
+                return error_reply(McpErrorCode::InvalidArgument, error.to_string(), false);
             }
         };
         let cancelled = self.operations.cancel(operation_id).await;
-        json_text(json!({ "ok": cancelled, "operation_id": operation_id }))
+        json_reply(json!({ "ok": cancelled, "operation_id": operation_id }))
     }
 
     #[tool(description = "Clear a player's pending gaze-based region selection")]
-    async fn clear_region(&self, Parameters(params): Parameters<PlayerParams>) -> String {
+    async fn clear_region(&self, Parameters(params): Parameters<PlayerParams>) -> CallToolResult {
         let player = match self.resolve_player(params.player.as_deref()) {
             Ok(player) => player,
-            Err(error) => return json_text(json!({ "ok": false, "error": error })),
+            Err(error) => return json_reply(json!({ "ok": false, "error": error })),
         };
         if let Some(error) = self.authorize_player(&player) {
-            return error;
+            return CallToolResult::error(vec![ContentBlock::text(error)]);
         }
         if let Some(session) = self.selections.lock().await.get_mut(&player) {
             session.session.clear();
             session.dimension = None;
         }
-        json_text(json!({ "ok": true, "player": player }))
+        json_reply(json!({ "ok": true, "player": player }))
     }
 }
 
@@ -5619,7 +5681,7 @@ impl ServerHandler for DustRouteMcp {
             if let Ok(response) = &result {
                 crate::performance::tool_progress(response);
             }
-            result.map(crate::failure::mark_tool_failure)
+            result
         })
         .await
     }
@@ -5643,6 +5705,48 @@ impl ServerHandler for DustRouteMcp {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn mcp_reply_outcome_is_set_before_text_encoding() {
+        for (value, failed) in [
+            (
+                serde_json::json!({"ok":false,"error":"legacy failure"}),
+                true,
+            ),
+            (
+                serde_json::json!({"ok":true,"operation":{"status":"failed","result":{"ok":false}}}),
+                false,
+            ),
+            (
+                serde_json::json!({"operation_id":"legacy proposal without ok"}),
+                false,
+            ),
+        ] {
+            let reply = super::json_reply(value.clone());
+            assert_eq!(reply.is_error, Some(failed));
+            assert!(reply.structured_content.is_none());
+            let public = super::test_support::decode_reply(&reply).unwrap();
+            for (key, expected) in value.as_object().unwrap() {
+                assert_eq!(&public[key], expected);
+            }
+        }
+    }
+
+    #[test]
+    fn mcp_reply_encoding_failure_is_a_tool_error() {
+        struct Unencodable;
+        impl serde::Serialize for Unencodable {
+            fn serialize<S: serde::Serializer>(&self, _: S) -> Result<S::Ok, S::Error> {
+                Err(serde::ser::Error::custom("test encoding failure"))
+            }
+        }
+        let reply = super::typed_reply(Unencodable);
+        assert_eq!(reply.is_error, Some(true));
+        let public = super::test_support::decode_reply(&reply).unwrap();
+        assert_eq!(public["ok"], false);
+        assert_eq!(public["error_code"], "serialization_failed");
+        assert!(public["failure"]["progress"].is_null());
+    }
+
     #[tokio::test]
     async fn mcp_envelope_marks_mutation_refusal_but_keeps_failed_history_query_successful() {
         let root = test_support::temporary();
@@ -5693,7 +5797,7 @@ mod tests {
     }
     #[test]
     fn legacy_error_information_remains_unknown_without_claiming_zero_writes() {
-        let response: serde_json::Value = serde_json::from_str(&super::json_text(
+        let response: serde_json::Value = test_support::decode_reply(&super::json_reply(
             serde_json::json!({"ok":false,"error":"timeout resource limit"}),
         ))
         .unwrap();
@@ -5936,7 +6040,7 @@ mod tests {
 
     #[test]
     fn legacy_tool_errors_receive_the_common_error_contract() {
-        let value: Value = serde_json::from_str(&json_text(json!({
+        let value: Value = test_support::decode_reply(&json_reply(json!({
             "ok": false,
             "error": "legacy failure"
         })))
@@ -5950,7 +6054,7 @@ mod tests {
     #[tokio::test]
     async fn unified_operation_tools_reject_invalid_ids_with_argument_error() {
         let service = DustRouteMcp::with_test_transport("127.0.0.1:1");
-        let result: Value = serde_json::from_str(
+        let result: Value = test_support::decode_reply(
             &service
                 .invoke_operation(Parameters(InvokeOperationParams {
                     blueprint_decision: None,
@@ -5966,7 +6070,7 @@ mod tests {
         assert_eq!(result["error_code"], "invalid_argument");
         assert_eq!(result["retryable"], false);
 
-        let get_result: Value = serde_json::from_str(
+        let get_result: Value = test_support::decode_reply(
             &service
                 .get_operation(Parameters(OperationParams {
                     operation_id: "not-a-uuid".into(),
@@ -5976,7 +6080,7 @@ mod tests {
         .unwrap();
         assert_eq!(get_result["error_code"], "invalid_argument");
 
-        let show_result: Value = serde_json::from_str(
+        let show_result: Value = test_support::decode_reply(
             &service
                 .show_operation(Parameters(ShowOperationParams {
                     operation_id: "not-a-uuid".into(),
@@ -5987,7 +6091,7 @@ mod tests {
         .unwrap();
         assert_eq!(show_result["error_code"], "invalid_argument");
 
-        let undo_result: Value = serde_json::from_str(
+        let undo_result: Value = test_support::decode_reply(
             &service
                 .undo_operation(Parameters(ConfirmedOperationParams {
                     operation_id: "not-a-uuid".into(),
@@ -5998,7 +6102,7 @@ mod tests {
         .unwrap();
         assert_eq!(undo_result["error_code"], "invalid_argument");
 
-        let stop_result: Value = serde_json::from_str(
+        let stop_result: Value = test_support::decode_reply(
             &service
                 .stop_operation(Parameters(OperationParams {
                     operation_id: "not-a-uuid".into(),
@@ -6060,7 +6164,7 @@ mod tests {
             .lock()
             .await
             .insert(plan, "minecraft:overworld".into(), None);
-        let response: Value = serde_json::from_str(
+        let response: Value = test_support::decode_reply(
             &service
                 .mutate_placement(
                     ConfirmedOperationParams {
@@ -6102,7 +6206,7 @@ mod tests {
             .await
             .insert(plan, "minecraft:overworld".into(), None);
 
-        let rejected: Value = serde_json::from_str(
+        let rejected: Value = test_support::decode_reply(
             &service
                 .invoke_operation(Parameters(InvokeOperationParams {
                     blueprint_decision: None,
@@ -6124,7 +6228,7 @@ mod tests {
                 .is_some_and(|plan| plan.previewed)
         );
 
-        let shown: Value = serde_json::from_str(
+        let shown: Value = test_support::decode_reply(
             &service
                 .show_operation(Parameters(ShowOperationParams {
                     operation_id: operation_id.to_string(),
@@ -6269,6 +6373,7 @@ mod tests {
         );
         assert!(tools.tools.iter().any(|tool| tool.name == "test_circuit"));
         assert!(tools.tools.iter().any(|tool| tool.name == "get_world"));
+        assert!(tools.tools.iter().all(|tool| tool.output_schema.is_none()));
         let prompts = client.list_prompts(None).await.unwrap();
         assert!(
             prompts
@@ -6421,7 +6526,7 @@ mod tests {
                 max_distance: None,
             }))
             .await;
-        assert!(result.contains("player override is not allowed"));
+        assert!(test_support::reply_text(&result).contains("player override is not allowed"));
     }
 
     #[tokio::test]
@@ -6489,8 +6594,8 @@ mod tests {
                 circuit_id: None,
             }))
             .await;
-        let value: Value = serde_json::from_str(&result).unwrap();
-        assert_eq!(value["ok"], true, "{result}");
+        let value: Value = test_support::decode_reply(&result).unwrap();
+        assert_eq!(value["ok"], true, "{result:?}");
         assert_eq!(value["mechanisms"], json!([]));
         assert_eq!(value["focused_component"]["block"], "Repeater");
         assert_eq!(
@@ -6544,7 +6649,7 @@ mod tests {
         assert!(value["focused_explanation"]["incoming"].is_array());
         assert!(value["focused_explanation"]["paths_to_outputs"].is_array());
         let circuit_id = value["circuit_id"].as_str().unwrap().to_owned();
-        let ir: Value = serde_json::from_str(
+        let ir: Value = test_support::decode_reply(
             &service
                 .get_circuit_ir(Parameters(GetLookedAtCircuitIrParams {
                     player: None,
@@ -6570,7 +6675,7 @@ mod tests {
             ir["analysis_id"].as_str().map(str::to_owned),
         ] {
             let matches = supplied.as_deref() == ir["analysis_id"].as_str();
-            let expanded: Value = serde_json::from_str(
+            let expanded: Value = test_support::decode_reply(
                 &service
                     .get_circuit_ir(Parameters(GetLookedAtCircuitIrParams {
                         player: None,
@@ -6656,8 +6761,8 @@ mod tests {
             .await;
         bridge.abort();
 
-        let value: Value = serde_json::from_str(&result).unwrap();
-        assert_eq!(value["ok"], true, "{result}");
+        let value: Value = test_support::decode_reply(&result).unwrap();
+        assert_eq!(value["ok"], true, "{result:?}");
         assert_eq!(value["schema_version"], "dustroute.diagnostic.v1");
         assert_eq!(value["analysis_mode"], "focused_fast");
         let shared: dustroute_translate::diagnostic::report::Diagnosis =
@@ -6741,14 +6846,14 @@ mod tests {
             LocatedSelection::with_bounds("builder", bounds, "minecraft:overworld".into()),
         );
 
-        let shown: Value = serde_json::from_str(
+        let shown: Value = test_support::decode_reply(
             &service
                 .show_region(Parameters(PlayerParams { player: None }))
                 .await,
         )
         .unwrap();
         let circuit_id = shown["circuit_id"].as_str().unwrap().to_owned();
-        let proposed: Value = serde_json::from_str(
+        let proposed: Value = test_support::decode_reply(
             &service
                 .new_repair(Parameters(ProposeRepairsParams {
                     player: None,
@@ -6774,7 +6879,7 @@ mod tests {
             dustroute_translate::diagnostic::report::RepairStrategy::PartialPatch
         );
         assert!(!shared.repair.permission_granted);
-        let context: Value = serde_json::from_str(
+        let context: Value = test_support::decode_reply(
             &service
                 .get_repair_context(Parameters(GetRepairContextParams {
                     player: None,
@@ -6810,7 +6915,7 @@ mod tests {
                 player: None,
             }))
             .await;
-        assert!(preview.contains("\"ok\": true"));
+        assert!(test_support::reply_text(&preview).contains("\"ok\": true"));
         // Preview and applied status must survive independent service instances.
         let restarted = make_service();
         let applied = restarted
@@ -6821,8 +6926,11 @@ mod tests {
                 contracts: None,
             }))
             .await;
-        assert!(applied.contains("\"verified\": true"), "{applied}");
-        let applied_value: Value = serde_json::from_str(&applied).unwrap();
+        assert!(
+            test_support::reply_text(&applied).contains("\"verified\": true"),
+            "{applied:?}"
+        );
+        let applied_value: Value = test_support::decode_reply(&applied).unwrap();
         assert!(applied_value["resulting_logic"].is_object());
         assert_eq!(applied_value["semantic_verification"]["available"], false);
         let id = uuid::Uuid::parse_str(&operation_id).unwrap();
@@ -6837,7 +6945,10 @@ mod tests {
                 confirm: true,
             }))
             .await;
-        assert!(undone.contains("\"verified\": true"), "{undone}");
+        assert!(
+            test_support::reply_text(&undone).contains("\"verified\": true"),
+            "{undone:?}"
+        );
         assert_eq!(
             service.repair_plan(id).await.unwrap().unwrap().lifecycle,
             RepairLifecycle::Undone
@@ -6970,7 +7081,7 @@ mod tests {
                                 }
                                 _ => unreachable!(),
                             };
-                            let value: Value = serde_json::from_str(&response).unwrap();
+                            let value: Value = test_support::decode_reply(&response).unwrap();
                             assert_eq!(value["ok"], false, "{invalidation}/{action}: {value}");
                             assert_eq!(
                                 value["error_code"], expected_code,
@@ -7138,14 +7249,14 @@ mod tests {
         let mut service =
             DustRouteMcp::with_test_transport_and_player(address, McpPolicy::default(), "builder");
         service.state_store = PlanStateStore::new(root.clone(), 3600);
-        let imported: Value = serde_json::from_str(
+        let imported: Value = test_support::decode_reply(
             &service
                 .test_circuit_change(Parameters(serde_json::from_value(records).unwrap()))
                 .await,
         )
         .unwrap();
         assert_eq!(imported["ok"], true, "{imported}");
-        let proposed: Value = serde_json::from_str(
+        let proposed: Value = test_support::decode_reply(
             &service
                 .test_circuit_change(Parameters(serde_json::from_value(proposal).unwrap()))
                 .await,
@@ -7157,9 +7268,9 @@ mod tests {
                 .unwrap_err();
         assert!(
             unadopted.contains("exactly one adopted update"),
-            "{unadopted}"
+            "{unadopted:?}"
         );
-        let adopted: Value = serde_json::from_str(
+        let adopted: Value = test_support::decode_reply(
             &service
                 .invoke_operation(Parameters(InvokeOperationParams {
                     blueprint_decision: Some(crate::blueprint_mcp::BlueprintDecision::Adopt),
@@ -7176,7 +7287,7 @@ mod tests {
                 .unwrap_err();
         assert!(
             ungrounded.contains("captured Circuit Revision ancestor"),
-            "{ungrounded}"
+            "{ungrounded:?}"
         );
         let grounding_revision = uuid::Uuid::new_v4();
         let grounding = crate::blueprint_mcp::AssemblyGrounding {
@@ -7200,7 +7311,7 @@ mod tests {
         .unwrap_err();
         assert!(
             rejected.contains("complete Assembly Revision"),
-            "{rejected}"
+            "{rejected:?}"
         );
         crate::blueprint_mcp::execute(
             &service.state_store,
@@ -7211,7 +7322,7 @@ mod tests {
             },
         )
         .unwrap();
-        let plan: Value = serde_json::from_str(
+        let plan: Value = test_support::decode_reply(
             &service
                 .new_placement(Parameters(
                     serde_json::from_value(json!({"assembly_revision_id":candidate_id})).unwrap(),
@@ -7341,8 +7452,8 @@ mod tests {
                     expires_at: Instant::now() + Duration::from_secs(300),
                 })
                 .await;
-            let first:Value=serde_json::from_str(&service.test_circuit_change(Parameters(serde_json::from_value(json!({"circuit_id":id,"changes":[{"position":{"x":1,"y":0,"z":0},"block":"minecraft:stone"}]})).unwrap())).await).unwrap();
-            let revision:Value=serde_json::from_str(&service.test_circuit_change(Parameters(serde_json::from_value(json!({"revision_id":first["revision_id"],"changes":[{"position":{"x":0,"y":0,"z":0},"block":"minecraft:air"}]})).unwrap())).await).unwrap();
+            let first:Value=test_support::decode_reply(&service.test_circuit_change(Parameters(serde_json::from_value(json!({"circuit_id":id,"changes":[{"position":{"x":1,"y":0,"z":0},"block":"minecraft:stone"}]})).unwrap())).await).unwrap();
+            let revision:Value=test_support::decode_reply(&service.test_circuit_change(Parameters(serde_json::from_value(json!({"revision_id":first["revision_id"],"changes":[{"position":{"x":0,"y":0,"z":0},"block":"minecraft:air"}]})).unwrap())).await).unwrap();
             if mode == "ok" {
                 let mut legacy = service
                     .load_revision(revision["revision_id"].as_str().unwrap(), "builder")
@@ -7358,7 +7469,7 @@ mod tests {
                         &legacy,
                     )
                     .unwrap();
-                let denied: Value = serde_json::from_str(
+                let denied: Value = test_support::decode_reply(
                     &service
                         .new_placement(Parameters(
                             serde_json::from_value(json!({"revision_id":legacy.revision_id}))
@@ -7371,7 +7482,7 @@ mod tests {
                 assert_eq!(writes.load(Ordering::SeqCst), 0);
             }
             service.circuits.lock().await.clear(); // persisted base survives original observation expiry.
-            let proposal: Value = serde_json::from_str(
+            let proposal: Value = test_support::decode_reply(
                 &service
                     .new_placement(Parameters(
                         serde_json::from_value(json!({"revision_id":revision["revision_id"]}))
@@ -7384,7 +7495,7 @@ mod tests {
             assert_eq!(proposal["plan"]["changes"].as_array().unwrap().len(), 2);
             let op = proposal["operation_id"].as_str().unwrap().to_owned();
             if mode != "unpreviewed" {
-                let shown: Value = serde_json::from_str(
+                let shown: Value = test_support::decode_reply(
                     &service
                         .show_operation(Parameters(ShowOperationParams {
                             operation_id: op.clone(),
@@ -7398,7 +7509,7 @@ mod tests {
             if mode == "stale" {
                 drift.store(true, Ordering::SeqCst);
             }
-            let result: Value = serde_json::from_str(
+            let result: Value = test_support::decode_reply(
                 &service
                     .invoke_operation(Parameters(InvokeOperationParams {
                         blueprint_decision: None,
@@ -7409,11 +7520,11 @@ mod tests {
                     .await,
             )
             .unwrap();
-            assert_eq!(result["ok"], mode == "ok", "{mode}: {result}");
+            assert_eq!(result["ok"], mode == "ok", "{mode}: {result:?}");
             let expected = usize::from(matches!(mode, "ok" | "uncertain" | "post_mismatch"));
             assert_eq!(writes.load(Ordering::SeqCst), expected);
             if mode == "uncertain" || mode == "post_mismatch" {
-                let retry: Value = serde_json::from_str(
+                let retry: Value = test_support::decode_reply(
                     &service
                         .invoke_operation(Parameters(InvokeOperationParams {
                             blueprint_decision: None,
@@ -7427,7 +7538,7 @@ mod tests {
                 assert_eq!(retry["ok"], false);
                 assert_eq!(writes.load(Ordering::SeqCst), 1);
             }
-            let undo: Value = serde_json::from_str(
+            let undo: Value = test_support::decode_reply(
                 &service
                     .undo_operation(Parameters(ConfirmedOperationParams {
                         operation_id: op,
@@ -7477,7 +7588,7 @@ mod tests {
             })
             .await;
         async fn edit(service: &DustRouteMcp, args: Value) -> Value {
-            serde_json::from_str(
+            test_support::decode_reply(
                 &service
                     .test_circuit_change(Parameters(serde_json::from_value(args).unwrap()))
                     .await,
@@ -7567,7 +7678,7 @@ mod tests {
             "builder",
         );
         restarted.state_store = PlanStateStore::new(root.clone(), 3600);
-        let persisted: Value = serde_json::from_str(
+        let persisted: Value = test_support::decode_reply(
             &restarted
                 .get_circuit_revision(Parameters(GetCircuitRevisionParams {
                     blueprint: None,
@@ -7612,7 +7723,7 @@ mod tests {
             assert_eq!(edit(&service, args).await["ok"], false);
         }
         // A revision ID is not an operation capability either.
-        let invoked: Value = serde_json::from_str(
+        let invoked: Value = test_support::decode_reply(
             &service
                 .invoke_operation(Parameters(InvokeOperationParams {
                     blueprint_decision: None,
@@ -7702,7 +7813,7 @@ mod tests {
         let service =
             DustRouteMcp::with_test_transport_and_player(address, McpPolicy::default(), "builder");
         for optimize in [false, true] {
-            let proposed: Value = serde_json::from_str(
+            let proposed: Value = test_support::decode_reply(
                 &service
                     .new_placement(Parameters(
                         serde_json::from_value(json!({"circuit":"half-adder","optimize":optimize}))
@@ -7712,7 +7823,7 @@ mod tests {
             )
             .unwrap();
             assert_eq!(proposed["ok"], true, "{proposed}");
-            let full: Value = serde_json::from_str(
+            let full: Value = test_support::decode_reply(
                 &service
                     .get_circuit_placement(Parameters(OperationParams {
                         operation_id: proposed["operation_id"].as_str().unwrap().into(),
@@ -7746,7 +7857,7 @@ mod tests {
                 assert_eq!(world.get(local), Some(&change.after));
             }
             assert!(!plan.previewed);
-            let shown: Value = serde_json::from_str(
+            let shown: Value = test_support::decode_reply(
                 &service
                     .show_operation(Parameters(ShowOperationParams {
                         operation_id: proposed["operation_id"].as_str().unwrap().into(),
@@ -7848,7 +7959,7 @@ mod tests {
                 },
                 "builder",
             );
-            let proposal: Value = serde_json::from_str(
+            let proposal: Value = test_support::decode_reply(
                 &service
                     .new_placement(Parameters(PreviewPlacementParams {
                         player: None,
@@ -7866,7 +7977,7 @@ mod tests {
             .unwrap();
             assert_eq!(proposal["ok"], true, "{mode}: {proposal}");
             let id = proposal["operation_id"].as_str().unwrap().to_owned();
-            let detail: Value = serde_json::from_str(
+            let detail: Value = test_support::decode_reply(
                 &service
                     .get_circuit_placement(Parameters(OperationParams {
                         operation_id: id.clone(),
@@ -7877,7 +7988,7 @@ mod tests {
             assert_eq!(detail["ok"], true);
             assert_eq!(detail["plan"]["changes"], proposal["changes"]);
             if mode != "unpreviewed" {
-                let shown: Value = serde_json::from_str(
+                let shown: Value = test_support::decode_reply(
                     &service
                         .show_operation(Parameters(ShowOperationParams {
                             operation_id: id.clone(),
@@ -7898,7 +8009,7 @@ mod tests {
                     .unwrap()
                     .expires_at = Instant::now();
             }
-            let result: Value = serde_json::from_str(
+            let result: Value = test_support::decode_reply(
                 &service
                     .invoke_operation(Parameters(InvokeOperationParams {
                         blueprint_decision: None,
@@ -7909,11 +8020,11 @@ mod tests {
                     .await,
             )
             .unwrap();
-            assert_eq!(result["ok"], mode == "ok", "{mode}: {result}");
+            assert_eq!(result["ok"], mode == "ok", "{mode}: {result:?}");
             let expected = usize::from(matches!(mode, "ok" | "uncertain" | "post_mismatch"));
             assert_eq!(writes.load(Ordering::SeqCst), expected, "{mode}");
             if expected == 1 {
-                let retry: Value = serde_json::from_str(
+                let retry: Value = test_support::decode_reply(
                     &service
                         .invoke_operation(Parameters(InvokeOperationParams {
                             blueprint_decision: None,
@@ -7927,7 +8038,7 @@ mod tests {
                 assert_eq!(retry["ok"], false);
                 assert_eq!(writes.load(Ordering::SeqCst), 1);
             }
-            let undo: Value = serde_json::from_str(
+            let undo: Value = test_support::decode_reply(
                 &service
                     .undo_operation(Parameters(ConfirmedOperationParams {
                         operation_id: id,
@@ -8040,7 +8151,7 @@ mod tests {
                     expires_at: Instant::now() + std::time::Duration::from_secs(300),
                 })
                 .await;
-            let proposed: Value = serde_json::from_str(
+            let proposed: Value = test_support::decode_reply(
                 &service
                     .new_piston_door_operation(Parameters(NewPistonDoorParams {
                         circuit_id: circuit.to_string(),
@@ -8056,7 +8167,7 @@ mod tests {
             assert_eq!(proposed["ok"], true, "{mode}: {proposed}");
             let id = proposed["operation_id"].as_str().unwrap().to_owned();
             if mode != "unpreviewed" {
-                let preview: Value = serde_json::from_str(
+                let preview: Value = test_support::decode_reply(
                     &service
                         .show_operation(Parameters(ShowOperationParams {
                             operation_id: id.clone(),
@@ -8077,7 +8188,7 @@ mod tests {
                     .unwrap()
                     .expires_at = Instant::now();
             }
-            let result: Value = serde_json::from_str(
+            let result: Value = test_support::decode_reply(
                 &service
                     .invoke_operation(Parameters(InvokeOperationParams {
                         blueprint_decision: None,
@@ -8091,12 +8202,12 @@ mod tests {
             assert_eq!(
                 result["ok"],
                 mode == "ok" || mode == "noop",
-                "{mode}: {result}"
+                "{mode}: {result:?}"
             );
             let expected = usize::from(matches!(mode, "ok" | "post_mismatch" | "uncertain"));
             assert_eq!(activations.load(Ordering::SeqCst), expected, "{mode}");
             if matches!(mode, "ok" | "post_mismatch" | "uncertain" | "noop") {
-                let retry: Value = serde_json::from_str(
+                let retry: Value = test_support::decode_reply(
                     &service
                         .invoke_operation(Parameters(InvokeOperationParams {
                             blueprint_decision: None,
@@ -8127,7 +8238,7 @@ mod tests {
                 "builder".into(),
                 LocatedSelection::with_bounds("builder", bounds, "minecraft:overworld".into()),
             );
-            let fresh: Value = serde_json::from_str(
+            let fresh: Value = test_support::decode_reply(
                 &service
                     .show_region(Parameters(PlayerParams { player: None }))
                     .await,
@@ -8141,12 +8252,12 @@ mod tests {
                 assert_eq!(fresh["mechanisms"][0]["state"], "closed");
             }
             if mode == "ok" {
-                let converted: Value = serde_json::from_str(&service.convert_from_circuit(Parameters(
+                let converted: Value = test_support::decode_reply(&service.convert_from_circuit(Parameters(
                     serde_json::from_value(json!({"circuit_id": fresh["circuit_id"], "include_truth_table": false})).unwrap()
                 )).await).unwrap();
                 assert_eq!(converted["ok"], true, "{converted}");
                 assert_eq!(converted["mechanisms"], fresh["mechanisms"]);
-                let original: Value = serde_json::from_str(&service.convert_from_circuit(Parameters(
+                let original: Value = test_support::decode_reply(&service.convert_from_circuit(Parameters(
                     serde_json::from_value(json!({"circuit_id": circuit.to_string(), "include_truth_table": false})).unwrap()
                 )).await).unwrap();
                 assert_eq!(original["mechanisms"][0]["state"], "open");

@@ -700,3 +700,48 @@ JSONはまだ残っている。これらの全面除去まで統合ゴールを�
 実機接続・ワールド変更・依存version更新は行っていない。codecの互換性検査用に
 既存workspaceの`dustroute-codec`をlibraryのdev dependencyへ追加した。
 formatting、差分の空白検査、Voxrig 322ファイルの既存pinとの一致も確認した。
+
+### MCPの結果フラグとクロック比較の型付き接続
+
+MCP facadeの戻り値を文字列から`CallToolResult`へ変更した。応答の成功・失敗は
+JSON文字列へ変換する前に判定し、SDKの成功/失敗resultとして渡す。
+`failure::mark_tool_failure`による完成した応答文字列の再解析を撤去した。
+公開textのfield、既存の診断補完、未知の進捗とrecoveryは維持する。
+履歴取得の内部に失敗した操作が含まれても、取得自体の成功を失敗へ変えない。
+応答型の変更でoutput schemaを追加せず、public tool metadataも維持する。
+
+これはworkflow全体の型付き移行の完了ではない。認可エラーをencoded textで
+内部へ渡す既存経路、操作registryの`result: Value`、workflowのJSON reportと
+`performance::tool_progress`による進捗再解析は残る。過去の記録をlive activityへ
+読み直さない条件を維持しながら、実行結果の型付き接続と一緒に移行する。
+
+四ブロックのクロック比較は、JSONを読むexampleから
+`periodic_clock_observation`のRust APIへ移した。入力の`ClockCapture`、外部刺激、
+固定配置、sample、edge、差分、モデル診断を用途別の型で保持し、比較中にJSONを
+生成・再解析しない。exampleのコマンド入口は撤去した。独立したMinecraft観測の
+JSON fixtureはテストの入力境界でdecodeし、既存の五つの比較をRust recordに対して
+実施する。配置・座標・刺激の余分なfieldを拒否する検査も加え、以前のexact JSON
+比較が持っていた固定scopeの条件を緩めない。
+
+モデルのhidden stateは診断用の値として返すだけで、Deserializeや復元経路を加えない。
+新profileの有限sample一致、旧profileの反例、finite-burstの証明、周期要件の失敗、
+実機での無限動作・restartabilityの未証明を引き続き区別する。
+
+#### MCP応答とクロック比較の回帰検証
+
+MCPの全lib試験は236件成功、失敗0件、実機・計測用10件はignoreのまま。
+公開MCPの失敗flagと成功した履歴取得、診断欠落のnull、encode失敗、toolのoutput schema、
+採用・再起動・配置・撤去・建築・修復・取消し・再送禁止を確認した。
+最初のcompileでhandlerの応答型に依存するテストの修正漏れを検出し、MCP応答は
+テスト専用decoderで確認する形へ直した。Rust API自体が返す通常のエラー文字列は
+そのまま検査する。結果の文字列再解析を本番の制御経路へ戻していない。
+
+クロック比較の6件も成功した。修正版は641 sample全一致、旧版の48 sampleの反例を
+維持し、recovery 261 sampleとqueue診断33 sampleを照合した。scope・coverage・
+cleanupの不足、および配置や刺激へ余分なfieldを加えた入力を拒否する。
+JSON fixtureは独立した観測資料のままで、期待値を新しい実装から作り直していない。
+
+workspace全targetとMCPの`--no-default-features`全targetのClippyが
+`-D warnings`で成功し、formattingと差分の空白検査も成功した。
+Cargoは単独・offline/locked・`-j1`で実行した。実機接続、ワールド変更、
+Voxrig source/vendor pin、保存schema、依存versionへの変更はない。

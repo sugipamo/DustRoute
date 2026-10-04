@@ -4,8 +4,8 @@ use super::test_support::*;
 use super::*;
 use crate::performance::measure;
 
-fn decoded(text: &str) -> Value {
-    let value: Value = serde_json::from_str(text).unwrap();
+fn decoded(reply: &CallToolResult) -> Value {
+    let value = decode_reply(reply).unwrap();
     assert_eq!(value["ok"], true, "{value}");
     value
 }

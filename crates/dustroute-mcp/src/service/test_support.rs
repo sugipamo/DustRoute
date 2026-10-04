@@ -15,6 +15,17 @@ use std::{
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpListener;
 
+pub(super) fn reply_text(reply: &rmcp::model::CallToolResult) -> &str {
+    let [ContentBlock::Text(text)] = reply.content.as_slice() else {
+        panic!("expected one MCP text response")
+    };
+    &text.text
+}
+
+pub(super) fn decode_reply(reply: &rmcp::model::CallToolResult) -> serde_json::Result<Value> {
+    serde_json::from_str(reply_text(reply))
+}
+
 #[derive(Default)]
 pub(super) struct Fake {
     pub(super) snapshot: Option<Value>,

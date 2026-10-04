@@ -450,7 +450,7 @@ mod tests {
             "builder",
         );
         service.state_store = store.clone();
-        let result: serde_json::Value = serde_json::from_str(
+        let result: serde_json::Value = super::super::test_support::decode_reply(
             &service
                 .mutate_repair(
                     ConfirmedOperationParams {
@@ -484,7 +484,7 @@ mod tests {
         );
         restarted.state_store = store.clone();
         for undo in [false, true] {
-            let result: serde_json::Value = serde_json::from_str(
+            let result: serde_json::Value = super::super::test_support::decode_reply(
                 &restarted
                     .mutate_repair(
                         ConfirmedOperationParams {

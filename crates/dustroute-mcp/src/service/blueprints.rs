@@ -81,7 +81,8 @@ mod tests {
             }
             _ => panic!("authorization must stop before dispatch"),
         }
-        let public: Value = serde_json::from_str(&typed_text(response)).unwrap();
+        let public: Value =
+            super::super::test_support::decode_reply(&typed_reply(response)).unwrap();
         assert_eq!(public["ok"], false);
         assert_eq!(public["error_code"], "permission_denied");
         assert_eq!(public["failure"]["progress"], Value::Null);

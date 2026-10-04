@@ -42,6 +42,7 @@ pub mod native_state;
 pub mod observed_piston_door;
 pub mod observed_properties;
 pub mod periodic;
+pub mod periodic_clock_observation;
 pub mod physical;
 pub mod physical_behavior;
 pub mod physics_trace;

@@ -1418,7 +1418,7 @@ async fn blueprint_mcp_captures_saved_assembly_and_rejects_mixed_operations() {
             expires_at: Instant::now() + Duration::from_secs(300),
         })
         .await;
-    let draft: Value = serde_json::from_str(
+    let draft: Value = crate::service::test_support::decode_reply(
         &service
             .test_circuit_change(Parameters(
                 serde_json::from_value(json!({"circuit_id":observed,"changes":[]})).unwrap(),

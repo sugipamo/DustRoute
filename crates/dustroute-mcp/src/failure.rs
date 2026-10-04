@@ -498,31 +498,6 @@ impl FailureReport {
     }
 }
 
-/// Inspect only the top-level outcome. Unknown JSON fields are skipped without
-/// building a second snapshot/trace Value tree. A successful history query may
-/// contain a failed operation; its nested result must not mark the query failed.
-pub(crate) fn mark_tool_failure(
-    mut response: rmcp::model::CallToolResponse,
-) -> rmcp::model::CallToolResponse {
-    #[derive(Deserialize)]
-    struct Outcome {
-        ok: bool,
-    }
-    if let rmcp::model::CallToolResponse::Complete(result) = &mut response {
-        if result.is_error != Some(true)
-            && result.content.iter().any(|content| {
-                if let rmcp::model::ContentBlock::Text(text) = content {
-                    serde_json::from_str::<Outcome>(&text.text).is_ok_and(|outcome| !outcome.ok)
-                } else {
-                    false
-                }
-            })
-        {
-            result.is_error = Some(true);
-        }
-    }
-    response
-}
 /// A failed mutation can include a locally known submitted prefix. This is
 /// diagnostic progress only, never an acknowledgement of server application.
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -561,36 +536,6 @@ pub(crate) fn persistence_failed(
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[test]
-    fn mcp_error_flag_tracks_top_level_outcome_and_keeps_history_query_success() {
-        for (text, expected) in [
-            (
-                r#"{"ok":false,"failure":{"progress":{"world":"unknown"}}}"#,
-                true,
-            ),
-            (
-                r#"{"ok":true,"operation":{"status":"failed","result":{"ok":false}}}"#,
-                false,
-            ),
-        ] {
-            let response = rmcp::model::CallToolResponse::Complete(
-                rmcp::model::CallToolResult::success(vec![rmcp::model::ContentBlock::text(text)]),
-            );
-            let rmcp::model::CallToolResponse::Complete(result) = mark_tool_failure(response)
-            else {
-                panic!("expected complete response")
-            };
-            assert_eq!(result.is_error == Some(true), expected);
-        }
-        let response =
-            rmcp::model::CallToolResponse::Complete(rmcp::model::CallToolResult::error(vec![
-                rmcp::model::ContentBlock::text("invalid tool arguments"),
-            ]));
-        let rmcp::model::CallToolResponse::Complete(result) = mark_tool_failure(response) else {
-            panic!("expected complete response")
-        };
-        assert_eq!(result.is_error, Some(true));
-    }
     #[test]
     fn unavailable_before_readback_requires_observation_even_without_writes() {
         let report = ExecutionProgress {
