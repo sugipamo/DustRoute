@@ -1,5 +1,8 @@
 # Public survival construction
 
+For the task overview, read [workflows](workflows.md#construct-using-survival-inventory)
+([日本語](workflows.ja.md#サバイバルの所持品で施工する)). This is the detailed English contract.
+
 The native-only `survival_construction` tool connects the bounded construction
 generator and executor to adopted Blueprints. Java 1.21.11, offline authentication,
 dry passive property-free cubes, a received player inventory and explicitly
@@ -173,12 +176,15 @@ specifications and continuation claims use typed DTOs. Checkpoint validation
 matches typed steps and edits to reconstruct conditional temporary ownership;
 it does not index JSON fields or compare serialized scope/endpoint strings.
 
-Wire names and JSON encoding remain at MCP/storage boundaries. Player/material
-identifiers and human-readable explanations remain text. Native receipts retained
-only for diagnosis use an opaque `DiagnosticPayload`; their JSON fields are not
-available to business logic. Saved data still cannot become a live checked plan
-or native operation token. `DiagnosticOnly` represents only false for authority
-restoration and automatic replay; true is rejected when decoding.
+Wire names and JSON encoding remain at the public MCP boundary. Internal state
+and storage use typed records and the versioned non-JSON codec. Player/material
+identifiers and human-readable explanations remain text. Native diagnostic data
+uses shared value types or separate `Recorded*` projections through
+`checked_survival::diagnostic`; the opaque `DiagnosticPayload` was removed.
+See [diagnostic records](native-diagnostic-records.md) and
+[codec migration](json-boundary-migration.md). Saved data still cannot become a
+live checked plan or native operation token. `DiagnosticOnly` represents only
+false for authority restoration and automatic replay; true is rejected when decoding.
 
 Process-local [job ownership](../crates/dustroute-mcp/src/service/survival/jobs.rs)
 now couples each lifecycle state to its checked preview or quarantined executor

@@ -1,73 +1,60 @@
 # DustRoute
 
-Minecraftのレッドストーン回路を、AIと一緒に調べたり、変更案を試したりするためのツールです。
+[English](README.md) · [日本語](README.ja.md)
 
-「この回路は何をしている？」「ここを変えたらどうなる？」から始められます。世界にあるブロックを観測し、そのコピーで変更を試してから、確認した計画を実際の世界へ反映できます。
+DustRoute helps an AI and a player inspect, prototype and build Minecraft
+redstone circuits and supported structures together. Observe an existing site,
+try changes in a model, review the plan, then apply and check the authorized work.
 
-## できること
+You can ask an MCP-connected AI:
 
-- **回路を調べる** — 視線先や選択した範囲から、ブロックの状態・接続・回路の役割を読み取ります。分からない部分も結果に残します。
-- **空想回路で試す** — 観測した回路を元に、ブロックの追加・削除・属性変更を試せます。案はrevisionとして保存され、元の版を残して別案を作れます。
-- **確認してから反映する** — 案を配置計画にし、プレビュー後に実行します。現地との照合に失敗した場合は止まり、対応する操作では元に戻せます。
-- **回路を設置・操作する** — 加算器などの組み込み回路と、検証済みの1×2ピストンドアを扱えます。固定ドアは設置から観測・開閉・撤去まで対応しています。
-- **縦・混在ピストンを配置する** — 対応範囲のAssemblyを検証・採用し、完全に観測できた空き領域へ配置できます。ダスト・リピーター・導体給電・準接続を扱い、各配置段階を読戻しで確認します。
-- **修復や最適化を検討する** — 対応している回路について、診断や候補を見ながら変更を検討できます。
+> Explain this circuit, including what you cannot determine.
 
-## 使い方のイメージ
+> Compare a version with a different repeater delay before changing the world.
 
-Minecraft内で調べたい回路を見るか、範囲を選び、MCPに接続したAIへ依頼します。
+> Build this adopted design using the materials in the bot's inventory. Show the
+> construction plan and temporary works first.
 
-> この回路を調べて、分かることと分からないことを教えて。
+## What you can do
 
-> 今の回路を元に空想回路を作って、リピーターの遅延を変えた案を比較して。
-
-> この案を反映できるか確認して、まず変更内容を見せて。
-
-基本の流れは **観測 → 案を作る → 検証 → プレビュー → 確認して反映** です。案を作っただけでブロックを書き換えることはありません。既定では実世界への書き込みも無効になっています。
-
-## 始めるには
-
-DustRouteは、Minecraft内のbotとMCP対応のAIクライアントをつないで使います。現在の実サーバー検証環境はMinecraft Java Edition 1.21.11です。
-
-Rust製クライアントのVoxrig経路では、受信パケットとクライアント側の状態再現から観測します。サーバーMODや観測用の常時コマンド照合は不要です。視線選択はダストやレバーを含む対応済みの静的な輪郭形状を使います。
-
-検証済みのVoxrigソースを同梱しているため、別のチェックアウトは不要です。既定ビルドでVoxrigを有効にし、offline認証で接続します。詳しくは[ネイティブ接続の設定](crates/dustroute-mcp/SETUP.md#native-rust-client-java-12111)と[観測方式の違い](docs/mcp-public-features.md#observation-backends)を参照してください。
-
-1. [セットアップ手順](crates/dustroute-mcp/SETUP.md)に沿って、Minecraftサーバーとbotを準備します。
-2. 同じ手順でMCPサーバーを起動し、AIクライアントに接続します。
-3. Minecraftに入り、まず接続確認と回路の観測から試します。
-
-現状はソースから起動する開発中のツールです。Rustを使い、サーバーを立てる場合はJava 21も必要です。Node.jsブリッジは不要です。回路の配置はコマンド書き込みを使うため、試験用のワールドから始めてください。設定の詳細や必要な権限はセットアップ手順にまとめています。
-
-## 今の対応範囲
-
-観測・revision編集・反映の流れはつながっていますが、任意の回路を自動で正しく設計できる完成版ではありません。
-
-| 項目 | 現状 |
+| Goal | Current scope |
 | --- | --- |
-| revision | 作成・編集・分岐・検証・保存に対応。mergeは未対応 |
-| revisionの保存 | 既定1時間。再起動をまたげますが、恒久保存ではありません |
-| 物理世界への反映 | 観測元への変更反映に加え、採用済みの対応Assemblyを新しい空き領域へ配置可能。いずれも現地で再検証 |
-| ピストン | 水平・上向き・下向きの混在Assemblyを配置可能。既存機構の認識・開閉操作は検証済み1×2固定構成に限定 |
-| 取り消し・撤去 | 操作ごとに条件が異なる。配置したカスタムAssemblyは記録を永続化し、再起動後も再観測・再検証して撤去を計画可能 |
-| 検証 | 支持関係や対応するシミュレーションを確認。全入力の動作や遠方の回路への影響を一律には保証しません |
+| Understand a circuit | Gaze or region observation, connections, diagnosis and bounded functional analysis |
+| Try an alternative | Immutable hypothetical revisions and model checks before live changes |
+| Reuse a design | Blueprint parts, types, requirements, reviewed updates and adopted Assemblies |
+| Place a mechanism | Supported redstone, mixed-direction pistons, typed doors and finite flying machines |
+| Author a building | Explicit parts, openings, air spaces and supported equipment composition |
+| Build in survival | Bounded passive cube designs, supplied inventory, temporary works, cleanup and retreat |
 
-エンティティや長期連続運転の検証は、今回の対応範囲には含めていません。使える機能と制限の詳細は [公開機能ガイド](docs/mcp-public-features.md) を参照してください。
+Read the [capability table](docs/capabilities.md) for conditions and exclusions.
+Support for observation, simulation and construction is different; recognizing a
+block does not make every operation on it available.
 
-## もっと詳しく
+## Start here
 
-技術文書の一覧は [Documentation](docs/README.md) にまとめています。
+1. Read [getting started](docs/getting-started.md) for connection and permissions.
+2. Choose a [workflow](docs/workflows.md) for observation, design or construction.
+3. Use the [documentation map](docs/README.md) to reach API contracts and evidence.
 
-| 知りたいこと | 読むもの |
-| --- | --- |
-| 利用できる機能・操作の順番・保存期限 | [公開機能ガイド](docs/mcp-public-features.md) |
-| サーバー・bot・AIクライアントの接続 | [セットアップ](crates/dustroute-mcp/SETUP.md) |
-| LLMがどのツールをどう使うか | [MCP利用ガイド](crates/dustroute-mcp/README.md) |
-| 空想回路のrevisionと反映 | [revision仕様](docs/circuit-revisions.md) |
-| 1×2ピストンドアの条件と検証結果 | [ピストンドア仕様](docs/piston-door-mcp-v1.md) |
-| 通常3×3ピストンドアの型と採用検証 | [型の仕様](docs/piston-door-type.md)・[新Revisionの採用結果](docs/reference-door-ordinary-adoption.md) |
-| 縦・混在Assemblyの配置と管理 | [カスタム配置](docs/custom-piston-assembly-placement.md)・[配置後の管理](docs/placed-assembly-management.md) |
-| 旧経路の除去と保存データの扱い | [安定化の記録](docs/stabilization-legacy-paths.md) |
-| Rustの構成・CLI・開発とテスト | [開発者向けガイド](docs/development.md) |
+The live client is the bundled Rust library Voxrig. The current MCP connection
+requires Minecraft Java 1.21.11 and offline authentication. Normal block reads
+use received packets and supported client reconstruction without a server MOD
+or per-cell confirmation commands. Mineflayer and the product CLI are retired.
 
-主な利用窓口はMCPです。CLIも開発・診断・自動化向けに用意しています。
+Command-based circuit/Assembly placement requires operator permissions. The
+separate supported survival workflow uses inventory and ordinary player actions
+without OP. World mutation is disabled by default; both paths require the
+applicable policy and explicit review/confirmation.
+
+Model validation checks declared requirements under a recorded context. Live
+verification checks fresh observations; neither freezes the world nor proves
+that hidden server queues are empty. Arbitrary blocks, entity-based mechanisms, unrestricted
+terrain work and fully autonomous general design are outside the current scope.
+
+## For developers
+
+Use the [architecture and development guide](docs/development.md) for Rust
+library boundaries and local checks. Detailed technical references may be
+English-only. English is the standard documentation language; front-facing
+pages also have Japanese versions. See the
+[documentation policy](docs/documentation-policy.md).

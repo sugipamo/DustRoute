@@ -1,5 +1,9 @@
 # DustRoute MCP — guide for LLM clients
 
+For the product overview, read [workflows](../../docs/workflows.md)
+([日本語](../../docs/workflows.ja.md)). This English guide gives detailed
+tool-selection rules for MCP clients.
+
 Use DustRoute to observe Minecraft redstone, explain evidence, create hypothetical revisions, review Blueprint updates, and propose verified world changes. Ground live-world tasks in the configured player's gaze or an explicitly selected region. Offline Blueprint tasks use exact catalog records and need no bridge connection. Keep observation, hypothesis and execution separate.
 
 This is the tool-use guide. Server installation, credentials, permissions and transport configuration belong in [SETUP.md](SETUP.md). Detailed subsystem examples are in [REFERENCE.md](REFERENCE.md); the 23 base tools, one native survival addition and 7 debug additions are in the [public feature guide](../../docs/mcp-public-features.md). Use the connected server's tool schemas for exact arguments.

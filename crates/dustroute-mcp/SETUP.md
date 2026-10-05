@@ -1,5 +1,10 @@
 # DustRoute MCP setup
 
+For an introduction, read [getting started](../../docs/getting-started.md)
+([日本語](../../docs/getting-started.ja.md)). This is the detailed English
+operator reference; the example private server below is for creative command
+trials, not a prerequisite to run non-OP survival construction.
+
 This document is for the person configuring the Minecraft server, bot and MCP client. For tool use, see the [LLM guide](README.md).
 
 ## Runtime
@@ -17,8 +22,9 @@ The tested Voxrig source is pinned in `vendor/voxrig` with commit and file
 checksums in `vendor/voxrig-source.json`. No separate checkout or Node.js process
 is needed. From the repository root, verify, build and start the native client:
 
-The current pin is `5bace7be7cd941e1340ad94052e922db23c4f892` (313 files).
-Run the source verification command below for the current snapshot.
+Read `revision` in `vendor/voxrig-source.json` for the current source pin and run
+the source verification command below to check its files. The manifest is the
+source of truth; historical trial documents retain their tested pins.
 
 This standalone checkout route was validated with Rust/Cargo 1.98.0 on Linux
 x86_64. Exact build and runtime evidence is linked from

@@ -8,6 +8,7 @@ For Java server/bot setup, use [MCP setup](../crates/dustroute-mcp/SETUP.md).
 
 | Crate | Responsibility |
 | --- | --- |
+| `dustroute-codec` | Bounded versioned non-JSON storage and canonical value encoding |
 | `dustroute-minecraft` | World primitives, block models, events, scheduler profiles and validation |
 | `dustroute-physical` | Physical observations, evidence, ports, nets, fragments and patches |
 | `dustroute-ir` | Derived signal/gate/expression/function and temporal representations |
@@ -15,7 +16,7 @@ For Java server/bot setup, use [MCP setup](../crates/dustroute-mcp/SETUP.md).
 | `dustroute-translate` | Forward compilation, reverse interpretation and bounded simulation |
 | `dustroute-optimize` | Candidate search and structural/behavioral verification |
 | `dustroute-app` | Shared application services and placement planning |
-| `dustroute-mcp` | MCP orchestration, observed/revision/operation identities and bot bridge |
+| `dustroute-mcp` | MCP orchestration, observed/revision/operation identities, native client adapter and survival jobs |
 
 Forward compilation follows logical intent → primitive lowering → cell mapping
 → placement/routing → legality validation → Java export. Reverse interpretation
@@ -63,16 +64,17 @@ Behavioral and live evidence still require their existing verification paths.
 update proposals over that gate. Supply the base parent/state, selected child,
 new parent/intermediate definitions and candidate Assembly Revision. Use
 `create` → `diff` → `validate` → `adopt` or `reject`. `adopt` reruns verification;
-serialized review history never grants adoption authority. The self-contained
-JSON archive retains candidates and decisions without modifying historical
-sources or states. The [workflow reference](blueprint-architecture.md#explicit-child-update-proposals)
+serialized review history never grants adoption authority. The typed archive,
+stored with the versioned non-JSON codec, retains candidates and decisions
+without modifying historical sources or states. The
+[workflow reference](blueprint-architecture.md#explicit-child-update-proposals)
 describes path conventions and persistence. MCP exposes this workflow through
 the existing revision and operation tools, without adding tool names; see the
 [Blueprint MCP contract](blueprint-mcp.md). The `blueprint_mcp` adapter stores a
 player-scoped catalog and proposal history with a lock across read/review/write,
 atomic replacement and no plan TTL. Tests in `service_blueprint_tests.rs` exercise
 actual MCP tool calls and restarts, including a forged saved pass that cannot
-authorize adoption. They need no Minecraft bridge.
+authorize adoption. They need no live Minecraft connection.
 
 `World` is mutable data. General placement requires `ValidatedWorld`; edits
 invalidate that proof. Persisted plans are proposals and must be checked against
@@ -150,6 +152,10 @@ execution does not authorize construction.
 
 ## Snapshot format
 
+The example below is public MCP/explicit fixture JSON, not an internal storage
+format. Rust code passes typed observations; persisted records use the non-JSON
+codec. See [JSON boundaries](json-boundary-migration.md).
+
 `properties` retains observed Java block-state values. An absent cell means air
 only inside a complete declared observation; boundary completeness is separate.
 
@@ -167,8 +173,9 @@ only inside a complete declared observation; boundary completeness is separate.
 
 ## Evidence and benchmarks
 
-Built-in cell layouts are frozen blueprint data. Use the explicit authoring
-command and reproducibility check in [blueprint architecture](blueprint-architecture.md)
+Built-in cell layouts are frozen blueprint data. Use typed Rust APIs and the
+explicit test-only [fixture adapters](development-fixture-adapters.md), with the
+reproducibility checks in [blueprint architecture](blueprint-architecture.md),
 when changing those definitions. Runtime lookup must not call their generators.
 
 Sanitized regression observations are tracked under

@@ -4,11 +4,16 @@ The practical target is to prototype and revise circuits containing thousands
 of blocks in a completely observed context, with bounded, separately reviewed
 work regions. A hierarchy summary is not a whole-circuit behavioral proof.
 
-Migration order:
+Current live backend: Voxrig only. Mineflayer was removed on 2026-10-03; its
+retained comparisons below describe the migration audit, not an available
+backend. For a task overview, read [workflows](workflows.md#try-a-change-before-applying-it)
+([日本語](workflows.ja.md#反映前に変更を試す)).
+
+Implemented migration order:
 
 1. Expose observation limits/evidence at the backend boundary. Native Voxrig
-   reads reconstructed client state; the optional Mineflayer bridge checks
-   command predicates. Its 8,880-cell command limit must not govern Voxrig.
+   reads reconstructed client state. The retired Mineflayer bridge checked
+   command predicates; its 8,880-cell command limit does not govern Voxrig.
 2. Make explicit coordinate capture independent of gaze. Still resolve the
    assisted player's actual dimension and require every requested cell loaded.
 3. Persist region work intentions, immutable before/target states and verified
@@ -79,13 +84,13 @@ large circuits or atomic server execution.
 
 | Contract | Result |
 | --- | --- |
-| 8,880-cell command confirmation | Kept exclusively as the Mineflayer observation capability; native Voxrig reports its 262,144-cell loaded-region limit. Both are distinct from user policy. |
-| Gaze required even for explicit coordinates | Removed. Native coordinate capture uses received player/dimension context, without a raycast or guessed eye pose. Compatibility capture ignores the incidental target. Gaze/discovery options cannot be combined with explicit region. |
+| 8,880-cell command confirmation | Historical Mineflayer-only limit; that backend is retired. Native Voxrig reports its 262,144-cell loaded-region limit, separately from user policy. |
+| Gaze required even for explicit coordinates | Removed. Native coordinate capture uses received player/dimension context, without a raycast or guessed eye pose. Gaze/discovery options cannot be combined with explicit region. |
 | 256-block generic gaze option versus native 64-block raycast | Adapter range is reported explicitly and checked before dispatch. It no longer restricts coordinate capture. |
 | Dense transport arrays consuming a 4,096-block revision limit | Removed: native Air records are normalized before counting non-Air content. Revision base states and job intentions are saved sparsely with complete known bounds; raw observation receipts/content IDs remain unchanged. |
 | 64 virtual changes | Replaced with a 4,096-change offline revision budget. Live work is still bounded to 64 changed coordinates per separately reviewed region. |
-| Approximate generic baseline ignoring dynamic properties | Native literal revision edits now use exact full-context common-runtime state comparisons, including passive geometry. Mineflayer coexistence retains its ordinary unscoped compatibility route. |
-| Predicate stair corrections and server clock evidence | Stay in the compatibility adapter. Native records remain client reconstructions; server confirmation is not fabricated. |
+| Approximate generic baseline ignoring dynamic properties | Native literal revision edits use exact full-context common-runtime state comparisons, including passive geometry. The old Mineflayer compatibility route is retired. |
+| Predicate stair corrections and server clock evidence | Retained only in historical Mineflayer evidence. Native records remain client reconstructions; server confirmation is not fabricated. |
 | Native packet pacing and local wait timeout allowance | Already native-specific; retained. Local waits use a client clock, not a server tick guarantee. |
 | Whole-context readback, 32-write idle batches, stationary samples, protected microsteps, consumed attempts | Retained as construction/observation safeguards, independent of Mineflayer. Removing them would need separate physics and recovery evidence. |
 | Fresh Assembly/building size budgets and exhaustive analysis budgets | Retained as separate model/generator limits. Region jobs do not silently change adoption, child pins or functional requirements. |

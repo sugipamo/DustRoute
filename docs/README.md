@@ -1,5 +1,37 @@
 # Documentation
 
+[English](README.md) · [日本語](README.ja.md)
+
+Read from the broad product view toward the task and its exact contract. English
+is the standard language. The front-facing pages below also have Japanese
+versions; API, architecture and evidence references can remain English-only.
+
+## Read in this order
+
+| Depth | Question | English | 日本語 |
+| --- | --- | --- | --- |
+| 1. Overview | What is DustRoute for? | [Project overview](../README.md) | [概要](../README.ja.md) |
+| 2. Scope | Can it do my task, and under what conditions? | [Capabilities](capabilities.md) | [対応表](capabilities.ja.md) |
+| 3. Preparation | What connection, materials and permissions do I need? | [Getting started](getting-started.md) | [導入ガイド](getting-started.ja.md) |
+| 4. Workflow | How do I observe, design, construct or recover? | [Workflows](workflows.md) | [利用手順](workflows.ja.md) |
+| 5. Contract | Which tools, IDs and exact gates apply? | [Public MCP reference](mcp-public-features.md) and the feature map below | Detailed references use English as standard |
+| 6. Implementation/evidence | How is it implemented, and what was tested? | Architecture and evidence lists below | Detailed references use English as standard |
+
+## Choose a feature
+
+| Task | Contract | Evidence / deeper detail |
+| --- | --- | --- |
+| Observe and interpret | [Public MCP reference](mcp-public-features.md), [function model](physical-function-model.md) | [Native client](voxrig-rollout.md), [targeting trials](native-client-usability.md) |
+| Edit an existing site | [Revisions](circuit-revisions.md), [edit scope](world-edit-scope.md), [region jobs](large-circuit-regions.md) | [Native Blueprint/region live validation](blueprint-iteration-live-validation.md) |
+| Review reusable sources | [Blueprint MCP](blueprint-mcp.md), [review errors](blueprint-review-diagnostics.md) | [Architecture](blueprint-architecture.md) |
+| Author buildings / equipment | [Building design input](blueprint-building-design.md), [small buildings](blueprint-building.md) | [Live iteration](blueprint-iteration-live-validation.md) |
+| Build from inventory | [Public survival construction](survival-public-construction.md) | [Single-builder plan and evidence](survival-single-client-plan.md) |
+| Place pistons / doors | [Custom placement](custom-piston-assembly-placement.md), [1×2](piston-door-mcp-v1.md), [3×3 type](piston-door-type.md) | [Electrical trials](piston-electrical-live-evidence.md), [reference door](reference-door-live-construction.md) |
+| Generate a finite flying machine | [Generation](flying-machine-generation.md), [lifecycle](flying-machine-lifecycle.md) | [Engine definitions](flying-machine-engines.md), [harvest scope](flying-machine-practical-roadmap.md) |
+| Diagnose or recover | [Assembly diagnosis](assembly-diagnosis.md), [instance management](placed-assembly-management.md) | [Shared diagnostics](diagnostic-system.md), [failure contracts](structured-failure-recovery.md) |
+
+## Detailed reference catalog
+
 Current contracts and reproducible evidence are kept here. Historical migration
 plans, repeated goal updates and superseded build instructions have been
 consolidated. Original observations remain in tracked regression fixtures and
@@ -10,7 +42,7 @@ Git history; diagnostic fixtures have not been promoted into public capability.
 | Document | Read it for |
 | --- | --- |
 | [Public features](mcp-public-features.md) | Tools, workflows, limits, ID lifetimes and recovery |
-| [Observation backends](mcp-public-features.md#observation-backends) | Voxrig/Mineflayer selection, gaze, evidence, clocks and command permissions |
+| [Observation backends](mcp-public-features.md#observation-backends) | Native Voxrig gaze, evidence, clocks and command permissions; retired Mineflayer evidence is historical |
 | [MCP setup](../crates/dustroute-mcp/SETUP.md) | Server, bot, transport and permissions |
 | [LLM tool guide](../crates/dustroute-mcp/README.md) | Tool selection and execution decisions |
 | [MCP subsystem reference](../crates/dustroute-mcp/REFERENCE.md) | Detailed examples |
@@ -26,7 +58,7 @@ Git history; diagnostic fixtures have not been promoted into public capability.
 
 | Document | Read it for |
 | --- | --- |
-| [Development](development.md) | Workspace boundaries, local checks, CLI and examples |
+| [Development](development.md) | Workspace boundaries, local checks, typed Rust APIs and explicit fixture adapters |
 | [Native Voxrig client rollout](voxrig-rollout.md) | Version adapters, moving-state reconstruction, explicit client evidence and live MCP door/flight lifecycles |
 | [Architecture readability audit](architecture-readability-audit.md) | Remaining responsibility, type and module boundaries; evidence and recommended refactoring order |
 | [Architecture migration](architecture-migration.md) | Migration progress, preserved contracts, deferred concerns and regression evidence |
@@ -108,7 +140,7 @@ Git history; diagnostic fixtures have not been promoted into public capability.
 | [Live piston interruption conformance](piston-live-interruption-conformance.md) | Isolated Java 1.21.11 ON/OFF trials, server-applied timing and model comparison |
 | [Piston diagnostics](piston-diagnostics.md) | Retained 3×3/single-cell models that are not deployable |
 | [Observed 3×3 recognition](observed-3x3-piston-door.md) | Read-only geometry/evidence recognition |
-| [Live harnesses](evidence/legacy-mineflayer/README.md) | Private-server test procedures |
+| [Retired live harnesses](evidence/legacy-mineflayer/README.md) | Historical private-server trial procedures, not current setup |
 
 GitHub Actions configuration was removed intentionally. Run the local checks in
 [development](development.md) before integrating code; this repository no longer
@@ -117,3 +149,6 @@ were also removed; `.gitignore` continues to exclude local environments and
 runtime artifacts.
 
 - [Component patterns and external equipment](blueprint-component-patterns.md): separate NOT bodies, direct device outputs, and freshly verified torch/support placements.
+
+For maintaining the reading layers and language pairs, see the
+[documentation policy](documentation-policy.md).

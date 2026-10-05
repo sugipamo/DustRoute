@@ -1,6 +1,9 @@
-# Public MCP feature guide
+# Public MCP reference
 
-Start here for supported workflows, public tools, ID lifetimes and recovery.
+For the product view, start with [capabilities](capabilities.md)
+([日本語](capabilities.ja.md)) and [workflows](workflows.md)
+([日本語](workflows.ja.md)). This English reference gives exact public tools,
+ID lifetimes and recovery contracts.
 [Setup](../crates/dustroute-mcp/SETUP.md) is for operators;
 [the LLM guide](../crates/dustroute-mcp/README.md) describes tool selection;
 [JSON contracts](mcp-api-v1.md) describe responses.
@@ -15,15 +18,16 @@ it does not apply them to Minecraft.
 
 With the `voxrig` feature, an additional `survival_construction` tool connects
 adopted grounded passive-building designs to bounded planning, non-OP inventory
-construction, progress and historical diagnosis. Its independent observer,
-material/scope checks and limits are documented in
+construction, progress, sealed-checkpoint continuation and historical diagnosis.
+One builder observes and constructs; a second observer is not required.
+Material/scope checks and limits are documented in
 [public survival construction](survival-public-construction.md). This is a
 separate contract from command-based circuit placement.
 
-Block reads use the selected backend's observation contract. Voxrig uses received
-packets and supported client reconstruction; Mineflayer uses command-confirmed
-server readback. Both require fresh complete observations for the applicable
-live checks. Their evidence and clocks remain distinct.
+Current block reads use Voxrig's received packets and supported client
+reconstruction, with fresh complete observations for applicable live checks.
+Retained Mineflayer command-confirmed readbacks belong to historical trials;
+their evidence and clocks remain distinct from current native observations.
 
 ## Observation backends
 
@@ -54,8 +58,7 @@ graphical camera frame.
 Fresh native client evidence can support the shared placement, diagnosis and
 recovery workflows after their own validation; it never becomes server-confirmed
 evidence. Unsupported backend settings or operations fail explicitly, without
-silently selecting another backend. A failed Mineflayer confirmation likewise
-does not fall back to an unconfirmed client snapshot.
+silently selecting another backend. There is no live Mineflayer fallback.
 
 Client frames and waits are not server game ticks. Native recordings preserve
 received block-state packets, not every reconstructed piston frame or hidden
@@ -67,7 +70,7 @@ nor server-confirmed readback proves empty event queues or prevents later edits.
 See [setup](../crates/dustroute-mcp/SETUP.md#native-rust-client-java-12111),
 [native evidence and limits](voxrig-rollout.md),
 [current targeting and recovery trials](native-client-usability.md), and
-[Mineflayer server readback](server-readback.md).
+[historical Mineflayer server readback](server-readback.md).
 
 ## Choose a workflow
 
@@ -100,16 +103,18 @@ into at most 64 stages of 64 declared changes. Each current stage derives its
 settled boundary in the complete context, including natural updates and one
 eligible temporary output initialization. Input settings and the final target
 remain immutable. Naturally satisfied stages still require preview/confirmation
-with no writes. Saved v2 boundary deltas support fresh planning after restart;
-v1 history must be recaptured rather than resumed. Large job history can be
-expanded explicitly with `manage_construction_job(action=get,include_intention=true)`.
+with no writes. Saved v3 non-JSON boundary deltas support fresh planning after
+restart; retired v1/v2 history must be recaptured rather than resumed. Large job
+history can be expanded explicitly with
+`manage_construction_job(action=get,include_intention=true)`.
 See [region costs, limits and evidence](large-circuit-regions.md).
 
 ## Default tools (23)
 
 Builds with `--features voxrig` additionally expose `survival_construction`
-(`plan`, `start`, `get`, `cancel`), for 24 default tools. It requires the native
-backend and explicit independent observer configuration.
+(`plan`, `start`, `get`, `cancel`, `checkpoint`, `continue`), for 24 default tools.
+It requires the native backend; normal execution uses one builder without an
+independent observer.
 
 | API | Purpose |
 | --- | --- |
@@ -139,7 +144,8 @@ backend and explicit independent observer configuration.
 
 ## Additional debug tools (7)
 
-`DUSTROUTE_MCP_TOOL_PROFILE=debug` exposes 30 tools in total.
+`DUSTROUTE_MCP_TOOL_PROFILE=debug` exposes 30 base tools, or 31 with the default
+Voxrig build's survival addition.
 
 | API | Purpose |
 | --- | --- |
@@ -227,8 +233,7 @@ fallback for its undo data.
   common callback runtime for each forward/undo stage and complete readback;
   they do not certify distant circuit effects or a flying/harvesting type.
   Native Voxrig routes all literal revision edits through this callback runtime,
-  including passive blocks. The optional compatibility backend retains its
-  generic route for ordinary unscoped blocks.
+  including passive blocks. The former Mineflayer compatibility route is retired.
   See [existing-machine modification](existing-machine-modification.md).
 - Literal revision jobs accept at most 64 disjoint work regions, 64 changed
   coordinates per region and 4096 non-Air blocks in the complete context.
@@ -256,8 +261,10 @@ fallback for its undo data.
   components, a passage and exact air-clearance requirements. Existing cube
   materials, at most 256 blocks and a completely observed empty target volume are
   supported. Generation, adoption, model-reviewed batched placement and durable
-  diagnosis/reconstruction share the ordinary Assembly path. Large multi-part
-  construction and terrain clearing are future work. See [building support](blueprint-building.md).
+  diagnosis/reconstruction share the ordinary Assembly path. Explicit named parts
+  are available through [building design input](blueprint-building-design.md),
+  within the same generator budget. Large-scale generated buildings and terrain
+  clearing are outside that entry. See [building support](blueprint-building.md).
 - The [ordinary 3×3 door type](piston-door-type.md) verifies repeated open/close
   commands after modeled completion. The reference door passes fresh adoption,
   including after restart. This adds no live readiness sensor and does not extend
@@ -280,7 +287,9 @@ fallback for its undo data.
   source water. Flowing water, growth and field construction are outside this
   scope. Other direct component destruction and entity
   carrying/bouncing/sliding remain outside scope. Earlier approvals require fresh review.
-- Placement uses command writes, not survival inventory gathering/construction.
+- Circuit/Assembly placement uses command writes. The separate
+  `survival_construction` workflow handles admitted passive grounded buildings
+  from supplied inventory, not active circuits or resource gathering.
 - Merge, entity handling, long-running endurance optimization and arbitrary
   fully autonomous design are outside the current scope.
 
