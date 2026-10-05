@@ -66,12 +66,19 @@ def main():
     parser.add_argument("--region-jobs", action="store_true", help="run region job capture/apply/restart/undo cases")
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--server-dir", type=Path, required=True)
+    parser.add_argument("--java-executable", type=Path, required=True,
+                        help="explicit Java 21 executable for the bounded private trial")
     parser.add_argument("--allow-owned-fixture-writes", action="store_true")
     parser.add_argument("--recover-run-id", help="only plan fresh public removal of instances from this failed owned trial")
     args = parser.parse_args()
     assert args.allow_owned_fixture_writes, "explicit fixture-write opt-in required"
     assert re.fullmatch(r"[a-zA-Z0-9_-]+", args.run_id), "invalid run ID"
     directory = args.server_dir.resolve()
+    java = args.java_executable.resolve(strict=True)
+    server_command = [str(java), "-XX:ActiveProcessorCount=1", "-Xms256M", "-Xmx768M",
+                      "-jar", "server.jar", "nogui"]
+    server_env = {k: v for k, v in os.environ.items()
+                  if k not in {"JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS"}}
     props = (directory / "server.properties").read_text()
     for setting in ("server-ip=127.0.0.1", "server-port=25565", "online-mode=false",
                     "gamemode=creative", "allow-flight=true", "white-list=true"):
@@ -118,6 +125,10 @@ def main():
                 "source_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
                 "server": "Vanilla Java 1.21.11", "endpoint": "127.0.0.1:25565", "dimension": "minecraft:overworld",
                 "server_jar_sha256": fingerprint(directory / "server.jar"),
+                "java_executable_sha256": fingerprint(java),
+                "server_command": server_command,
+                "server_controller_sha256": fingerprint(ROOT / "tools/observe_torch_burnout.py"),
+                "forced_shutdown_allowed": False,
                 "mcp_binary_sha256": fingerprint(ROOT / "target/debug/dustroute-mcp"),
                 "probe_binary_sha256": fingerprint(probe_binary),
                 "probe_source_sha256": fingerprint(ROOT / "crates/dustroute-mcp/tests/blueprint_iteration_live.rs"),
@@ -132,7 +143,8 @@ def main():
     server = None
     probe = None
     try:
-        server = Server(directory, prefix.with_suffix(".server.log"))
+        server = Server(directory, prefix.with_suffix(".server.log"),
+                        command=server_command, env=server_env, force_kill_on_timeout=False)
         probe = subprocess.Popen(fixture_command(probe_binary),
                                  cwd=ROOT, env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                  stderr=subprocess.STDOUT, text=True, bufsize=1)

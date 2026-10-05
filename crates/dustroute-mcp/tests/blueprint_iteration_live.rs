@@ -151,7 +151,7 @@ mod trial {
         let result: Value = serde_json::from_str(&text.text)?;
         record(
             file,
-            json!({"stage":"tool","name":name,"args":args,"response":result,"elapsed_ms":started.elapsed().as_secs_f64()*1000.0}),
+            json!({"stage":"tool","name":name,"args":args,"response":result,"is_error":response.is_error,"elapsed_ms":started.elapsed().as_secs_f64()*1000.0}),
         )?;
         Ok(result)
     }
@@ -257,6 +257,59 @@ mod trial {
             )
             .await?;
         actor.wait_ticks(20, DIM).await?;
+        Ok(())
+    }
+    async fn diagnose_building(
+        client: &Client,
+        actor: &BotBridge,
+        file: &mut File,
+        instance: &Value,
+    ) -> anyhow::Result<()> {
+        let args = json!({"action":"diagnose","instance_id":instance});
+        let intact = call(client, file, "manage_assembly", args.clone(), true).await?;
+        anyhow::ensure!(
+            intact["diagnosis"]["status"] == "matches_reference"
+                && intact["diagnosis"]["findings"] == json!([]),
+            "intact building diagnosis: {intact}"
+        );
+        let before = checkpoint(actor, file, "intact_diagnosis_no_writes").await?;
+        write(actor, file, A, "minecraft:air").await?;
+        let damaged = checkpoint(actor, file, "missing_floor_input_applied").await?;
+        anyhow::ensure!(non_air(&damaged) == 3 && block_name(&damaged, A) == "minecraft:air");
+        let report = call(client, file, "manage_assembly", args.clone(), true).await?;
+        let diagnosis = &report["diagnosis"];
+        anyhow::ensure!(
+            diagnosis["status"] == "differences_found"
+                && diagnosis["summary"]["differing_positions"] == 1
+                && diagnosis["findings"]
+                    .as_array()
+                    .is_some_and(|f| f.len() == 1)
+                && diagnosis["findings"][0]["position"] == json!(A)
+                && diagnosis["findings"][0]["kinds"] == json!(["missing"])
+                && diagnosis["world_writes"] == false
+                && diagnosis["repair"]["permission_granted"] == false
+                && report.get("operation_id").is_none(),
+            "missing floor diagnosis: {report}"
+        );
+        let after = checkpoint(actor, file, "missing_floor_diagnosis_no_writes").await?;
+        anyhow::ensure!(
+            after.blocks == damaged.blocks,
+            "diagnosis changed damaged layout"
+        );
+        // Explicit owned-fixture restoration, not automatic repair authority.
+        write(actor, file, A, "minecraft:stone").await?;
+        let restored = checkpoint(actor, file, "missing_floor_restored").await?;
+        anyhow::ensure!(
+            restored.blocks == before.blocks,
+            "restoration differs from baseline"
+        );
+        let final_report = call(client, file, "manage_assembly", args, true).await?;
+        anyhow::ensure!(final_report["diagnosis"]["status"] == "matches_reference");
+        let final_snapshot = checkpoint(actor, file, "restored_diagnosis_no_writes").await?;
+        anyhow::ensure!(
+            final_snapshot.blocks == restored.blocks,
+            "diagnosis changed restored layout"
+        );
         Ok(())
     }
     fn design(namespace: &str, material: &str) -> Value {
@@ -905,6 +958,7 @@ mod trial {
                 && block_name(&original, Pos::new(A.x + 1, A.y + 1, A.z + 1)) == "minecraft:glass",
             "base layout mismatch"
         );
+        diagnose_building(client, actor, file, &instance_a).await?;
         let design = design("live.iteration.after", "tinted_glass");
         let request = json!({"base_assembly_revision_id":base,"previous":previous,"design":design});
         let mut wrong = request.clone();
@@ -1023,7 +1077,8 @@ mod trial {
         .await?;
         let drift = checkpoint(actor, file, "protected_drift_blocks_apply").await?;
         anyhow::ensure!(
-            block_name(&drift, edit) == "minecraft:stone",
+            block_name(&drift, edit) == "minecraft:stone"
+                && block_name(&drift, guard) == "minecraft:stone",
             "refused apply changed editable cell"
         );
         write(actor, file, guard, "minecraft:glass").await?;
@@ -1045,7 +1100,8 @@ mod trial {
         .await?;
         let drift = checkpoint(actor, file, "protected_drift_blocks_undo").await?;
         anyhow::ensure!(
-            block_name(&drift, edit) == "minecraft:smooth_quartz",
+            block_name(&drift, edit) == "minecraft:smooth_quartz"
+                && block_name(&drift, guard) == "minecraft:stone",
             "refused undo changed editable cell"
         );
         write(actor, file, guard, "minecraft:glass").await?;

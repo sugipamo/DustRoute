@@ -73,7 +73,7 @@ grants, or restart a running shared server. The declared area
 ```sh
 cargo build --offline --locked -j1 -p dustroute-mcp --bin dustroute-mcp
 cargo test --offline --locked -j1 -p dustroute-mcp --test blueprint_iteration_live --no-run
-python3 tools/verify_blueprint_iteration_live.py --run-id NEW_UNIQUE_ID --server-dir .local/minecraft-server-1.21.11 --allow-owned-fixture-writes
+python3 tools/verify_blueprint_iteration_live.py --run-id NEW_UNIQUE_ID --server-dir .local/minecraft-server-1.21.11 --java-executable .local/jdks/jdk-21.0.12.1+1/bin/java --allow-owned-fixture-writes
 ```
 
 Raw request/response JSONL, console predicates, process logs and fresh saved
@@ -83,6 +83,14 @@ with a new run ID. Recovery creates new public removal plans; it does not restor
 or replay old executable plans. Owned external fixture cleanup requires its
 literal current state to match the retained last write. A mismatch is left for
 inspection rather than silently removed.
+
+The runner requires an explicit Java executable and records its fingerprint.
+Its JVM uses one active CPU and a 256–768 MiB heap, with inherited Java option
+variables removed. Shutdown uses `stop`; a timeout is retained as a failure,
+without forced termination. These limits concern the private trial, not product
+resource limits. The current building probe also diagnoses one missing floor
+block before and after explicit fixture restoration, checking that diagnosis
+does not write or grant repair permission.
 
 Live fixture clients are explicit ignored integration tests under
 `crates/dustroute-mcp/tests/`, rather than example commands. They compile without

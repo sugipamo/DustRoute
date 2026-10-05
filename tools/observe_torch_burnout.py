@@ -17,14 +17,16 @@ from pathlib import Path
 
 
 class Server:
-    def __init__(self, directory, log):
+    def __init__(self, directory, log, *, command=None, env=None,
+                 force_kill_on_timeout=True):
+        self.force_kill_on_timeout = force_kill_on_timeout
         self.log = log.open("x")
         self.lines = queue.Queue()
         self.fence = 0
         self.proc = subprocess.Popen(
-            ["java", "-Xms512M", "-Xmx1024M", "-jar", "server.jar", "nogui"],
+            command or ["java", "-Xms512M", "-Xmx1024M", "-jar", "server.jar", "nogui"],
             cwd=directory, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT, text=True, bufsize=1,
+            stderr=subprocess.STDOUT, text=True, bufsize=1, env=env,
         )
 
         def consume():
@@ -112,6 +114,8 @@ class Server:
             try:
                 self.proc.wait(timeout=30)
             except subprocess.TimeoutExpired:
+                if not self.force_kill_on_timeout:
+                    raise
                 self.proc.kill()
                 self.proc.wait(timeout=5)
         self.reader.join(timeout=5)
