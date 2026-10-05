@@ -8,7 +8,8 @@ MCPの入出力に加え、第6段階でMinecraftサーバーのwireに必要な
 
 最新状態（2026-10-05）: 承認済みのオフラインJSON移行・監査範囲は完了。
 JSONは公開MCP、承認済みMinecraft wire、明示的な試験fixture codecへ限定した。
-最終節に監査対象・検証範囲・実機未実施の区別を記録する。
+オフライン移行完了後、ユーザーの追加依頼で公開MCPの実接続2系統も検証した。
+最終節に実機結果と確認範囲を記録する。
 
 ## 順序とゴール
 
@@ -1728,3 +1729,38 @@ observation/Python実測資料の再比較結果を維持する。独立fixture�
 新しいlibrary codec、責務移動、productionの認可/正当性条件の変更は追加していない。
 実機接続・world変更は今回のゴール対象外で実施していないため、この結果を実機再検証の
 成功とは扱わない。既存live試験の再実行は別途明示した実機作業で行う。
+
+
+### 追加依頼による実接続検証（2026-10-05）
+
+オフライン移行完了後、ユーザーの「実接続検証もお願いします」に従い、停止中の既存private
+Vanilla 1.21.11サーバーで代表的な公開MCP workflowを再検証した。製品sourceは189cfc7。
+最新MCP binaryをoffline/locked/-j1でbuildし、各runのbinary/source hashとraw traceを保持した。
+新しいrun IDとstate directoryを使い、既存whitelist/OP・EULA・loopback設定のまま実行した。
+共有serverの再起動や権限変更は行っていない。試験用owned regionだけを操作した。
+
+試験実行形式の移行に伴い、libtest pretty表示が最初のoperator barrierへtest名を付ける
+問題を準備時に見つけた。fixture runnerをstable --format=terseへ変更し、2件のmock検査と
+実際のPOSITION_CLIENTS/CHECKPOINT処理で確認した。製品Rust/runtimeの改修は不要だった。
+
+| 試験 | MCP呼出し | 期待した拒否 | 状態確認 | serverとのcell照合 | MCP正常終了 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Blueprint iteration | 53 | 10 | 13 | 20,384 | 2 |
+| Region jobs | 42 | 3 | 11 | 86,168 | 3 |
+| 合計 | 95 | 13 | 24 | 106,552 | 5 |
+
+Blueprintは生成/import/propose/review/adopt、旧instanceを保持した更新版の配置、
+protected driftによるapply/undo拒否、scope内の編集/取消し、observerの保護判定、公開撤去、
+別MCP OS processでの保存履歴/removed instance再読込み、旧実行undo planの拒否に成功した。
+最終的に1,568-cell owned regionの全airをserver側でも確認した。
+
+Region jobsは32³-cell capture、80-blockの2区画依存順、途中境界から別MCP OS processでの
+fresh plan_next、protected drift拒否、逆順のplan_undo、cancel後の旧stage拒否に成功した。
+自然給電で目標が満たされた区画のno-write確認とundoも通った。初期/最終39,304-cell context
+は全airでserverと一致した。13の拒否は宣言した負例であり、予期しない失敗はなかった。
+
+両runともpassed/restored_to_air=true、probe exit=0、workflow errorなし、private serverは
+正常停止した。最後に25565のcloseも確認した。raw資料は.local/e2e-artifactsに保持し、
+[比較結果とfingerprint](evidence/json-boundary-live-20261005.json)をrepoへ記録した。
+これは有限の公開workflowと安定checkpointの比較結果である。runtimeのreadbackをserver-confirmed
+能力へ昇格させず、tickをまたぐ独立predicate比較をatomic/hidden queue検証とは扱わない。

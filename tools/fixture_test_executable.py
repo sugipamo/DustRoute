@@ -30,5 +30,7 @@ def build_fixture_test(crate, name):
 
 
 def fixture_command(binary):
+    # Pretty libtest output prefixes the first barrier with the test name.
+    # Terse output keeps operator protocol markers at the start of each line.
     return [str(binary), '--ignored', '--exact', 'retain_fixture',
-            '--nocapture', '--test-threads=1']
+            '--nocapture', '--test-threads=1', '--format=terse']

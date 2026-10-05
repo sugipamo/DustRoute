@@ -92,3 +92,17 @@ barriers and owned-world restrictions. The Blueprint runner selects the exact Ca
 test artifact and hashes it. Its MCP restart bookkeeping remains native in memory;
 retained JSON recovery fixtures are decoded only at the test boundary, followed by
 fresh public removal plans and exact observed external-state checks.
+
+
+## Native JSON migration revalidation (2026-10-05)
+
+The migrated ignored-test runner passed Blueprint iteration (53 tool calls,
+13 checkpoints, 20,384 cell comparisons) and region jobs (42 tool calls,
+11 checkpoints, 86,168 cell comparisons) on the existing private Vanilla server.
+All declared negative cases refused as expected. Both trials restored their owned
+regions to air, closed all MCP processes normally, and stopped the server normally.
+Product source is `189cfc7`; no product runtime repair was needed.
+The fixture launcher uses `--format=terse` so libtest does not prefix the first
+operator barrier. Original evidence above is unchanged; this is a separate run.
+See [the retained summary](evidence/json-boundary-live-20261005.json) for fingerprints,
+raw paths and the finite stable-checkpoint scope.

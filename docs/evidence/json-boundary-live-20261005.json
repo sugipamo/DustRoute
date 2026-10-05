@@ -1,0 +1,248 @@
+{
+  "schema_version": "dustroute.json-boundary-live.v1",
+  "recorded_at_utc": "2026-10-05T05:43:49.265750+00:00",
+  "scope": "Declared public MCP Blueprint iteration and region-job lifecycles after native JSON migration",
+  "server": "Vanilla Java 1.21.11",
+  "endpoint": "127.0.0.1:25565",
+  "runs": [
+    {
+      "run_id": "native-json-boundary-20261005-blueprint-a",
+      "case": "blueprint_iteration",
+      "product_source_commit": "189cfc7549a087abbd22e7efb6fc01c2718c90f3",
+      "raw_manifest": ".local/e2e-artifacts/native-json-boundary-20261005-blueprint-a.manifest.json",
+      "raw_manifest_sha256": "b3c7131e68a4cb3208f94edafa5a39ffd28b1550b8cd6c025e54673959bd8592",
+      "raw_trace": ".local/e2e-artifacts/native-json-boundary-20261005-blueprint-a.jsonl",
+      "raw_trace_sha256": "2d20e24dd4d441bf388e31a30f08ae12844c9dec13212b3c6862700742ee7301",
+      "binary_sha256": {
+        "mcp": "db0ad5ad911d6329c6f721056a9c0832cc328bf761e7d223feec9b3772371dad",
+        "fixture": "04a376463ea0c2dfc0ea2966cfeff5bcaeabfe969cf084f42e66213c00f61251"
+      },
+      "source_sha256": {
+        "trial": "b1a1bff3d367a75cd808114f5f635db989ff8160de03b3d0842846df7c489770",
+        "runner": "c3eaa2af6d2f89a72e46d3f146e3a11d19a2d92a2c578da1ee5593dbcea32865",
+        "fixture_helper": "7d9beb0a77be4abbdda731395e240a17463658c6862053fed749bce50816118c"
+      },
+      "started_at_utc": "2026-10-05T05:36:15.268553+00:00",
+      "finished_at_utc": "2026-10-05T05:38:06.399004+00:00",
+      "passed": true,
+      "restored_to_air": true,
+      "public_tool_calls": 53,
+      "expected_refusals": 10,
+      "clean_mcp_process_stops": 2,
+      "server_stopped_normally": true,
+      "probe_exit_code": 0,
+      "workflow_errors": [],
+      "checkpoints": [
+        {
+          "stage": "initial_empty",
+          "non_air": 0,
+          "checked_cells": 1568,
+          "atomic": false,
+          "hidden_runtime_observed": false
+        },
+        {
+          "stage": "errors_no_world_writes",
+          "non_air": 0,
+          "checked_cells": 1568,
+          "atomic": false,
+          "hidden_runtime_observed": false
+        },
+        {
+          "stage": "base_placed",
+          "non_air": 4,
+          "checked_cells": 1568,
+          "atomic": false,
+          "hidden_runtime_observed": false
+        },
+        {
+          "stage": "updated_placed_base_unchanged",
+          "non_air": 8,
+          "checked_cells": 1568,
+          "atomic": false,
+          "hidden_runtime_observed": false
+        },
+        {
+          "stage": "protected_drift_blocks_apply",
+          "non_air": 8,
+          "checked_cells": 1568,
+          "atomic": false,
+          "hidden_runtime_observed": false
+        },
+        {
+          "stage": "scoped_edit_applied",
+          "non_air": 8,
+          "checked_cells": 1568,
+          "atomic": false,
+          "hidden_runtime_observed": false
+        },
+        {
+          "stage": "protected_drift_blocks_undo",
+          "non_air": 8,
+          "checked_cells": 1568,
+          "atomic": false,
+          "hidden_runtime_observed": false
+        },
+        {
+          "stage": "scoped_edit_undone",
+          "non_air": 8,
+          "checked_cells": 1568,
+          "atomic": false,
+          "hidden_runtime_observed": false
+        },
+        {
+          "stage": "protected_observer_pulse_refused",
+          "non_air": 9,
+          "checked_cells": 1568,
+          "atomic": false,
+          "hidden_runtime_observed": false
+        },
+        {
+          "stage": "observer_edit_allowed_settled",
+          "non_air": 10,
+          "checked_cells": 1568,
+          "atomic": false,
+          "hidden_runtime_observed": false
+        },
+        {
+          "stage": "observer_edit_undone",
+          "non_air": 9,
+          "checked_cells": 1568,
+          "atomic": false,
+          "hidden_runtime_observed": false
+        },
+        {
+          "stage": "all_fixtures_removed",
+          "non_air": 0,
+          "checked_cells": 1568,
+          "atomic": false,
+          "hidden_runtime_observed": false
+        },
+        {
+          "stage": "after_restart_empty",
+          "non_air": 0,
+          "checked_cells": 1568,
+          "atomic": false,
+          "hidden_runtime_observed": false
+        }
+      ]
+    },
+    {
+      "run_id": "native-json-boundary-20261005-regions-a",
+      "case": "region_jobs",
+      "product_source_commit": "189cfc7549a087abbd22e7efb6fc01c2718c90f3",
+      "raw_manifest": ".local/e2e-artifacts/native-json-boundary-20261005-regions-a.manifest.json",
+      "raw_manifest_sha256": "201bd33475e267fb90dceaeb70cfbcebfd68e06ee28f294921bca4f2211c24ac",
+      "raw_trace": ".local/e2e-artifacts/native-json-boundary-20261005-regions-a.jsonl",
+      "raw_trace_sha256": "f965c11d365e648224261f34f79741088173f87d9b154c99cb5fe1a973a10be7",
+      "binary_sha256": {
+        "mcp": "db0ad5ad911d6329c6f721056a9c0832cc328bf761e7d223feec9b3772371dad",
+        "fixture": "04a376463ea0c2dfc0ea2966cfeff5bcaeabfe969cf084f42e66213c00f61251"
+      },
+      "source_sha256": {
+        "trial": "b1a1bff3d367a75cd808114f5f635db989ff8160de03b3d0842846df7c489770",
+        "runner": "c3eaa2af6d2f89a72e46d3f146e3a11d19a2d92a2c578da1ee5593dbcea32865",
+        "fixture_helper": "7d9beb0a77be4abbdda731395e240a17463658c6862053fed749bce50816118c"
+      },
+      "started_at_utc": "2026-10-05T05:38:20.531751+00:00",
+      "finished_at_utc": "2026-10-05T05:42:00.912690+00:00",
+      "passed": true,
+      "restored_to_air": true,
+      "public_tool_calls": 42,
+      "expected_refusals": 3,
+      "clean_mcp_process_stops": 3,
+      "server_stopped_normally": true,
+      "probe_exit_code": 0,
+      "workflow_errors": [],
+      "checkpoints": [
+        {
+          "stage": "job_initial_full_context",
+          "non_air": 0,
+          "checked_cells": 39304,
+          "atomic": false,
+          "hidden_runtime_observed": false
+        },
+        {
+          "stage": "job_first_region",
+          "non_air": 40,
+          "checked_cells": 840,
+          "atomic": false,
+          "hidden_runtime_observed": false
+        },
+        {
+          "stage": "job_protected_drift_refusal",
+          "non_air": 41,
+          "checked_cells": 840,
+          "atomic": false,
+          "hidden_runtime_observed": false
+        },
+        {
+          "stage": "job_both_regions",
+          "non_air": 80,
+          "checked_cells": 840,
+          "atomic": false,
+          "hidden_runtime_observed": false
+        },
+        {
+          "stage": "job_undo_region_1",
+          "non_air": 40,
+          "checked_cells": 840,
+          "atomic": false,
+          "hidden_runtime_observed": false
+        },
+        {
+          "stage": "job_undo_region_0",
+          "non_air": 0,
+          "checked_cells": 840,
+          "atomic": false,
+          "hidden_runtime_observed": false
+        },
+        {
+          "stage": "noop_initial_lamp",
+          "non_air": 1,
+          "checked_cells": 840,
+          "atomic": false,
+          "hidden_runtime_observed": false
+        },
+        {
+          "stage": "noop_naturally_powered",
+          "non_air": 2,
+          "checked_cells": 840,
+          "atomic": false,
+          "hidden_runtime_observed": false
+        },
+        {
+          "stage": "noop_confirmed_without_writes",
+          "non_air": 2,
+          "checked_cells": 840,
+          "atomic": false,
+          "hidden_runtime_observed": false
+        },
+        {
+          "stage": "noop_restored_lamp",
+          "non_air": 1,
+          "checked_cells": 840,
+          "atomic": false,
+          "hidden_runtime_observed": false
+        },
+        {
+          "stage": "job_final_full_context",
+          "non_air": 0,
+          "checked_cells": 39304,
+          "atomic": false,
+          "hidden_runtime_observed": false
+        }
+      ]
+    }
+  ],
+  "total_public_tool_calls": 95,
+  "total_expected_refusals": 13,
+  "total_checkpoints": 24,
+  "total_cell_comparisons": 106552,
+  "fixture_runner_adjustment": "Use stable libtest --format=terse to keep the first operator barrier at the start of its line; product runtime unchanged",
+  "limits": [
+    "Finite declared cases; not all public workflows or arbitrary circuits.",
+    "Runtime observations remain client reconstructions; independent console predicates confirm stable states.",
+    "Predicate batches span ticks; no atomic observation or hidden pending-event proof.",
+    "Old executable plans remain unrestored; saved history is not current execution authority."
+  ]
+}

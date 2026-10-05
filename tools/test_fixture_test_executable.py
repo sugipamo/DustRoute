@@ -25,7 +25,7 @@ class FixtureExecutableTests(unittest.TestCase):
             self.assertIn('--locked', command)
             self.assertIn('-j1', command)
             self.assertEqual(fixture_command(actual)[1:], ['--ignored', '--exact',
-                             'retain_fixture', '--nocapture', '--test-threads=1'])
+                             'retain_fixture', '--nocapture', '--test-threads=1', '--format=terse'])
 
     def test_missing_or_ambiguous_artifacts_are_not_replaced_by_a_stale_binary(self):
         record = {'reason': 'compiler-artifact', 'target': {'name': 'probe'},
