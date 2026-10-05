@@ -79,11 +79,6 @@ mod tests {
             .blueprint_command(Command::Read(BlueprintRead::Archive), None, true)
             .await
             .unwrap();
-        let expected = super::super::test_support::decode_reply(&legacy_cause_reply(
-            FailureCause::from(service.policy.authorize_player("builder").unwrap_err())
-                .at(FailurePhase::Admission),
-        ))
-        .unwrap();
         match &response {
             BlueprintCommandResponse::PermissionDenied(error) => {
                 assert_eq!(error.kind, CauseKind::PermissionDenied);
@@ -93,7 +88,12 @@ mod tests {
         }
         let public: Value =
             super::super::test_support::decode_reply(&typed_reply(response)).unwrap();
-        assert_eq!(public, expected);
+        assert_eq!(public["failure"]["primary"]["kind"], "permission_denied");
+        assert_eq!(public["failure"]["primary"]["phase"], "admission");
+        assert_eq!(
+            public["failure"]["primary"]["details"]["resource"],
+            "player:builder"
+        );
         assert_eq!(public["ok"], false);
         assert_eq!(public["error_code"], "permission_denied");
         assert_eq!(public["failure"]["progress"], Value::Null);

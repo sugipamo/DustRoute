@@ -517,8 +517,31 @@ async fn selected_region_analysis_completes_native_flat_and_hierarchical_reports
 }
 
 #[tokio::test]
-async fn analysis_admission_matches_legacy_boundary_before_creating_work() {
-    for case in 0..5 {
+async fn analysis_admission_refuses_before_creating_work() {
+    // Check the public refusal contract without rebuilding the retired adapter
+    // or calling the same validation helpers to manufacture an expected reply.
+    for (case, code, kind, phase) in [
+        (
+            "player_override",
+            "permission_denied",
+            "permission_denied",
+            None,
+        ),
+        (
+            "player_denied",
+            "permission_denied",
+            "permission_denied",
+            Some("admission"),
+        ),
+        ("missing_selection", "invalid_state", "invalid_state", None),
+        ("scan_limit", "resource_limit", "resource_limit", None),
+        (
+            "invalid_budget",
+            "invalid_argument",
+            "invalid_input",
+            Some("unknown"),
+        ),
+    ] {
         let root = temporary();
         let mut service = DustRouteMcp::with_test_transport_and_player(
             "127.0.0.1:1",
@@ -527,63 +550,42 @@ async fn analysis_admission_matches_legacy_boundary_before_creating_work() {
         );
         service.state_store = PlanStateStore::new(root.clone(), 3600);
         let mut args = json!({});
-        let bounds = dustroute_translate::world_reverse::RegionBounds::new(
-            Pos::new(0, 80, 0),
-            Pos::new(
-                if case == 3 { 4096 } else { 0 },
-                80,
-                if case == 3 { 4096 } else { 0 },
-            ),
-        );
-        let cause = match case {
-            0 => {
-                args["player"] = json!("Other");
-                service.resolve_player(Some("Other")).unwrap_err()
-            }
-            1 => {
+        match case {
+            "player_override" => args["player"] = json!("Other"),
+            "player_denied" => {
                 service.policy.allowed_players = ["AnotherPlayer".into()].into();
-                FailureCause::from(service.policy.authorize_player("Tester").unwrap_err())
-                    .at(FailurePhase::Admission)
             }
-            2 => service.selected_region("Tester").await.unwrap_err(),
-            3 => {
+            "missing_selection" => {}
+            "scan_limit" | "invalid_budget" => {
+                let max = if case == "scan_limit" { 4096 } else { 0 };
+                let bounds = dustroute_translate::world_reverse::RegionBounds::new(
+                    Pos::new(0, 80, 0),
+                    Pos::new(max, 80, max),
+                );
                 service.selections.lock().await.insert(
                     "Tester".into(),
                     LocatedSelection::with_bounds("Tester", bounds, "minecraft:overworld".into()),
                 );
-                FailureCause::from(service.policy.validate_region(bounds).unwrap_err())
-            }
-            4 => {
-                service.selections.lock().await.insert(
-                    "Tester".into(),
-                    LocatedSelection::with_bounds("Tester", bounds, "minecraft:overworld".into()),
-                );
-                args = json!({"include_truth_table":true,"truth_table_max_inputs":0});
-                FailureCause::new(CauseKind::Unknown, "unused")
+                if case == "invalid_budget" {
+                    args = json!({"include_truth_table":true,"truth_table_max_inputs":0});
+                }
             }
             _ => unreachable!(),
-        };
-        let expected = if case == 4 {
-            let error = reverse_request_for_truth_table(
-                bounds,
-                TruthTableRequestOptions {
-                    include_truth_table: true,
-                    max_inputs: Some(0),
-                    ..Default::default()
-                },
-            )
-            .unwrap_err();
-            test_support::decode_reply(&error_reply(McpErrorCode::InvalidArgument, error, false))
-                .unwrap()
-        } else {
-            test_support::decode_reply(&legacy_cause_reply(cause)).unwrap()
-        };
+        }
         let reply = service
             .start_selected_region_conversion(Parameters(serde_json::from_value(args).unwrap()))
             .await;
-        assert_eq!(reply.is_error, Some(true));
-        assert_eq!(test_support::decode_reply(&reply).unwrap(), expected);
-        assert!(service.operations.list().await.is_empty());
-        assert!(!root.exists());
+        assert_eq!(reply.is_error, Some(true), "{case}");
+        let response = test_support::decode_reply(&reply).unwrap();
+        assert_eq!(response["error_code"], code, "{case}");
+        assert_eq!(response["failure"]["primary"]["kind"], kind, "{case}");
+        assert_eq!(
+            response["failure"]["primary"]["phase"],
+            json!(phase),
+            "{case}"
+        );
+        assert_eq!(response["failure"]["progress"], Value::Null, "{case}");
+        assert!(service.operations.list().await.is_empty(), "{case}");
+        assert!(!root.exists(), "{case}");
     }
 }

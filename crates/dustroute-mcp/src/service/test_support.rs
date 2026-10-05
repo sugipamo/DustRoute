@@ -290,3 +290,41 @@ pub(super) async fn serve(service: DustRouteMcp) -> (Client, tokio::task::JoinHa
         server,
     )
 }
+
+pub(super) fn broken_wire_snapshot(repaired: bool) -> Value {
+    let mut blocks = vec![
+        snapshot_block(0, 0, 0, "minecraft:stone", json!({})),
+        snapshot_block(1, 0, 0, "minecraft:stone", json!({})),
+        snapshot_block(2, 0, 0, "minecraft:stone", json!({})),
+        snapshot_block(0, 1, 0, "minecraft:redstone_wire", wire_properties()),
+        snapshot_block(2, 1, 0, "minecraft:redstone_wire", wire_properties()),
+    ];
+    if repaired {
+        blocks.push(snapshot_block(
+            1,
+            1,
+            0,
+            "minecraft:redstone_wire",
+            wire_properties(),
+        ));
+    }
+    json!({
+        "min": { "x": 0, "y": 0, "z": 0 },
+        "max": { "x": 2, "y": 2, "z": 0 },
+        "blocks": blocks,
+    })
+}
+
+pub(super) fn snapshot_block(x: i32, y: i32, z: i32, name: &str, properties: Value) -> Value {
+    json!({ "pos": { "x": x, "y": y, "z": z }, "name": name, "properties": properties })
+}
+
+fn wire_properties() -> Value {
+    json!({
+        "north": "none",
+        "east": "side",
+        "south": "none",
+        "west": "side",
+        "power": "0",
+    })
+}

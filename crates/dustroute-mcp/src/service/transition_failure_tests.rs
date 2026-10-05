@@ -846,3 +846,61 @@ async fn transition_preview_submission_does_not_replace_candidate_or_execution_e
     );
     transport.abort();
 }
+
+/// Conflicting invalid inputs must still be rejected in the established order,
+/// before transport access or attempt publication, for both run and restore.
+#[tokio::test]
+async fn transition_admission_preserves_refusal_priority_without_starting_work() {
+    let missing_id = uuid::Uuid::nil().to_string();
+    for (read_only, confirm, id, code, message) in [
+        (
+            true,
+            false,
+            "invalid-id",
+            "invalid_argument",
+            "confirm=true is required",
+        ),
+        (
+            true,
+            true,
+            "invalid-id",
+            "permission_denied",
+            "read-only policy",
+        ),
+        (false, true, "invalid-id", "invalid_argument", "invalid"),
+        (
+            false,
+            true,
+            missing_id.as_str(),
+            "not_found",
+            "transition scenario not found",
+        ),
+    ] {
+        let service = DustRouteMcp::with_test_transport_and_player(
+            "127.0.0.1:1",
+            McpPolicy {
+                read_only,
+                ..Default::default()
+            },
+            "Tester",
+        );
+        for restore in [false, true] {
+            let params = Parameters(RunTransitionParams {
+                operation_id: id.into(),
+                confirm,
+                contracts: None,
+            });
+            let reply = if restore {
+                service.restore_transition_test(params).await
+            } else {
+                service.invoke_transition_test(params).await
+            };
+            let response = test_support::decode_reply(&reply).unwrap();
+            assert_eq!(reply.is_error, Some(true));
+            assert_eq!(response["error_code"], code);
+            assert!(response["error"].as_str().unwrap().contains(message));
+            assert!(response["failure"]["progress"].is_null());
+            assert!(service.operations.list().await.is_empty());
+        }
+    }
+}

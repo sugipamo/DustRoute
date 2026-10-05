@@ -82,30 +82,6 @@ fn encode_response(mut value: Value) -> EncodedResponse {
     EncodedResponse { text, failed }
 }
 
-// Independent compatibility adapter for the former final MCP promotion. It is
-// used only by boundary regressions; production accepts native cause responses.
-#[cfg(test)]
-pub(super) fn legacy_cause_reply(cause: FailureCause) -> CallToolResult {
-    let mut value = json!({"ok":false,"error":cause});
-    if let Some(object) = value.as_object_mut() {
-        // Only a typed cause is promoted; arbitrary strings remain unknown.
-        if !object.contains_key("failure")
-            && let Some(cause) = object
-                .get("error")
-                .cloned()
-                .and_then(|value| serde_json::from_value::<FailureCause>(value).ok())
-        {
-            object.extend(
-                cause_value(&cause)
-                    .as_object()
-                    .expect("diagnostic object")
-                    .clone(),
-            );
-        }
-    }
-    json_reply(value)
-}
-
 pub(super) fn error_reply(
     code: McpErrorCode,
     message: impl Into<String>,

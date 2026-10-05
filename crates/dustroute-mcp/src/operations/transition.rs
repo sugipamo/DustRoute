@@ -1,13 +1,69 @@
 //! Transition candidate metadata and one attempt's evidence and cleanup.
 //! Simulation results remain separate from execution and replay authority.
-use super::mutation::Success;
-use crate::api::{TRANSITION_SCHEMA_V1, TransitionTraceResponse};
+use super::mutation::{Success, UnrecordedFailure};
+use crate::api::{ErrorResponse, McpErrorCode, TRANSITION_SCHEMA_V1, TransitionTraceResponse};
 use crate::bridge::LeverActivation;
-use crate::failure::{ExecutionProgress, FailureReport};
+use crate::failure::{ExecutionProgress, FailureCause, FailureReport};
 use dustroute_ir::{BehaviorTrace, TransientAssessment, TransitionTrace};
 use dustroute_translate::scenario::{Scenario, ScenarioDifference, ScenarioRun, ScenarioTrace};
 use serde::{Serialize, Serializer};
 use uuid::Uuid;
+
+/// A refusal before an attempt has started. It carries diagnostic data only;
+/// execution decisions never depend on its serialized representation.
+#[derive(Debug)]
+pub(crate) enum TransitionRefusal {
+    Unrecorded(UnrecordedFailure),
+    Safety(Box<crate::TransitionSafetyAssessment>),
+    Validation(dustroute_translate::world::WorldValidationError),
+}
+impl TransitionRefusal {
+    pub fn coded(code: McpErrorCode, message: impl Into<String>) -> Self {
+        Self::Unrecorded(UnrecordedFailure::coded(code, message, false))
+    }
+}
+impl From<UnrecordedFailure> for TransitionRefusal {
+    fn from(failure: UnrecordedFailure) -> Self {
+        Self::Unrecorded(failure)
+    }
+}
+impl From<FailureCause> for TransitionRefusal {
+    fn from(cause: FailureCause) -> Self {
+        Self::Unrecorded(cause.into())
+    }
+}
+impl Serialize for TransitionRefusal {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        #[derive(Serialize)]
+        struct SafetyRefusal<'a> {
+            #[serde(flatten)]
+            error: ErrorResponse,
+            safety: &'a crate::TransitionSafetyAssessment,
+        }
+        #[derive(Serialize)]
+        struct ValidationRefusal<'a> {
+            ok: bool,
+            error: String,
+            validation: &'a dustroute_translate::world::WorldValidationError,
+        }
+        match self {
+            Self::Unrecorded(failure) => failure.serialize(serializer),
+            Self::Safety(safety) => SafetyRefusal {
+                error: ErrorResponse::new(
+                    McpErrorCode::InvalidState,
+                    "scenario is preview-only because the region contains temporal or unsupported devices",
+                    false,
+                ),
+                safety,
+            }.serialize(serializer),
+            Self::Validation(validation) => ValidationRefusal {
+                ok: false,
+                error: validation.to_string(),
+                validation,
+            }.serialize(serializer),
+        }
+    }
+}
 
 /// Candidate metadata is neither an execution result nor a reusable plan.
 #[derive(Clone, Debug, PartialEq, Serialize)]

@@ -14,7 +14,6 @@ async fn all_session_authorization_entries_preserve_cause_and_pending_state() {
     assert!(service.authorize_player("Tester").is_ok());
     service.policy.allowed_players = ["AnotherPlayer".into()].into();
     let cause = service.authorize_player("Tester").unwrap_err();
-    let expected = decode_reply(&legacy_cause_reply(cause.clone())).unwrap();
     assert_eq!(cause.phase, Some(FailurePhase::Admission));
     assert_eq!(cause.details.resource.as_deref(), Some("player:Tester"));
     let bounds = RegionBounds::new(Pos::new(0, 0, 0), Pos::new(1, 1, 1));
@@ -55,7 +54,16 @@ async fn all_session_authorization_entries_preserve_cause_and_pending_state() {
     ];
     for reply in replies {
         assert_eq!(reply.is_error, Some(true));
-        assert_eq!(decode_reply(&reply).unwrap(), expected);
+        let response = decode_reply(&reply).unwrap();
+        assert_eq!(response["error_code"], "permission_denied");
+        assert_eq!(response["failure"]["primary"]["kind"], "permission_denied");
+        assert_eq!(response["failure"]["primary"]["phase"], "admission");
+        assert_eq!(
+            response["failure"]["primary"]["details"]["resource"],
+            "player:Tester"
+        );
+        assert!(response["failure"]["progress"].is_null());
+        assert_eq!(response["recovery"]["same_operation_replay_allowed"], false);
     }
     let selected = service.selections.lock().await;
     let selected = selected.get("Tester").unwrap();
@@ -432,17 +440,15 @@ async fn player_override_keeps_known_cause_and_legacy_message_distinct() {
         let response = decode_reply(&reply).unwrap();
         assert_eq!(response["error_code"], code);
         let message = "player override is not allowed; configured assist player is \"Tester\"";
-        let expected = if code == "permission_denied" {
-            // Original boundary encoded the native cause, including no assigned phase.
-            decode_reply(&legacy_cause_reply(FailureCause::new(
-                CauseKind::PermissionDenied,
-                message,
-            )))
-            .unwrap()
+        assert_eq!(response["error"], message);
+        let (kind, phase) = if code == "permission_denied" {
+            ("permission_denied", Value::Null)
         } else {
-            decode_reply(&json_reply(json!({"ok":false,"error":message}))).unwrap()
+            ("unknown", json!("unknown"))
         };
-        assert_eq!(response, expected);
+        assert_eq!(response["failure"]["primary"]["kind"], kind);
+        assert_eq!(response["failure"]["primary"]["phase"], phase);
+        assert_eq!(response["recovery"]["same_operation_replay_allowed"], false);
         assert!(response["failure"]["progress"].is_null());
         assert!(!response["error"].as_str().unwrap().starts_with('{'));
     }

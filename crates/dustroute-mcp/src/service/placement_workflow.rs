@@ -1,6 +1,7 @@
 //! One command-placement attempt, its context check and independent readback.
 //! Player resolution and MCP dispatch have already happened at the facade.
 use super::*;
+use crate::bridge_protocol::CommandWrite;
 use crate::operations::mutation::{
     MutationAction, PlacementAttempt, PlacementFailure, PlacementOutcome, PlacementReceipt,
     Success, UnrecordedFailure,
