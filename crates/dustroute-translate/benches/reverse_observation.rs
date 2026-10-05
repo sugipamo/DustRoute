@@ -8,9 +8,7 @@ use dustroute_translate::{
     world_reverse::RegionBounds, world_reverse::TruthTableBudget,
     world_reverse::analyze_world_region, world_reverse::infer_truth_table_with_budget_and_stats,
 };
-use serde::Serialize;
 
-#[derive(Serialize)]
 struct Observation {
     circuit: String,
     world_blocks: usize,
@@ -49,6 +47,83 @@ struct Observation {
     truth_table_unattributed_ms: f64,
     truth_table_ok: bool,
     truth_table_error: Option<String>,
+}
+
+impl std::fmt::Debug for Observation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Observation")
+            .field("circuit", &self.circuit)
+            .field("world_blocks", &self.world_blocks)
+            .field("graph_nodes", &self.graph_nodes)
+            .field("graph_edges", &self.graph_edges)
+            .field("components", &self.components)
+            .field("inputs", &self.inputs)
+            .field("outputs", &self.outputs)
+            .field("unsupported", &self.unsupported)
+            .field("settle_ticks", &self.settle_ticks)
+            .field("liveness_sources", &self.liveness_sources)
+            .field("liveness_drive_reachable", &self.liveness_drive_reachable)
+            .field(
+                "liveness_potential_reachable",
+                &self.liveness_potential_reachable,
+            )
+            .field("undriven_inputs", &self.undriven_inputs)
+            .field("directed_regions", &self.directed_regions)
+            .field("signal_islands", &self.signal_islands)
+            .field("unreachable_components", &self.unreachable_components)
+            .field("dead_end_components", &self.dead_end_components)
+            .field("invalid_supports", &self.invalid_supports)
+            .field("compile_ms", &self.compile_ms)
+            .field("extract_ms", &self.extract_ms)
+            .field("analyze_ms", &self.analyze_ms)
+            .field("liveness_ms", &self.liveness_ms)
+            .field("truth_table_ms", &self.truth_table_ms)
+            .field("truth_table_rows", &self.truth_table_rows)
+            .field(
+                "truth_table_rows_requested",
+                &self.truth_table_rows_requested,
+            )
+            .field(
+                "truth_table_settle_ticks_executed",
+                &self.truth_table_settle_ticks_executed,
+            )
+            .field(
+                "truth_table_solver_iterations",
+                &self.truth_table_solver_iterations,
+            )
+            .field(
+                "truth_table_execution_elapsed_ms",
+                &self.truth_table_execution_elapsed_ms,
+            )
+            .field(
+                "truth_table_world_clone_ms",
+                &self.truth_table_world_clone_ms,
+            )
+            .field(
+                "truth_table_input_drive_ms",
+                &self.truth_table_input_drive_ms,
+            )
+            .field(
+                "truth_table_wire_shape_update_ms",
+                &self.truth_table_wire_shape_update_ms,
+            )
+            .field(
+                "truth_table_simulator_init_ms",
+                &self.truth_table_simulator_init_ms,
+            )
+            .field("truth_table_settle_ms", &self.truth_table_settle_ms)
+            .field(
+                "truth_table_output_read_ms",
+                &self.truth_table_output_read_ms,
+            )
+            .field(
+                "truth_table_unattributed_ms",
+                &self.truth_table_unattributed_ms,
+            )
+            .field("truth_table_ok", &self.truth_table_ok)
+            .field("truth_table_error", &self.truth_table_error)
+            .finish()
+    }
 }
 
 fn elapsed_ms(started: Instant) -> f64 {
@@ -211,9 +286,7 @@ fn main() {
     ];
     for (name, dag, settle_ticks, pad_world_to) in circuits {
         let observation = observe(name, dag, settle_ticks, pad_world_to);
-        println!(
-            "{}",
-            serde_json::to_string(&observation).expect("observation is JSON serializable")
-        );
+        // Human-readable diagnostics; this is not an application message codec.
+        println!("{observation:#?}");
     }
 }

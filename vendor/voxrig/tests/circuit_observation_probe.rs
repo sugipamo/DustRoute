@@ -1,3 +1,4 @@
+//! Opt-in fixture adapter. JSON encoding is test-only; native state decides outcomes.
 //! Observe a prepared isolated circuit through ordinary lever inputs.
 //! Configuration describes bounds and inputs; setup/independent assertions stay external.
 use std::{
@@ -15,6 +16,13 @@ struct Config {
     waits_ms: Vec<u64>,
 }
 
+#[derive(serde::Serialize)]
+struct InputTiming {
+    before_sequence: Option<u64>,
+    before_frame: u64,
+    wait_ms: u64,
+}
+
 async fn barrier(message: &str) -> anyhow::Result<()> {
     println!("{message}; press enter after console setup");
     io::stdout().flush()?;
@@ -27,8 +35,9 @@ async fn barrier(message: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "explicit isolated-server fixture capture; requires prepared world and environment"]
+async fn retain_fixture() -> anyhow::Result<()> {
     let config: Config =
         serde_json::from_reader(std::fs::File::open(std::env::var("PROBE_CONFIG")?)?)?;
     anyhow::ensure!(
@@ -64,7 +73,11 @@ async fn main() -> anyhow::Result<()> {
     for wait in config.waits_ms {
         let boundary = client.observe_client_region(region).await?;
         client.interact_block(config.input, BlockFace::Up).await?;
-        inputs.push(serde_json::json!({"before_sequence":boundary.received.receive_sequence,"before_frame":boundary.client_tick,"wait_ms":wait}));
+        inputs.push(InputTiming {
+            before_sequence: boundary.received.receive_sequence,
+            before_frame: boundary.client_tick,
+            wait_ms: wait,
+        });
         let started = tokio::time::Instant::now();
         while started.elapsed() < Duration::from_millis(wait) {
             tokio::time::sleep(Duration::from_millis(20)).await;
@@ -103,19 +116,15 @@ async fn main() -> anyhow::Result<()> {
     serde_json::to_writer(file, &record)?;
     client.disconnect().await?;
     println!(
-        "TRACE_RETAINED complete={} packets={} issue={}",
-        record["trace"]["complete"],
-        record["trace"]["records"].as_array().unwrap().len(),
-        record["after_client"]["issue"]
+        "TRACE_RETAINED complete={} packets={} issue={:?}",
+        trace.complete,
+        trace.records.len(),
+        after_client.issue
     );
     anyhow::ensure!(
-        record["trace"]["complete"] == true
-            && record["transient"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .all(|s| s["issue"].is_null())
-            && record["after_client"]["issue"].is_null(),
+        trace.complete
+            && transient.iter().all(|sample| sample.issue.is_none())
+            && after_client.issue.is_none(),
         "incomplete client reconstruction; capture retained"
     );
     Ok(())

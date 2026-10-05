@@ -104,6 +104,7 @@
 今回の再現コマンド（再実行時は新しいnamespace・run-id・空き座標を使う）:
 
 ```sh
-target/debug/examples/generate_flying_machine request.json > .local/engine.fixture.json
+DUSTROUTE_FLIGHT_INPUT="$PWD/request.json" DUSTROUTE_FLIGHT_OUTPUT="$PWD/.local/engine.fixture.json" \
+  cargo test --offline --locked -j1 -p dustroute-translate --test flying_machine_fixture_adapter -- --ignored --exact export_fixture --test-threads=1
 python3 tools/observe_assembly_construction.py --run-id engine-next --x 320000 --fixture .local/engine.fixture.json --rotation r90 --persistence --capture-construction
 ```

@@ -1,58 +1,50 @@
-//! Replay measured input times at actual world coordinates. No live evidence
-//! is inferred here; the capture runner compares this output separately.
+//! Diagnostic replay of explicit observed inputs through the shared runtime.
+//! This predicts only the supplied initial state and input order. It neither
+//! certifies a live capture nor grants adoption, placement or restart authority.
+use crate::snapshot::{MinecraftSnapshot, assembly_from_snapshot};
 use dustroute_minecraft::time::piston_runtime::{
-    ELECTRICAL_PROFILE, ElectricalPistonRuntime, PistonEvent, new_piston_runtime,
-    schedule_device_use_after_tick, schedule_electrical_input,
-    schedule_electrical_input_after_tick,
+    ElectricalPistonRuntime, PistonEvent, new_piston_runtime, schedule_device_use_after_tick,
+    schedule_electrical_input, schedule_electrical_input_after_tick,
 };
 use dustroute_minecraft::time::runtime::RuntimeLimits;
 use dustroute_minecraft::{BlockKind, Pos, Region};
-use dustroute_translate::snapshot::MinecraftSnapshot;
-use dustroute_translate::snapshot::assembly_from_snapshot;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 
-#[derive(Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct Input {
-    tick: u64,
-    position: Pos,
-    powered: Option<bool>,
+pub struct ReplayInput {
+    pub tick: u64,
+    pub position: Pos,
+    pub powered: Option<bool>,
     #[serde(default)]
-    use_device: bool,
+    pub use_device: bool,
     #[serde(default)]
-    after_world_tick: bool,
-}
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct Trial {
-    initial: MinecraftSnapshot,
-    inputs: Vec<Input>,
-    #[serde(default)]
-    trace: bool,
-    #[serde(default)]
-    verify_restoration: bool,
-    #[serde(default)]
-    restoration_scope: RestorationScope,
-    /// Retain commits and delivery metadata, omitting bulky continuation payloads.
-    #[serde(default)]
-    device_projection: bool,
+    pub after_world_tick: bool,
 }
 
-#[derive(Clone, Copy, Default, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
-enum RestorationScope {
+pub enum RestorationScope {
     #[default]
     MovementOrDevice,
-    /// Explicit negative trial: no carriers, resume a changed input's callbacks.
+    /// A negative diagnostic: no carriers, resume a changed input's callbacks.
     InputNotifications,
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let path = std::env::args()
-        .nth(1)
-        .ok_or("usage: compare_electrical_pistons INPUT.json")?;
-    let trial: Trial = serde_json::from_str(&std::fs::read_to_string(path)?)?;
+pub struct ReplayRequest {
+    pub initial: MinecraftSnapshot,
+    pub inputs: Vec<ReplayInput>,
+    pub verify_restoration: bool,
+    pub restoration_scope: RestorationScope,
+}
+
+/// Retains exact delivery metadata and world state in their owning Rust types.
+/// JSON fixture IO and optional trace projections belong to test adapters.
+/// Restoration compares the exact checkpoint and representative behavior future
+/// without promoting a saved observation or fixture to execution permission.
+pub fn replay_electrical(
+    trial: ReplayRequest,
+) -> Result<ElectricalPistonRuntime, Box<dyn std::error::Error>> {
     let region = Region::new(trial.initial.min, trial.initial.max);
     // The historical analysis importer infers wire shapes. Live comparisons
     // must preserve the exact observed arm map and validate it independently.
@@ -157,56 +149,5 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     } else {
         rt.run_until_idle()?;
     }
-    let blocks: Vec<_> = rt.view().world().iter().map(|(pos, b)| json!({"position":pos,"name":b.observed_name,"properties":b.observed_properties})).collect();
-    let mut changes = Vec::new();
-    for record in rt.trace() {
-        if let Some(delta) = &record.delta {
-            for change in &delta.changes {
-                changes.push(json!({"tick": record.invocation.time.game_tick,
-                    "section": record.invocation.time.section, "position": change.position,
-                    "kind": change.after.kind, "name": change.after.observed_name,
-                    "properties": change.after.observed_properties}));
-            }
-        }
-    }
-    let trace = if !trial.trace {
-        None
-    } else if trial.device_projection {
-        Some(
-            rt.trace()
-                .iter()
-                .map(|r| {
-                    let inv = &r.invocation;
-                    let payload = match &inv.call.payload {
-                        PistonEvent::Initialize => json!("Initialize"),
-                        PistonEvent::Device { callback, .. } => {
-                            json!({"Device":{"callback":callback}})
-                        }
-                        PistonEvent::Notify { jobs } => {
-                            json!({"Notify":{"jobs":jobs.front().into_iter().collect::<Vec<_>>()}})
-                        }
-                        PistonEvent::NotifyAnalogReaders { .. } => json!(inv.call.payload),
-                        PistonEvent::Block { .. } | PistonEvent::CarrierTick => json!(inv.call.payload),
-                        PistonEvent::ForceFinish { .. } => json!({"ForceFinish":{}}),
-                        _ => serde_json::Value::Null,
-                    };
-                    json!({"invocation":{"id":inv.id,"cause":inv.cause,"root":inv.root,"kind":inv.kind,"time":inv.time,
-                "call":{"target":inv.call.target,"payload":payload}},
-                "result":r.result,"delta":r.delta,"carrier_changes":r.carrier_changes})
-                })
-                .collect::<Vec<_>>(),
-        )
-    } else {
-        Some(rt.trace().iter().map(|r| json!(r)).collect())
-    };
-    println!(
-        "{}",
-        serde_json::to_string_pretty(
-            &json!({"source":"dustroute_model","profile":ELECTRICAL_PROFILE,"status":rt.status(),"pending":rt.pending_count(),"final_time":rt.view().time(),"blocks":blocks,"changes":changes,
-                "restoration_verified": trial.verify_restoration,
-                "restoration_scope": trial.restoration_scope,
-                "trace_projection":if trial.device_projection {"device_circuit"} else {"full"}, "trace":trace})
-        )?
-    );
-    Ok(())
+    Ok(rt)
 }

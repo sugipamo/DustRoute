@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Compare retained mixed-device observations with an offline model."""
+from electrical_fixture_adapter import replay_fixture
+
 import json
 import subprocess
 
 from compare_device_circuits import ReplayOutsideScope, compare_model, observe
-from observation_fixture import ROOT
 from observation_records import save
 
 
@@ -26,8 +27,8 @@ def compare_capture(paths, fixture):
                  restoration_scope=fixture.get('restoration_scope', 'movement_or_device'))
     save(paths['.input.json'], trial)
     try:
-        model = subprocess.run([str(ROOT / 'target/debug/examples/compare_electrical_pistons'), str(paths['.input.json'])],
-                               text=True, capture_output=True, timeout=120)
+        model = replay_fixture(paths['.input.json'],
+                               timeout=120)
     except subprocess.TimeoutExpired:
         return dict(classification='model_timeout'), observation
     if model.returncode:

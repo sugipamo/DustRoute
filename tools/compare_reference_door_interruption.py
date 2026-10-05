@@ -4,6 +4,8 @@
 Consumes observe_reference_door.py --interrupted artifacts. The existing full
 tick/write/callback comparator remains the authority for model conformance.
 """
+from electrical_fixture_adapter import replay_fixture
+
 import argparse
 import hashlib
 import json
@@ -45,8 +47,6 @@ def compact(live, raw_path):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--prefix', type=Path, required=True)
-    parser.add_argument('--model-binary', type=Path,
-                        default=ROOT / 'target/debug/examples/compare_electrical_pistons')
     args = parser.parse_args()
     prefix = args.prefix.resolve()
     path = lambda suffix: prefix.with_suffix(suffix)
@@ -60,7 +60,7 @@ def main():
                  trace=True, verify_restoration=True)
     save(path('.input.json'), trial)
     with path('.model.json').open('x') as output:
-        subprocess.run([str(args.model_binary.resolve()), str(path('.input.json'))],
+        replay_fixture(path('.input.json'),
                        stdout=output, check=True, timeout=180)
     result = subprocess.run([
         sys.executable, str(ROOT / 'tools/compare_reference_door.py'),

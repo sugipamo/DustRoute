@@ -39,15 +39,12 @@ fn main() {
             .map(|s| s.expected.len())
             .sum();
         println!(
-            "{}",
-            serde_json::json!({
-                "schema":"dustroute.work-region-scaling.v2", "debug_assertions":cfg!(debug_assertions),
-                "non_air_context_blocks":total, "changed_positions":64, "proof_elapsed_ms":elapsed_ms,
-                "forward_commands":proof.steps(false).len(), "undo_commands":proof.steps(true).len(),
-                "logical_expected_block_records":retained_records,
-                "retained_expected_block_records":usage.block_records,"estimated_expected_bytes":usage.estimated_bytes,
-                "scope":"one passive region, full-context forward/inverse proof; no live transport"
-            })
+            "work_region_scaling debug_assertions={} non_air_context_blocks={total} changed_positions=64 proof_elapsed_ms={elapsed_ms} forward_commands={} undo_commands={} logical_expected_block_records={retained_records} retained_expected_block_records={} estimated_expected_bytes={} scope=passive_full_context",
+            cfg!(debug_assertions),
+            proof.steps(false).len(),
+            proof.steps(true).len(),
+            usage.block_records,
+            usage.estimated_bytes,
         );
     }
 }

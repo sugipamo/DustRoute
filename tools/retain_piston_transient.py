@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Retain server-derived transient expectations after verifying capture coverage."""
+from electrical_fixture_adapter import replay_fixture
+
 import argparse
 import hashlib
 import json
-import subprocess
 import tempfile
 from pathlib import Path
 
@@ -29,11 +30,10 @@ def retain(prefix, output):
     first = applied[0]['game_tick']
     inputs = [{'tick': row['game_tick'] - first + 1,
                'position': row['position'], 'powered': row['powered'], 'after_world_tick': True} for row in applied]
-    model_binary = Path(__file__).resolve().parents[1] / 'target/debug/examples/compare_electrical_pistons'
     with tempfile.TemporaryDirectory() as directory:
         request = Path(directory) / 'input.json'
         request.write_text(json.dumps(dict(initial=initial, inputs=inputs, trace=True, verify_restoration=True)))
-        replay = subprocess.run([str(model_binary),str(request)],capture_output=True,text=True,check=True,timeout=60)
+        replay = replay_fixture(request, check=True, timeout=60)
         verified = json.loads(replay.stdout)
     assert verified['restoration_verified']
     predicted = model_trace(initial, verified['trace'])
@@ -64,7 +64,7 @@ def retain(prefix, output):
             'actor_sha256': summary['actor_sha256'],
             'model_exporter_sha256': summary['comparator_sha256'],
             'fixture_sha256': summary['fixture_sha256'],
-            'replay_binary_sha256': sha256(model_binary),
+            'replay_binary_sha256': replay.replay_binary_sha256,
             'replay_output_sha256': hashlib.sha256(replay.stdout.encode()).hexdigest(),
             'projection_sha256': sha256(Path(__file__).with_name('compare_piston_transients.py')),
         },

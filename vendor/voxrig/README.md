@@ -74,3 +74,18 @@ cargo clippy --all-targets -- -D warnings
 
 Voxrigは[MIT License](LICENSE)で提供します。組み込まれたregistry dataと
 fixtureの出典・ライセンスは[Third-party notices](THIRD_PARTY_NOTICES.md)を参照してください。
+
+### Retaining independent comparison fixtures
+
+The former JSON probe examples are opt-in integration tests. The library and
+its ordinary operations use native Rust results; only these fixture adapters
+encode external comparison records. For example, after explicitly preparing an
+owned disposable server and setting the existing `MC_PORT`/`TRACE_OUTPUT`
+variables, `cargo test --offline --locked -j1 --test packet_trace_probe --
+--ignored --exact retain_fixture --nocapture --test-threads=1` retains the same
+packet/observation fixture. The corresponding tests are `circuit_observation_probe`,
+`modern_operations_probe`, `client_recovery_probe`, and `player_observation_probe`.
+They retain the original setup barriers and exclusive output creation. They are
+ignored by default, never run as part of an offline conformance check, and do not
+turn a saved record into permission to operate on another server. Existing
+independent fixtures remain unchanged.

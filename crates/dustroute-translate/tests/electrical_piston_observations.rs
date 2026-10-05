@@ -3,8 +3,10 @@
 use std::collections::BTreeMap;
 
 use dustroute_library::blueprint::BlueprintCatalog;
-use dustroute_minecraft::time::piston_runtime::{new_piston_runtime, schedule_electrical_input};
 use dustroute_minecraft::{Pos, Region};
+use dustroute_translate::electrical_replay::{
+    ReplayInput, ReplayRequest, RestorationScope, replay_electrical,
+};
 use dustroute_translate::snapshot::MinecraftSnapshot;
 use dustroute_translate::snapshot::assembly_from_snapshot;
 use serde::Deserialize;
@@ -61,12 +63,27 @@ fn observed_mixed_states_moving_sources_and_short_pulses_replay() {
                 .unwrap()
                 .proposed_world()
         };
-        let mut rt =
-            new_piston_runtime(import(&trial.initial), region, Default::default()).unwrap();
-        for input in &trial.inputs {
-            schedule_electrical_input(&mut rt, input.tick, input.position, input.powered).unwrap();
-        }
-        rt.run_until_idle().unwrap();
+        let replay = |count| {
+            replay_electrical(ReplayRequest {
+                initial: trial.initial.clone(),
+                inputs: trial
+                    .inputs
+                    .iter()
+                    .take(count)
+                    .map(|input| ReplayInput {
+                        tick: input.tick,
+                        position: input.position,
+                        powered: Some(input.powered),
+                        use_device: false,
+                        after_world_tick: false,
+                    })
+                    .collect(),
+                verify_restoration: false,
+                restoration_scope: RestorationScope::MovementOrDevice,
+            })
+            .unwrap()
+        };
+        let rt = replay(trial.inputs.len());
         let identities = |world: &dustroute_minecraft::World| -> BTreeMap<_, _> {
             world
                 .iter()
@@ -81,13 +98,7 @@ fn observed_mixed_states_moving_sources_and_short_pulses_replay() {
         );
         assert_eq!(rt.pending_count(), 0);
         for prefix in &trial.observed_prefixes {
-            let mut rt =
-                new_piston_runtime(import(&trial.initial), region, Default::default()).unwrap();
-            for input in trial.inputs.iter().take(prefix.input_count) {
-                schedule_electrical_input(&mut rt, input.tick, input.position, input.powered)
-                    .unwrap();
-            }
-            rt.run_until_idle().unwrap();
+            let rt = replay(prefix.input_count);
             for sample in &prefix.blocks {
                 let actual = rt.view().block(sample.position).unwrap();
                 let name = actual.observed_name.as_deref().unwrap_or("minecraft:air");

@@ -107,18 +107,18 @@ v19の固定環境・サトウキビは [明示した機体と畑の更新経路
 この生成器は登録されたエンジン定義を変形・拡張するもので、任意の新エンジンを発明する探索器ではない。
 別エンジンの追加も、同じ型・検証・配置経路へつなぐ。
 
-## CLIと実機試験
+## Rust APIと実機試験用fixture
 
 Rustの公開関数は `dustroute_translate::flying_machine::generate_flying_machine`。
-公開APIと同じ生成器を使うCLI exampleも用意する。
+通常利用は公開MCPの生成入口を使う。独立比較用の入力資料を作る場合だけ、同じ生成APIを使う明示実行のfixture試験を使う。旧JSON CLIは撤去済み。
 
 ```sh
-cargo build --offline --locked -j 1 -p dustroute-translate --example generate_flying_machine
-target/debug/examples/generate_flying_machine request.json > .local/generated-flight.json
+DUSTROUTE_FLIGHT_INPUT="$PWD/request.json" DUSTROUTE_FLIGHT_OUTPUT="$PWD/.local/generated-flight.json" \
+  cargo test --offline --locked -j1 -p dustroute-translate --test flying_machine_fixture_adapter -- --ignored --exact export_fixture --test-threads=1
 ```
 
 出力は `records`、`request`（提案IDは省略）、生成要求・検証結果を含む。
-不合格なら候補の診断を出力して終了コードを非0にする。
+既存出力ファイルの上書きは拒否する。不合格なら候補の診断資料を残して試験は失敗する。資料の生成だけで採用・配置は許可されない。
 既存の隔離サーバーで新しいrun-id・座標を指定して公開操作を試せる。
 
 ```sh

@@ -94,8 +94,10 @@ fn main() {
                 );
             }
             println!(
-                "{}",
-                serde_json::json!({"schema":"dustroute.runtime-metadata-scaling.v1","debug_assertions":cfg!(debug_assertions),"kind":kind,"metadata_entries":count,"queued_at_start":if kind=="queue" {count.max(128)}else{0},"world_blocks":4096,"measured_events":128,"elapsed_ms":start.elapsed().as_secs_f64()*1000.0,"setup_included":false})
+                "runtime_metadata_scaling debug_assertions={} kind={kind} metadata_entries={count} queued_at_start={} world_blocks=4096 measured_events=128 elapsed_ms={} setup_included=false",
+                cfg!(debug_assertions),
+                if kind == "queue" { count.max(128) } else { 0 },
+                start.elapsed().as_secs_f64() * 1000.0,
             );
         }
     }

@@ -482,3 +482,8 @@ This is a baseline rather than a stable benchmark: chunk-cache state,
 coordinates, and server load affect it. The new cumulative bridge metrics
 should be collected after the next normal bridge restart and used for the
 decision about batching; no custom client is justified by this sample alone.
+
+Measurement examples now print human-readable non-JSON diagnostics. The
+`reverse_observation` bench prints every field of its native `Observation`,
+including an absent versus present truth-table error; timing and solver work
+are unchanged. This output is not an internal RPC or persisted operation.

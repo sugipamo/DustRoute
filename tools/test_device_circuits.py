@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Replay retained independent device observations and reject weakened evidence."""
+from electrical_fixture_adapter import replay_fixture
+
 import copy
 import gzip
 import json
@@ -17,7 +19,6 @@ from device_capture_comparison import compare_capture
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / 'crates/dustroute-translate/tests/fixtures/device-circuits'
-MODEL = ROOT / 'target/debug/examples/compare_electrical_pistons'
 
 
 def load(path):
@@ -34,7 +35,7 @@ def replay(trial):
     with tempfile.TemporaryDirectory(prefix='dustroute-device-replay-') as directory:
         path = Path(directory) / 'input.json'
         path.write_text(json.dumps(trial))
-        result = subprocess.run([str(MODEL), str(path)], capture_output=True, text=True, timeout=120)
+        result = replay_fixture(path, timeout=120)
     return result
 
 
@@ -304,7 +305,7 @@ class DeviceCircuitEvidence(unittest.TestCase):
                 if kind != 'missing':
                     paths['.raw.ndjson'].write_text(''.join(json.dumps(r) + '\n' for r in record['raw_interval']))
                     paths['.client.json'].write_text(json.dumps(record['client']))
-                with patch('device_capture_comparison.subprocess.run', return_value=
+                with patch('device_capture_comparison.replay_fixture', return_value=
                            subprocess.CompletedProcess([], 1, stdout='', stderr='explicit rejection')) as run:
                     outcome, _ = compare_capture(paths, record['fixture'])
                 self.assertEqual(outcome['classification'], expected)

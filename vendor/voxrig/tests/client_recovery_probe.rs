@@ -1,10 +1,12 @@
+//! Opt-in fixture adapter. JSON encoding is test-only; native state decides outcomes.
 //! Observe native moving-piston chunk data on an isolated, already prepared server.
 //! This probe does not place blocks, issue commands, or change server ticking.
 use std::{fs::OpenOptions, time::Duration};
 use voxrig::{Client, ConnectionConfig, MinecraftVersion, Region, Server};
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "explicit isolated-server fixture capture; requires prepared world and environment"]
+async fn retain_fixture() -> anyhow::Result<()> {
     let port = std::env::var("MC_PORT")?.parse()?;
     let directory = std::env::var("TRACE_DIR")?;
     let region = Region {

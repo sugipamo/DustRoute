@@ -91,7 +91,7 @@ tests reproduce all comparisons without launching Minecraft; the existing
 four-input normal-cycle comparison is also rerun.
 
 ```sh
-cargo build --offline --locked -j 1 -p dustroute-translate --example compare_electrical_pistons
+cargo test --offline --locked -j1 -p dustroute-translate --test electrical_fixture_adapter --no-run
 python3 -m unittest discover -s tools -p 'test_reference_door*.py'
 ```
 
@@ -108,3 +108,8 @@ The explicit `--interrupted` mode records a negative circuit outcome without
 weakening trace integrity checks or the original four-input capture mode. A
 successful comparison certifies agreement for that captured window, not adoption
 or arbitrary-input correctness.
+
+The former electrical replay example is retired. The native Rust API is
+`dustroute_translate::electrical_replay::replay_electrical`; the Python conformance
+runners use the explicitly ignored `electrical_fixture_adapter` test for fixture IO.
+It never connects to Minecraft, rewrites retained server expectations, or grants adoption.

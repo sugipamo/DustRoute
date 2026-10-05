@@ -114,7 +114,7 @@ original model outputs are unchanged, including trial i's diagnostic mismatch.
 Replay and check the retained evidence without starting a server:
 
 ```bash
-cargo build --offline --locked -p dustroute-translate --example compare_electrical_pistons -j 1
+cargo test --offline --locked -j1 -p dustroute-translate --test electrical_fixture_adapter --no-run
 python3 tools/test_piston_transients.py
 ```
 
@@ -146,3 +146,8 @@ and fixture hashes are recorded in the
 Working artifacts are under `.local/e2e-artifacts/piston-transient-20260926-*`.
 The comparisons establish the declared projection and trials, not all Minecraft
 updates, all coordinate/order combinations or new component support.
+
+The former electrical replay example is retired. The native Rust API is
+`dustroute_translate::electrical_replay::replay_electrical`; the Python conformance
+runners use the explicitly ignored `electrical_fixture_adapter` test for fixture IO.
+It never connects to Minecraft, rewrites retained server expectations, or grants adoption.

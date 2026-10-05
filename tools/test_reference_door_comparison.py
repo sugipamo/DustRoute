@@ -1,10 +1,10 @@
-"""Offline checks for evidence boundaries; no server or compiler is started."""
+"""Offline evidence checks using the native Rust fixture adapter; no server."""
+from electrical_fixture_adapter import replay_fixture
+
 import copy
 import hashlib
 import json
-import os
 from pathlib import Path
-import subprocess
 import tempfile
 import unittest
 
@@ -64,12 +64,10 @@ class RetainedDoorTests(unittest.TestCase):
             observed.append(dict(event, world=callbacks['world_states'][event['world']]))
         trial = dict(initial=reference['initial'], inputs=[dict(i, after_world_tick=True) for i in reference['inputs']],
                      trace=True, verify_restoration=True)
-        model_binary = Path(os.environ.get('DUSTROUTE_TRANSIENT_MODEL', root / 'target/debug/examples/compare_electrical_pistons'))
-        self.assertTrue(model_binary.is_file(), 'Build compare_electrical_pistons first')
         with tempfile.TemporaryDirectory() as directory:
             request = Path(directory) / 'input.json'
             request.write_text(json.dumps(trial))
-            run = subprocess.run([str(model_binary), str(request)], text=True, capture_output=True, timeout=180)
+            run = replay_fixture(request, timeout=180)
         self.assertEqual(run.returncode, 0, run.stderr)
         model = json.loads(run.stdout)
         self.assertTrue(model['restoration_verified'])

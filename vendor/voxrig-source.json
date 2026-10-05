@@ -3,9 +3,9 @@
     ".gitignore": "71870d96e32698e1f122e1a9c8b89367b1fd8f42446ef199c4be336490414414",
     "CONTRIBUTING.md": "a4708ce071c551b865abdbe60db594274ce42d3fa6a0baa8446d693dc49f632f",
     "Cargo.lock": "a6f07b5589c1b526d54bb3c4f9b9f2f09d64ad80170bf3c7e73679047004690f",
-    "Cargo.toml": "f749674b61044a3d19416fad63f8564172b18bcb6e923998557c90fadcd6d196",
+    "Cargo.toml": "3be9abf4f68dbb047114b59c5ec7e4dff97a739dc36eae0312da27ae7323974f",
     "LICENSE": "b30ad0c791d4b036c6596a0222f23e439b495935ca4a945fdc7b4969caa93f5c",
-    "README.md": "66f90bab32ba922de498f49b20692ae55ce4f522528febf40b6a51e751a47c1c",
+    "README.md": "101e5d35df972255b7036f393ce958ef0790739944999541849a41dda4a7bc9d",
     "THIRD_PARTY_NOTICES.md": "bc9d80fbdd982feb9046934417eb9bcd6099b9661014f758eedb633abb9531f8",
     "data/block_collision_shapes.json": "133fa12949ee8f5a2d94551f5d03468b0441ac7994905a36509b7fd6956af944",
     "data/block_state_ranges.json": "e09fe5973d72086d0139e9b80a3006bfd176bc701618fd442e1f2e2a6d6218ca",
@@ -180,9 +180,7 @@
     "examples/attack_probe.rs": "dae78da2452a63362baedeb0fdf8a097b962fd169cb60cfccbbc3076c129c43a",
     "examples/bubble_probe.rs": "01756b1a5f968f6c43ec2ff020712b4804dded556abd76bc1b556bd425983321",
     "examples/chat_sound_probe.rs": "ee3b847fe2afcaf28847bbcbdda3d48adda690957cf82472f7f32e30c482d5f6",
-    "examples/circuit_observation_probe.rs": "b98207de8777715f0fb8b3c23667ff2a2872b0db7fe009f00fd681eeea77487e",
     "examples/click_probe.rs": "7b116436d628e12c1a24744d520bb721d521b511e605bd42d7ce9918261610fd",
-    "examples/client_recovery_probe.rs": "4f36c2ff7ad4a172aabe18cd84ee49ef30141d199459371e96ad55f9cef9b688",
     "examples/climb_probe.rs": "f9a8861d48488394a8fa96c804c045945cca4d028392e5942165f3df80743f68",
     "examples/control_probe.rs": "1261b76edc6d3425b6ecb62d820443fe6ebaa9ce41dd1730ae612fa92e676e79",
     "examples/cooperation_probe.rs": "0a90e0c4174edb36fdc9874527dbf2fbab080e6c00ba0a592429551aefde357b",
@@ -201,11 +199,8 @@
     "examples/jump_probe.rs": "db71c534acd7a18b677c643a207f27359dcb13299ba15d8d636aeadaabad3527",
     "examples/liquid_probe.rs": "5a8255ad3b60852f0c55020cec2bf9bfb49406293b92e621f5452c488858b41c",
     "examples/metrics_probe.rs": "6bbdc2cd48b33534d31ac370f6c7a94cf4db2f17ae23c3d9b630370ff37fca97",
-    "examples/modern_operations_probe.rs": "222e02290f2859350f3cb6c69c8e5463fd3a085d7370160b751395ca18d8d0da",
     "examples/multi_bot.rs": "73fadd38637b7fa7487d410516aeb6703821fe6d8d68408c1389a56276e0f935",
-    "examples/packet_trace_probe.rs": "a84c09fdacbfbcbda35ed8815059422db8997766ec51e1dbd0d352c94908f5d1",
     "examples/phase2_course.rs": "8fa9468cfdc86b28f37157976dbb3f5aac61acb52ede754cfb797e972d65348c",
-    "examples/player_observation_probe.rs": "1432aa649a65c2ef96d2227a3b7a36abaadeb9fb8397592429fe7b45fc3a091b",
     "examples/shape_landing_probe.rs": "5bdab21ee8e1eab45391290f751ed483f2b3fef58b4aa1ae34a228a2c89179ee",
     "examples/sneak_probe.rs": "122ab9e342fc11a566ac9cd4f351dda8641b5a3a7add0e5c65edf96487865f71",
     "examples/special_block_probe.rs": "e1904d29de618a11d6a25a5d32624ac29a8a32edfbe06af7efbde81d6dddcf7f",
@@ -321,7 +316,12 @@
     "src/versions/java_1_21_11/recovery_tests.rs": "a30d0542997bfdc2f5b995a10f1ddfab3644c75deed2865e8cd809d554c2a4e5",
     "src/versions/java_1_21_11/wire.rs": "7ae15e04cf21e4cbc1ed681027efe8be917f0e242e3629fe0f09702aeefa210e",
     "src/versions/java_1_21_11/world.rs": "c58faa72de6d954b0fc4d9551da4f0f460cd445e21c829290ffe194d971f97ee",
-    "src/versions/mod.rs": "ce7d93c815b5e74ff23f04279b3ae53c3640a380143f8f9760aef19ed51c4ac7"
+    "src/versions/mod.rs": "ce7d93c815b5e74ff23f04279b3ae53c3640a380143f8f9760aef19ed51c4ac7",
+    "tests/circuit_observation_probe.rs": "963a0547e5aa3d9bdd842ab3733b6d91e0573f218251e64db6afcc865ab53d3e",
+    "tests/client_recovery_probe.rs": "3a8d11e8541dfbe198f289411b48e732987f948dbccbcdb104ac607a35c172d5",
+    "tests/modern_operations_probe.rs": "6bb5ee94473e5e281b42af7083d19e1af3aef0fe16a6ce6640ef333f5b162903",
+    "tests/packet_trace_probe.rs": "a06761a87cf0f4f164cdb5c0264370b5fea795f60835f063658ec29a9cd249c9",
+    "tests/player_observation_probe.rs": "7bcda7a1f2bc47b2b7531e3a66daa10bf2b195f970b273a214477afe6b04b7c2"
   },
   "license": "MIT; retain THIRD_PARTY_NOTICES.md for generated data and fixtures",
   "projection": [
@@ -336,8 +336,9 @@
     "data",
     "docs",
     "examples",
+    "tests",
     "scripts"
   ],
   "repository": "https://github.com/sugipamo/Voxrig",
-  "revision": "c26c1c6e83fb2e2bcfc37927744f144b0c915c4f"
+  "revision": "0e53062335c3c9f550321fd4cec755cdbd7c3932"
 }

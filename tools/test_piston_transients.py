@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Offline server-trace regressions. Build compare_electrical_pistons first."""
+"""Offline server-trace regressions through the explicit fixture adapter."""
+from electrical_fixture_adapter import replay_fixture
+
 import copy
 import json
-import os
 from pathlib import Path
-import subprocess
 import tempfile
 import unittest
 
@@ -14,7 +14,6 @@ from observation_records import state, world_rows
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = sorted(path for pattern in ('piston-transient-observed-*-v2.json', 'piston-payload-observed-*-v2.json', 'observer-movement-observed-*-v1.json')
                   for path in (ROOT / 'crates/dustroute-translate/tests/fixtures').glob(pattern))
-MODEL = Path(os.environ.get('DUSTROUTE_TRANSIENT_MODEL', ROOT / 'target/debug/examples/compare_electrical_pistons'))
 
 
 def readback(snapshot):
@@ -43,7 +42,6 @@ class TransientEvidenceTests(unittest.TestCase):
         cls.reference = json.loads(FIXTURES[0].read_text())
 
     def test_recorded_callback_worlds_and_moving_state_restoration(self):
-        self.assertTrue(MODEL.is_file(), 'Build the compare_electrical_pistons example before running this suite')
         for path in FIXTURES:
             with self.subTest(capture=path.name), tempfile.TemporaryDirectory() as directory:
                 fixture = json.loads(path.read_text())
@@ -54,7 +52,7 @@ class TransientEvidenceTests(unittest.TestCase):
                 request = dict(initial=fixture['initial'], inputs=fixture['inputs'], trace=True, verify_restoration=True)
                 input_path = Path(directory) / 'input.json'
                 input_path.write_text(json.dumps(request))
-                run = subprocess.run([str(MODEL), str(input_path)], text=True, capture_output=True, timeout=60)
+                run = replay_fixture(input_path, timeout=60)
                 self.assertEqual(run.returncode, 0, run.stderr)
                 output = json.loads(run.stdout)
                 self.assertTrue(output['restoration_verified'])

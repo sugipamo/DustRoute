@@ -1513,7 +1513,7 @@ native保存物、retired JSON保存物の拒否がサイズ超過より優先�
 Cargoは単独offline/locked・`-j1`、試験は単一threadで実行した。
 実機接続・ワールド操作・Voxrig source/vendor pin・保存schemaは変更していない。
 
-### 残存監査の分岐点: 診断と独立証拠の採取ツール（改修未着手）
+### 診断と独立証拠の採取ツール（停止時の調査と承認案）
 
 crateのsrcとCargo manifest、およびvendor/voxrig/srcを調べた。MCP以外のworkspace crateと
 Voxrigのserde_jsonはdev-dependencyで、productionのJSON使用は確認した範囲では
@@ -1560,3 +1560,64 @@ MCP clientのtool引数/応答codec、測定値のstdout出力、診断command�
 
 独立証拠の採取/受渡しをこの試験用境界へ整理する範囲への承認を求める。
 JSON除去ゴール全体は未完了である。
+
+### 承認後: native replayと明示的なfixture採取境界
+
+ユーザーの「推奨で進めてほしい」に従い、独立証拠の採取/比較を保ちながら整理を再開した。
+以下はこの段階の完了項目であり、残る全exampleの移行完了を意味しない。
+
+`dustroute_translate::electrical_replay::replay_electrical`へ、旧比較commandのliteral snapshot
+読込み後の再生・正確なcheckpointとbehavior stateの未来照合を移した。入力は
+`ReplayRequest`/`ReplayInput`/`RestorationScope`、結果は既存の`ElectricalPistonRuntime`で、
+内部にJSONはない。入力時刻、world-tick前後、device useとlever assignmentの区別、
+root limitsと対象領域、途中復元の条件・拒否は旧処理のまま維持する。
+モデルの再生成功を実機観測の証拠、採用、配置や実接続の再開権限として扱わない。
+
+旧`compare_electrical_pistons` exampleを撤去した。公開入力/traceの既存fixture形式は、
+`tests/electrical_fixture_adapter.rs`の明示実行するignored testだけでdecode/encodeする。
+fullとdevice projectionの選択はfixture codecに限定し、再生と復元判定はnative APIで行う。
+8つのPython比較/保持runnerは`tools/electrical_fixture_adapter.py`からこの試験へ接続する。
+Cargoはoffline/locked・`-j1`で単独実行し、正確なtest名と単一threadを指定する。
+出力/失敗資料は新規temporary fileへ限定する。process成功だけでは結果の存在を補わず、
+出力がない場合は未検証の失敗とする。再生失敗はnative診断を返し、元のinputは書き換えない。
+将来の保持資料には、実際に使用したfixture test executableのhashを記録する。
+旧任意model binary指定は撤去し、既存の保存資料・期待値・hashは変更しない。
+
+飛行候補の旧JSON authoring exampleも撤去した。通常利用の公開MCPと型付き生成APIは
+維持し、独立試験の入力資料生成だけを`flying_machine_fixture_adapter`のignored testへ移した。
+既存のrecords/request/finite_flight projectionを保持し、出力の上書きを拒否する。
+判定はnative verification statusで行い、不合格資料の作成を採用の許可にしない。
+新しいtemporary requestから一度だけ明示実行し、unadopted records、IDを省いた提案fixture、
+distance=3の有限飛行資料とpassed generation checkが得られた。実機へは接続していない。
+
+Voxrig sourceでは、packet/circuit/modern-operation/recovery/playerの5つの採取exampleを
+明示実行のignored integration testへ移した。capture JSONはこのfixture境界だけに残し、
+trace.completeとclient reconstructionの成功判定はnative fieldから行う。
+入力のbefore_sequenceは`Option<u64>`のまま保持し、未取得をzeroにしない。
+最初の型付けでu64との不一致がcompile errorになったため、unwrap/defaultではなく
+Optionの宣言へ修正した。JSONのnullとnative Noneの対応、元のsetup barrier、native操作、
+採取範囲、出力の排他的作成、拒否/切断順序は維持する。
+
+Voxrigのsource commitは`0e53062335c3c9f550321fd4cec755cdbd7c3932`。
+vendor projectionへtestsを追加し、そのcommitから正規のvendor updaterで取り込んだ。
+322 fileの整合性検査が成功した。既存fileのhash変更はCargo.tomlとREADMEだけで、
+src/dataには変更がない。5つの旧exampleと5つの新しいfixture testが対応する。
+ライブラリへDustRouteの型・保存codec・建築責務は導入していない。source checkoutの既存
+untracked logsは操作していない。5試験はcompile成功・既定でignoredを確認し、実行しない。
+Voxrig全targetのClippyは`-D warnings`に成功した。
+
+一般の計測出力4箇所（reverse observation bench、work-region scaling、runtime metadata
+scaling、observation speed probe）を非JSONの人間向け表示へ変更した。測定対象・実行・
+計算条件は変えず、reverse benchは全測定fieldと未取得errorの区別を表示する。
+計測そのものや実機接続は再実行せず、公開説明と実行案内を更新した。
+
+offlineのPython比較26件（transient 7、door comparison 3、interruption 2、mixed-device 14）と
+fixture IOの境界検査3件が成功した。Rustの既存electrical observation試験1件をnative APIへ
+接続し、10個の独立した初期/終状態資料と途中prefixの照合が成功した。
+これらの既存server期待値をmodel出力から作り直していない。
+workspace全targetとMCPの`--no-default-features`全targetのClippy、fmt、差分の空白検査が
+成功した。実機接続・ワールド変更・productionの保存schema/認可条件は変更していない。
+
+次は、残る診断/fixture生成exampleとMCP試験clientの用途・呼出し元を個別に確認して移行する。
+現時点で16のRust example fileにJSON使用が残る。MCP codecとして許可されるものも含むため、
+file数だけで全てを未対応内部JSONとは扱わない。統合ゴールの完了監査も未実施で、goalはactive。

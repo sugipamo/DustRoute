@@ -1,10 +1,10 @@
 """Offline replay of retained short-input evidence; never starts Minecraft."""
+from electrical_fixture_adapter import replay_fixture
+
 import copy
 import hashlib
 import json
-import os
 from pathlib import Path
-import subprocess
 import tempfile
 import unittest
 
@@ -23,8 +23,6 @@ class InterruptedDoorTests(unittest.TestCase):
         assert cls.retained['schema_version'] == 'dustroute.reference-door-short-live.v1'
 
     def test_measured_pulses_match_tick_ends_writes_callbacks_and_restored_execution(self):
-        binary = Path(os.environ.get('DUSTROUTE_TRANSIENT_MODEL', ROOT / 'target/debug/examples/compare_electrical_pistons'))
-        self.assertTrue(binary.is_file(), 'Build compare_electrical_pistons first')
         for case in self.retained['cases']:
             with self.subTest(requested_ticks=case['requested_ticks']):
                 reference, callbacks = case['reference'], case['callbacks']
@@ -41,7 +39,7 @@ class InterruptedDoorTests(unittest.TestCase):
                 with tempfile.TemporaryDirectory() as directory:
                     path = Path(directory) / 'input.json'
                     path.write_text(json.dumps(trial))
-                    run = subprocess.run([str(binary), str(path)], text=True, capture_output=True, timeout=180)
+                    run = replay_fixture(path, timeout=180)
                 self.assertEqual(run.returncode, 0, run.stderr)
                 model = json.loads(run.stdout)
                 self.assertTrue(model['restoration_verified'])

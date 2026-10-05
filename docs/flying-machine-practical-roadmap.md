@@ -97,7 +97,8 @@ v17 の保存された実行・探索コンテキストを v18 と読み替え�
 再実行する場合は新しいnamespace・run-id・空き座標を使う:
 
 ```sh
-target/debug/examples/generate_flying_machine request.json > .local/harvest.fixture.json
+DUSTROUTE_FLIGHT_INPUT="$PWD/request.json" DUSTROUTE_FLIGHT_OUTPUT="$PWD/.local/harvest.fixture.json" \
+  cargo test --offline --locked -j1 -p dustroute-translate --test flying_machine_fixture_adapter -- --ignored --exact export_fixture --test-threads=1
 python3 tools/observe_assembly_construction.py --run-id harvest-next --x 324000 --fixture .local/harvest.fixture.json --rotation r90 --persistence --capture-construction
 ```
 

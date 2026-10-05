@@ -1,3 +1,4 @@
+//! Opt-in fixture adapter. JSON encoding is test-only; native state decides outcomes.
 //! Two native clients on the owned isolated server; no entity simulation.
 use std::{
     io::{self, Write},
@@ -26,8 +27,9 @@ async fn pause(message: &str) -> anyhow::Result<()> {
     anyhow::ensure!(read > 0, "closed stdin");
     Ok(())
 }
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "explicit isolated-server fixture capture; requires prepared world and environment"]
+async fn retain_fixture() -> anyhow::Result<()> {
     let file = std::fs::OpenOptions::new()
         .write(true)
         .create_new(true)

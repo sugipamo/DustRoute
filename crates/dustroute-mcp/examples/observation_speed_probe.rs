@@ -52,8 +52,7 @@ async fn main() -> anyhow::Result<()> {
     .await?;
     let observer_ready_ms = started.elapsed().as_secs_f64() * 1000.0;
     println!(
-        "READY_FOR_POSITIONING {}",
-        serde_json::json!({"dummy":dummy_name,"observer":observer_name,"dummy_ready_ms":dummy_ready_ms,"observer_ready_ms":observer_ready_ms,"http_bind":bind.to_string()})
+        "READY_FOR_POSITIONING dummy={dummy_name} observer={observer_name} dummy_ready_ms={dummy_ready_ms} observer_ready_ms={observer_ready_ms} http_bind={bind}"
     );
     io::stdout().flush()?;
     // The operator confirms console setup; EOF is an error, never authorization.
@@ -67,10 +66,7 @@ async fn main() -> anyhow::Result<()> {
     controls.set_flying(true).await?;
     // Initial chunk streaming is measured separately from steady tool requests.
     tokio::time::sleep(Duration::from_secs(5)).await;
-    println!(
-        "POSITIONED_DUMMY {}",
-        serde_json::to_string(&controls.player_state().await?)?
-    );
+    println!("POSITIONED_DUMMY {:?}", controls.player_state().await?);
     let cancellation = CancellationToken::new();
     let http: StreamableHttpService<DustRouteMcp, LocalSessionManager> = StreamableHttpService::new(
         move || Ok(service.clone()),

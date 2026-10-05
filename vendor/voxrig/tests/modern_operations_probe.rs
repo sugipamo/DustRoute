@@ -1,3 +1,4 @@
+//! Opt-in fixture adapter. JSON encoding is test-only; native state decides outcomes.
 //! Explicit isolated-server creative operations trial. No survival or pathfinding claim.
 use std::{
     io::{self, Write},
@@ -32,8 +33,9 @@ async fn observe(
     anyhow::bail!("expected {name} was not observed")
 }
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "explicit isolated-server fixture capture; requires prepared world and environment"]
+async fn retain_fixture() -> anyhow::Result<()> {
     let file = std::fs::OpenOptions::new()
         .write(true)
         .create_new(true)

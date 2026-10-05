@@ -13,6 +13,7 @@ include = [
     "/src/**",
     "/data/**",
     "/examples/**",
+    "/tests/**",
     "/docs/**",
     "/scripts/generate_java_1_21_11.cjs",
     "/scripts/generate_rust_tables.py",

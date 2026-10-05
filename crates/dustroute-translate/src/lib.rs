@@ -27,6 +27,7 @@ pub mod connectivity;
 pub mod diagnostic;
 pub mod dust_law;
 pub mod electrical;
+pub mod electrical_replay;
 pub mod finite_burst;
 pub mod flying_machine;
 pub mod location_behavior;

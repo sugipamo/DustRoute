@@ -1,3 +1,4 @@
+//! Opt-in fixture adapter. JSON encoding is test-only; native state decides outcomes.
 //! Captures native packets while toggling the prepared isolated stair/piston fixture.
 use std::{
     io::{self, Write},
@@ -5,8 +6,9 @@ use std::{
 };
 use voxrig::{BlockFace, Client, ConnectionConfig, MinecraftVersion, Region, Server};
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "explicit isolated-server fixture capture; requires prepared world and environment"]
+async fn retain_fixture() -> anyhow::Result<()> {
     let port = std::env::var("MC_PORT")?.parse()?;
     let output = std::env::var("TRACE_OUTPUT")?;
     let fixture =
@@ -91,21 +93,16 @@ async fn main() -> anyhow::Result<()> {
     let record = serde_json::json!({"fixture":fixture,"input_wait_ms":wait_ms,"settling_ms":4000,"before":before,"on":on,"after":after,"trace":trace,"on_client":on_client,"after_client":after_client,"transient":transient});
     serde_json::to_writer_pretty(file, &record)?;
     println!(
-        "TRACE_RETAINED complete={} packets={} target={}",
-        record["trace"]["complete"],
-        record["trace"]["records"].as_array().unwrap().len(),
-        record["after"]["blocks"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .find(|b| b["position"] == serde_json::json!(target))
-            .unwrap()
+        "TRACE_RETAINED complete={} packets={} target={:?}",
+        trace.complete,
+        trace.records.len(),
+        after.blocks.iter().find(|block| block.position == target)
     );
     client.disconnect().await?;
     anyhow::ensure!(
-        record["after_client"]["issue"].is_null(),
-        "client reconstruction incomplete: {}",
-        record["after_client"]["issue"]
+        after_client.issue.is_none(),
+        "client reconstruction incomplete: {:?}",
+        after_client.issue
     );
     Ok(())
 }

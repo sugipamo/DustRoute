@@ -221,3 +221,5 @@ addition of response schema identifiers and a more conservative property-map
 retention estimate. The response identifiers and public lifecycle are checked
 by the final public-tool regression. This finite trial does not certify arbitrary
 active circuits or hidden server queues.
+
+`work_region_scaling` now prints named, human-readable measurements rather than JSON. Its passive proof and retained-state calculation are unchanged.

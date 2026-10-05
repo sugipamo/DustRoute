@@ -71,7 +71,7 @@ These small captures supplement the door run, in which no observer itself moves.
   record exact commands and results. The three observer fixtures retain their
   contiguous raw windows and can be replayed without launching Minecraft.
 
-After building `compare_electrical_pistons`, the Python suites
+After compiling the `electrical_fixture_adapter` test, the Python suites
 `test_reference_door_comparison.py` and `test_piston_transients.py` reproduce the
 comparison, including restoration, from retained evidence. The latter includes
 17 earlier piston captures and three new observer captures. Corrupt input timing,
@@ -108,3 +108,8 @@ and made interruption tolerance optional. [The agreed type specification](piston
 records that functional acceptance separately from the historical unrestricted
 candidate's rejection. Its protocol-aware contract and verifier are now implemented;
 see the [fresh ordinary-type adoption audit](reference-door-ordinary-adoption.md).
+
+The former electrical replay example is retired. The native Rust API is
+`dustroute_translate::electrical_replay::replay_electrical`; the Python conformance
+runners use the explicitly ignored `electrical_fixture_adapter` test for fixture IO.
+It never connects to Minecraft, rewrites retained server expectations, or grants adoption.

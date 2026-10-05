@@ -4,10 +4,11 @@
 Only prefixes whose modeled idle time precedes the next actual server input
 are compared. This does not claim an exact client-sample server tick.
 """
+from electrical_fixture_adapter import replay_fixture
+
 import argparse
 import json
 from pathlib import Path
-import subprocess
 
 from observation_fixture import ROOT
 from observation_records import digest, key, properties, save
@@ -23,7 +24,7 @@ def main():
     for index in range(1, len(trial["inputs"])):
         path = args.prefix.with_suffix(f".prefix-{index}.input.json")
         save(path, {**trial, "inputs": trial["inputs"][:index]})
-        run = subprocess.run([str(ROOT / "target/debug/examples/compare_electrical_pistons"), str(path)], check=True, capture_output=True, text=True)
+        run = replay_fixture(path, check=True)
         model = json.loads(run.stdout)
         if model["final_time"]["game_tick"] >= trial["inputs"][index]["tick"]:
             continue

@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DEST = ROOT / "vendor/voxrig"
 MANIFEST = ROOT / "vendor/voxrig-source.json"
 PATHS = ["Cargo.toml", "Cargo.lock", "LICENSE", "README.md", "THIRD_PARTY_NOTICES.md",
-         "CONTRIBUTING.md", ".gitignore", "src", "data", "docs", "examples", "scripts"]
+         "CONTRIBUTING.md", ".gitignore", "src", "data", "docs", "examples", "tests", "scripts"]
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--check", action="store_true")
 parser.add_argument("--source", type=Path)

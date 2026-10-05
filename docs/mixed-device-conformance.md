@@ -149,7 +149,7 @@ actual mismatch remain distinct nonpassing outcomes.
 Replay without starting Minecraft:
 
 ```sh
-cargo build --offline --locked -j 1 -p dustroute-translate --example compare_electrical_pistons
+cargo test --offline --locked -j1 -p dustroute-translate --test electrical_fixture_adapter --no-run
 python3 -m unittest discover -s tools -p 'test_*.py'
 ```
 
@@ -183,3 +183,8 @@ These results establish the listed bounded circuits, not arbitrary Minecraft
 world conformance, normal construction order, hidden register/history equality,
 all shape/inert-target callbacks, or all rotations and input phases. The scope
 exclusions and stop conditions above remain in force.
+
+The former electrical replay example is retired. The native Rust API is
+`dustroute_translate::electrical_replay::replay_electrical`; the Python conformance
+runners use the explicitly ignored `electrical_fixture_adapter` test for fixture IO.
+It never connects to Minecraft, rewrites retained server expectations, or grants adoption.
