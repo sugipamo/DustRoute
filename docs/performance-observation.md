@@ -348,7 +348,7 @@ cargo test --offline --locked -j1 -p dustroute-mcp --features voxrig --lib \
 ```
 
 Run the Law probe alone in a fresh process to retain a meaningful cold sample.
-Both probes print `PERFORMANCE` followed by a JSON object. The workflow probe
+Both probes print `PERFORMANCE` followed by the native Measurement human-readable display (named values and phase measurements). No JSON log or internal record is created. The workflow probe
 checks scan volumes, model passes, requested waits, stage counts and successful
 outcomes rather than imposing environment-dependent timing assertions.
 

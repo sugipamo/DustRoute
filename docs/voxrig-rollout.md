@@ -125,7 +125,7 @@ matches the generator's declared endpoint. Independent vanilla functions check
 placed/arrived/removed states in two bounded 567-cell subregions each. These are
 explicit stable-state comparisons, not an atomic snapshot claim.
 
-The live harness is `crates/dustroute-mcp/examples/voxrig_assembly_probe.rs`.
+The live harness is `crates/dustroute-mcp/tests/voxrig_assembly_probe.rs`.
 Build with `cargo build --locked -p dustroute-mcp --features voxrig --examples`,
 then run it with `MC_PORT`, a **new** isolated `DUSTROUTE_STATE_DIR`, a new
 `TRACE_OUTPUT` JSONL path, and `PROBE_CASE=door` or `flight`. It uses only loopback,
@@ -190,3 +190,12 @@ MCP workflow evidence is listed above.
 Cargo checks were sequential with `--offline --locked -j1`. Live servers were
 owned loopback vanilla instances, without a companion MOD; trial fixtures and
 temporary operator grants were removed and each server stopped normally.
+
+Live fixture clients are explicit ignored integration tests under
+`crates/dustroute-mcp/tests/`, rather than example commands. They compile without
+connecting; only `retain_fixture` with `--ignored --exact --nocapture --test-threads=1`
+and the prepared private-server environment runs a trial. Preserve all operator
+barriers and owned-world restrictions. The Blueprint runner selects the exact Cargo
+test artifact and hashes it. Its MCP restart bookkeeping remains native in memory;
+retained JSON recovery fixtures are decoded only at the test boundary, followed by
+fresh public removal plans and exact observed external-state checks.

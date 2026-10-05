@@ -95,3 +95,12 @@ implementation was exported to that source repository. No vendored source files
 needed changing. The [pin alignment verification](evidence/voxrig/source-pin-alignment-20261002.json)
 records the new standalone checks; the original live evidence above remains tied
 to the revisions actually used in those trials.
+
+Live fixture clients are explicit ignored integration tests under
+`crates/dustroute-mcp/tests/`, rather than example commands. They compile without
+connecting; only `retain_fixture` with `--ignored --exact --nocapture --test-threads=1`
+and the prepared private-server environment runs a trial. Preserve all operator
+barriers and owned-world restrictions. The Blueprint runner selects the exact Cargo
+test artifact and hashes it. Its MCP restart bookkeeping remains native in memory;
+retained JSON recovery fixtures are decoded only at the test boundary, followed by
+fresh public removal plans and exact observed external-state checks.

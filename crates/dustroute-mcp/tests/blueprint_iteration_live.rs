@@ -1,25 +1,28 @@
 //! Opt-in public MCP trial in an initially empty, disposable Vanilla server region.
 //! Run through tools/verify_blueprint_iteration_live.py, never on a player server.
-#[cfg(not(feature = "voxrig"))]
-fn main() {
-    eprintln!("requires --features voxrig");
-}
-
 #[cfg(feature = "voxrig")]
 #[allow(dead_code)]
 #[path = "../../dustroute-translate/tests/support/runtime_blueprint.rs"]
 mod fixture;
 
 #[cfg(feature = "voxrig")]
-#[tokio::main(worker_threads = 2)]
-async fn main() -> anyhow::Result<()> {
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[ignore = "explicit isolated-server fixture trial; requires prepared private world and operator barriers"]
+async fn retain_fixture() -> anyhow::Result<()> {
     trial::run().await
 }
 
+#[path = "support/blueprint_trial_state.rs"]
+mod trial_state;
+
 #[cfg(feature = "voxrig")]
 mod trial {
+    use super::trial_state::{
+        ExternalWrite, RegionJobIds, WorkflowIds, block_name, non_air, verify_external_write,
+    };
     use dustroute_mcp::BotBridge;
     use dustroute_physical::Pos;
+    use dustroute_translate::snapshot::MinecraftSnapshot;
     use rmcp::{
         ServiceExt,
         model::{CallToolRequestParams, ClientInfo, ContentBlock},
@@ -211,7 +214,11 @@ mod trial {
         call(client, file, "invoke_operation", json!({"operation_id":op["operation_id"],"confirm":true,"blueprint_decision":{"action":"adopt"}}), true).await?;
         Ok(request["candidate_state"]["id"].clone())
     }
-    async fn checkpoint(actor: &BotBridge, file: &mut File, stage: &str) -> anyhow::Result<Value> {
+    async fn checkpoint(
+        actor: &BotBridge,
+        file: &mut File,
+        stage: &str,
+    ) -> anyhow::Result<MinecraftSnapshot> {
         checkpoint_region(actor, file, stage, MIN, MAX).await
     }
     async fn checkpoint_region(
@@ -220,32 +227,15 @@ mod trial {
         stage: &str,
         min: Pos,
         max: Pos,
-    ) -> anyhow::Result<Value> {
+    ) -> anyhow::Result<MinecraftSnapshot> {
         actor.wait_ticks(20, DIM).await?;
         let sample = actor.scan_region_observed(min, max, DIM).await?;
-        let snapshot = serde_json::to_value(sample.snapshot)?;
-        let value = json!({"stage":stage,"snapshot":snapshot,"readback":sample.readback});
+        // JSON is only the explicit fixture/console-verifier projection.
+        // Native callers inspect the original snapshot, never the projection.
+        let value = json!({"stage":stage,"snapshot":sample.snapshot,"readback":sample.readback});
         record(file, value.clone())?;
-        // Independent server console predicates are required before advancing.
         barrier(format!("CHECKPOINT {value}")).await?;
-        Ok(snapshot)
-    }
-    fn non_air(snapshot: &Value) -> usize {
-        snapshot["blocks"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .filter(|b| b["name"] != "minecraft:air")
-            .count()
-    }
-    fn block_name(snapshot: &Value, pos: Pos) -> &str {
-        snapshot["blocks"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .find(|b| b["pos"] == json!(pos))
-            .and_then(|b| b["name"].as_str())
-            .unwrap_or("minecraft:air")
+        Ok(sample.snapshot)
     }
     async fn write(
         actor: &BotBridge,
@@ -344,7 +334,7 @@ mod trial {
         actor: &BotBridge,
         client: &Client,
         file: &mut File,
-    ) -> anyhow::Result<Value> {
+    ) -> anyhow::Result<RegionJobIds> {
         let min = Pos::new(1280, 179, 1200);
         let max = Pos::new(1311, 210, 1231);
         let guard_min = Pos::new(1279, 178, 1199);
@@ -401,9 +391,10 @@ mod trial {
         .await?;
         // Deliberately request the dependent region first. The work plan
         // must place its floor support in the other region before the lever.
-        let regions = json!([
-            {"min":{"x":1282,"y":182,"z":1202},"max":{"x":1286,"y":182,"z":1209}},
-            {"min":{"x":1282,"y":181,"z":1202},"max":{"x":1286,"y":181,"z":1209}}]);
+        let regions = vec![
+            dustroute_physical::Region::new(Pos::new(1282, 182, 1202), Pos::new(1286, 182, 1209)),
+            dustroute_physical::Region::new(Pos::new(1282, 181, 1202), Pos::new(1286, 181, 1209)),
+        ];
         let first = call(
             client,
             file,
@@ -432,24 +423,34 @@ mod trial {
             checkpoint_region(actor, file, "job_first_region", small_min, small_max).await?;
         anyhow::ensure!(non_air(&first_state) == 40, "first region state mismatch");
         anyhow::ensure!(
-            first_state["blocks"]
-                .as_array()
-                .unwrap()
+            first_state
+                .blocks
                 .iter()
-                .find(|b| b["pos"] == json!(Pos::new(1282, 181, 1202)))
-                .unwrap()["properties"]["lit"]
+                .find(|b| b.pos == Pos::new(1282, 181, 1202))
+                .unwrap()
+                .properties["lit"]
                 == "false",
             "model-derived lamp intermediate was not OFF on the server"
         );
-        Ok(json!({"job_id":job_id,"revision_id":revision["revision_id"],"regions":regions}))
+        Ok(RegionJobIds {
+            job_id: job_id
+                .as_str()
+                .ok_or_else(|| anyhow::anyhow!("MCP job ID is not a string"))?
+                .to_owned(),
+            revision_id: revision["revision_id"]
+                .as_str()
+                .ok_or_else(|| anyhow::anyhow!("MCP revision ID is not a string"))?
+                .to_owned(),
+            regions,
+        })
     }
     async fn finish_region_job_trial(
         actor: &BotBridge,
         session: &Client,
         file: &mut File,
-        ids: &Value,
+        ids: &RegionJobIds,
     ) -> anyhow::Result<()> {
-        let job_id = &ids["job_id"];
+        let job_id = &ids.job_id;
         let history = call(
             session,
             file,
@@ -505,12 +506,11 @@ mod trial {
         let full = checkpoint_region(actor, file, "job_both_regions", small_min, small_max).await?;
         anyhow::ensure!(non_air(&full) == 80, "completed job state mismatch");
         anyhow::ensure!(
-            full["blocks"]
-                .as_array()
-                .unwrap()
+            full.blocks
                 .iter()
-                .find(|b| b["pos"] == json!(Pos::new(1282, 181, 1202)))
-                .unwrap()["properties"]["lit"]
+                .find(|b| b.pos == Pos::new(1282, 181, 1202))
+                .unwrap()
+                .properties["lit"]
                 == "true",
             "later region did not naturally light the prior region's lamp"
         );
@@ -623,9 +623,9 @@ mod trial {
         actor: &BotBridge,
         session: &Client,
         file: &mut File,
-        ids: &Value,
+        ids: &RegionJobIds,
     ) -> anyhow::Result<()> {
-        let job_id = &ids["job_id"];
+        let job_id = &ids.job_id;
         for (index, count) in [(1, 40), (0, 0)] {
             let undo = call(
                 session,
@@ -703,7 +703,15 @@ mod trial {
             "explicit opt-in required"
         );
         let state = std::path::PathBuf::from(std::env::var("DUSTROUTE_STATE_DIR")?);
-        let recovery = std::env::var("PROBE_RECOVERY_INSTANCES").ok();
+        // Explicit compatibility inputs from the retained test fixture runner.
+        let recovery = std::env::var("PROBE_RECOVERY_INSTANCES")
+            .ok()
+            .map(|input| serde_json::from_str::<Vec<String>>(&input))
+            .transpose()?;
+        let external = std::env::var("PROBE_RECOVERY_EXTERNAL_WRITES")
+            .ok()
+            .map(|input| serde_json::from_str::<Vec<ExternalWrite>>(&input))
+            .transpose()?;
         anyhow::ensure!(
             recovery.is_some() || !state.exists(),
             "fresh state directory required"
@@ -739,9 +747,8 @@ mod trial {
             return Ok(());
         }
         if let Some(recovery) = recovery {
-            let ids: Vec<Value> = serde_json::from_str(&recovery)?;
             checkpoint(&actor, &mut file, "before_recovery_removal").await?;
-            for id in ids {
+            for id in recovery {
                 let plan = call(
                     &session.0,
                     &mut file,
@@ -753,36 +760,13 @@ mod trial {
                 show_apply(&session.0, &mut file, &plan["operation_id"]).await?;
             }
             let snapshot = checkpoint(&actor, &mut file, "registered_fixtures_removed").await?;
-            if let Ok(external) = std::env::var("PROBE_RECOVERY_EXTERNAL_WRITES") {
-                let external: Vec<Value> = serde_json::from_str(&external)?;
+            if let Some(external) = external {
                 for write_record in external {
-                    let pos: Pos = serde_json::from_value(write_record["position"].clone())?;
-                    if block_name(&snapshot, pos) == "minecraft:air" {
+                    if block_name(&snapshot, write_record.position) == "minecraft:air" {
                         continue;
                     }
-                    let block = snapshot["blocks"]
-                        .as_array()
-                        .unwrap()
-                        .iter()
-                        .find(|b| b["pos"] == json!(pos))
-                        .unwrap();
-                    let properties = block["properties"]
-                        .as_object()
-                        .unwrap()
-                        .iter()
-                        .map(|(k, v)| format!("{k}={}", v.as_str().unwrap()))
-                        .collect::<Vec<_>>()
-                        .join(",");
-                    let actual = if properties.is_empty() {
-                        block["name"].as_str().unwrap().to_owned()
-                    } else {
-                        format!("{}[{properties}]", block["name"].as_str().unwrap())
-                    };
-                    anyhow::ensure!(
-                        actual == write_record["state"].as_str().unwrap(),
-                        "owned external fixture changed before cleanup"
-                    );
-                    write(&actor, &mut file, pos, "minecraft:air").await?;
+                    verify_external_write(&snapshot, &write_record)?;
+                    write(&actor, &mut file, write_record.position, "minecraft:air").await?;
                 }
             }
             anyhow::ensure!(
@@ -802,22 +786,20 @@ mod trial {
             json!({"stage":"workflow_result","error":result.as_ref().err().map(|e|format!("{e:#}"))}),
         )?;
         stop(session, &mut file).await?;
-        result?;
+        let ids = result?;
         // A new OS process reloads catalog, instances and history; executable plans remain absent.
         let session = start(port, &mut file).await?;
-        let ids: Value =
-            serde_json::from_slice(&std::fs::read(std::env::var("PROBE_IDS_OUTPUT")?)?)?;
         let history = call(
             &session.0,
             &mut file,
             "get_operation",
-            json!({"operation_id":ids["scoped_operation"]}),
+            json!({"operation_id":ids.scoped_operation}),
             true,
         )
         .await?;
         anyhow::ensure!(
             history["record"]["state"] == "undone"
-                && history["record"]["edit_scope"] == ids["scope"]
+                && history["record"]["edit_scope"] == serde_json::to_value(&ids.scope)?
                 && history["executable_plan_restored"] == false,
             "history reload mismatch"
         );
@@ -825,11 +807,11 @@ mod trial {
             &session.0,
             &mut file,
             "undo_operation",
-            json!({"operation_id":ids["scoped_operation"],"confirm":true}),
+            json!({"operation_id":ids.scoped_operation,"confirm":true}),
             false,
         )
         .await?;
-        for id in ids["instances"].as_array().unwrap() {
+        for id in &ids.instances {
             let saved = call(
                 &session.0,
                 &mut file,
@@ -853,7 +835,11 @@ mod trial {
         println!("COMPLETED");
         Ok(())
     }
-    async fn workflow(actor: &BotBridge, client: &Client, file: &mut File) -> anyhow::Result<()> {
+    async fn workflow(
+        actor: &BotBridge,
+        client: &Client,
+        file: &mut File,
+    ) -> anyhow::Result<WorkflowIds> {
         let baseline = checkpoint(actor, file, "initial_empty").await?;
         anyhow::ensure!(
             non_air(&baseline) == 0,
@@ -979,8 +965,10 @@ mod trial {
 
         let edit = Pos::new(A.x, A.y, A.z);
         let guard = Pos::new(A.x + 1, A.y + 1, A.z + 1);
-        let scope =
-            json!({"editable":[{"min":edit,"max":edit}],"protected":[{"min":guard,"max":guard}]});
+        let scope = dustroute_library::world_edit::WorldEditScope {
+            editable: vec![dustroute_physical::Region::new(edit, edit)],
+            protected: vec![dustroute_physical::Region::new(guard, guard)],
+        };
         let revision = capture_change(
             client,
             file,
@@ -1155,14 +1143,27 @@ mod trial {
             non_air(&checkpoint(actor, file, "all_fixtures_removed").await?) == 0,
             "removal left blocks"
         );
-        let ids = json!({"scoped_operation":op,"scope":scope,"instances":[instance_a,instance_b],"base":base,"updated":updated});
-        serde_json::to_writer(
-            File::options()
-                .write(true)
-                .create_new(true)
-                .open(std::env::var("PROBE_IDS_OUTPUT")?)?,
-            &ids,
+        let ids = WorkflowIds {
+            scoped_operation: op
+                .as_str()
+                .ok_or_else(|| anyhow::anyhow!("MCP operation ID is not a string"))?
+                .to_owned(),
+            scope,
+            instances: [&instance_a, &instance_b]
+                .into_iter()
+                .map(|id| {
+                    id.as_str()
+                        .map(str::to_owned)
+                        .ok_or_else(|| anyhow::anyhow!("MCP instance ID is not a string"))
+                })
+                .collect::<anyhow::Result<Vec<_>>>()?,
+        };
+        // Retain diagnostic provenance, but keep restart state native in memory.
+        record(
+            file,
+            json!({"stage":"restart_ids", "scoped_operation":ids.scoped_operation,
+            "scope":ids.scope,"instances":ids.instances,"base":base,"updated":updated}),
         )?;
-        Ok(())
+        Ok(ids)
     }
 }

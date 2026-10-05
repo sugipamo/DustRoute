@@ -16,6 +16,7 @@ import socket
 import subprocess
 
 from observe_torch_burnout import Server
+from fixture_test_executable import build_fixture_test, fixture_command
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -92,7 +93,7 @@ def main():
     assert not any(prefix.parent.glob(prefix.name + ".*")), "fresh run ID required"
     env = os.environ | {"DUSTROUTE_LIVE_BLUEPRINT_PROBE": "1", "MC_PORT": "25565",
                         "DUSTROUTE_STATE_DIR": str(prefix.with_suffix(".state")),
-                        "TRACE_OUTPUT": str(trace), "PROBE_IDS_OUTPUT": str(prefix.with_suffix(".ids.json")),
+                        "TRACE_OUTPUT": str(trace),
                         "MCP_PROCESS_BIN": str(ROOT / "target/debug/dustroute-mcp")}
     if args.region_jobs:
         assert not args.recover_run_id, "region jobs do not use Assembly recovery"
@@ -110,6 +111,7 @@ def main():
                     if r.get("stage") == "external_fixture_write"}
         env["PROBE_RECOVERY_EXTERNAL_WRITES"] = json.dumps(list(external.values()))
         env["DUSTROUTE_STATE_DIR"] = str(prior.with_suffix(".state"))
+    probe_binary = build_fixture_test("dustroute-mcp", "blueprint_iteration_live")
     manifest = {"schema_version": "dustroute.blueprint-iteration-live.v1", "run_id": args.run_id, "probe": "region_jobs" if args.region_jobs else "blueprint_iteration",
                 "started_at_utc": datetime.now(timezone.utc).isoformat(),
                 "recovery_from_run": args.recover_run_id,
@@ -117,8 +119,8 @@ def main():
                 "server": "Vanilla Java 1.21.11", "endpoint": "127.0.0.1:25565", "dimension": "minecraft:overworld",
                 "server_jar_sha256": fingerprint(directory / "server.jar"),
                 "mcp_binary_sha256": fingerprint(ROOT / "target/debug/dustroute-mcp"),
-                "probe_binary_sha256": fingerprint(ROOT / "target/debug/examples/blueprint_iteration_live"),
-                "probe_source_sha256": fingerprint(ROOT / "crates/dustroute-mcp/examples/blueprint_iteration_live.rs"),
+                "probe_binary_sha256": fingerprint(probe_binary),
+                "probe_source_sha256": fingerprint(ROOT / "crates/dustroute-mcp/tests/blueprint_iteration_live.rs"),
                 "runner_source_sha256": fingerprint(Path(__file__)),
                 "owned_region": {"min": {"x": 1279 if args.region_jobs else 1280, "y": 178 if args.region_jobs else 179, "z": 1199 if args.region_jobs else 1200}, "max": {"x": 1312 if args.region_jobs else 1307, "y": 211 if args.region_jobs else 185, "z": 1232 if args.region_jobs else 1207}},
                 "backend": "Voxrig native", "actors": sorted(actors), "checkpoints": [], "passed": False,
@@ -131,7 +133,7 @@ def main():
     probe = None
     try:
         server = Server(directory, prefix.with_suffix(".server.log"))
-        probe = subprocess.Popen([str(ROOT / "target/debug/examples/blueprint_iteration_live")],
+        probe = subprocess.Popen(fixture_command(probe_binary),
                                  cwd=ROOT, env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                  stderr=subprocess.STDOUT, text=True, bufsize=1)
         with prefix.with_suffix(".probe.log").open("x") as log:

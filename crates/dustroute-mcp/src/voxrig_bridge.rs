@@ -694,8 +694,8 @@ mod tests {
                 assert_eq!(conversion.materialized_cells, volume as u64);
                 assert_eq!(conversion.cache_hits, 99);
                 println!(
-                    "CONVERSION_SHARING {}",
-                    serde_json::json!({"sample":sample_number,"cells":volume,"acquisitions":100,"previous_ms":previous_ms,"shared_ms":measurement.elapsed_ms,"first_shared_ms":first_ms,"shared_materialized_cells":conversion.materialized_cells,"cache_hits":conversion.cache_hits})
+                    "CONVERSION_SHARING sample={sample_number} cells={volume} acquisitions=100 previous_ms={previous_ms} shared_ms={} first_shared_ms={first_ms} shared_materialized_cells={} cache_hits={}",
+                    measurement.elapsed_ms, conversion.materialized_cells, conversion.cache_hits
                 );
             }
         }

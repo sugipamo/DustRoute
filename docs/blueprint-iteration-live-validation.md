@@ -71,7 +71,8 @@ grants, or restart a running shared server. The declared area
 `(1280,179,1200)..(1307,185,1207)` must be completely empty on first readback.
 
 ```sh
-cargo build --offline --locked -j 1 -p dustroute-mcp --features voxrig --bin dustroute-mcp --example blueprint_iteration_live
+cargo build --offline --locked -j1 -p dustroute-mcp --bin dustroute-mcp
+cargo test --offline --locked -j1 -p dustroute-mcp --test blueprint_iteration_live --no-run
 python3 tools/verify_blueprint_iteration_live.py --run-id NEW_UNIQUE_ID --server-dir .local/minecraft-server-1.21.11 --allow-owned-fixture-writes
 ```
 
@@ -82,3 +83,12 @@ with a new run ID. Recovery creates new public removal plans; it does not restor
 or replay old executable plans. Owned external fixture cleanup requires its
 literal current state to match the retained last write. A mismatch is left for
 inspection rather than silently removed.
+
+Live fixture clients are explicit ignored integration tests under
+`crates/dustroute-mcp/tests/`, rather than example commands. They compile without
+connecting; only `retain_fixture` with `--ignored --exact --nocapture --test-threads=1`
+and the prepared private-server environment runs a trial. Preserve all operator
+barriers and owned-world restrictions. The Blueprint runner selects the exact Cargo
+test artifact and hashes it. Its MCP restart bookkeeping remains native in memory;
+retained JSON recovery fixtures are decoded only at the test boundary, followed by
+fresh public removal plans and exact observed external-state checks.

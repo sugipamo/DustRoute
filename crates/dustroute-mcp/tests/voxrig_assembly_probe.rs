@@ -1,11 +1,8 @@
 //! Explicit isolated-server MCP lifecycle trial. Never run against a player world.
-#[cfg(not(feature = "voxrig"))]
-fn main() {
-    eprintln!("requires --features voxrig");
-}
 #[cfg(feature = "voxrig")]
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[ignore = "explicit isolated-server fixture trial; requires prepared private world and operator barriers"]
+async fn retain_fixture() -> anyhow::Result<()> {
     trial::main().await
 }
 #[cfg(feature = "voxrig")]
@@ -226,11 +223,13 @@ mod trial {
         proxy: Option<&Proxy>,
     ) -> anyhow::Result<()> {
         let client = &session.as_ref().unwrap().0;
-        let (records, mut request) = if case == "door" {
+        let (records, mut request, region, input) = if case == "door" {
             let f = super::door_fixture::ordinary_fixture();
             (
                 json!({"types":f.catalog.type_revisions().collect::<Vec<_>>(),"classifications":f.catalog.classifications().collect::<Vec<_>>(),"revisions":f.catalog.revisions().collect::<Vec<_>>(),"assemblies":[f.base]}),
                 serde_json::to_value(f.request)?,
+                f.context.known_region,
+                f.context.input_levers[0],
             )
         } else {
             let generated=call(client,file,"test_circuit_change",json!({"blueprint":{"action":"generate_flying_machine","request":{"namespace":"native.flight","body":"honey_nose","distance":3,"rotation":"r270","mirrored":true}}}),true).await?;
@@ -238,21 +237,21 @@ mod trial {
                 generated["result"]["verification"]["status"] == "passed",
                 "generation failed"
             );
+            // Decode only the actual public MCP response. The door path above
+            // keeps its native context rather than rereading a JSON projection.
+            let context: dustroute_library::runtime_behavior::RuntimeBehaviorContext =
+                serde_json::from_value(generated["result"]["request"]["behavior_context"].clone())?;
             (
                 generated["result"]["records"].clone(),
                 generated["result"]["request"].clone(),
+                context.known_region,
+                context.input_levers[0],
             )
         };
         request.as_object_mut().unwrap().remove("id");
-        let min = translated(serde_json::from_value(
-            request["behavior_context"]["known_region"]["min"].clone(),
-        )?);
-        let max = translated(serde_json::from_value(
-            request["behavior_context"]["known_region"]["max"].clone(),
-        )?);
-        let input = translated(serde_json::from_value(
-            request["behavior_context"]["input_levers"][0].clone(),
-        )?);
+        let min = translated(region.min);
+        let max = translated(region.max);
+        let input = translated(input);
         record(
             file,
             &json!({"stage":"bounds","min":min,"max":max,"input":input,"case":case}),

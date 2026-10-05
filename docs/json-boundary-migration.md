@@ -6,6 +6,10 @@ MCPの入出力に加え、第6段階でMinecraftサーバーのwireに必要な
 組込み定義はRustの定数テーブルを使う。旧形式の維持のためだけの互換経路は作らない。
 過去の実機証拠は現行の実行形式と分ける。
 
+最新状態（2026-10-05）: 承認済みのオフラインJSON移行・監査範囲は完了。
+JSONは公開MCP、承認済みMinecraft wire、明示的な試験fixture codecへ限定した。
+最終節に監査対象・検証範囲・実機未実施の区別を記録する。
+
 ## 順序とゴール
 
 各段階でゴールを作成し、必要な検証が成功してから次の段階へ進む。
@@ -1665,3 +1669,62 @@ prepare/adopt/recheckの7回の明示offline出力が成功した。request ID�
 diagnostic scope、fresh adoption/recheck結果を確認し、独立fixtureは変更していない。
 workspace全target Clippyに成功。実機接続/world変更は実施していない。
 残るJSON exampleはMCP live trialの3件であり、全体監査とその移行を継続する。
+
+
+### MCP live trialの型付き接続と最終監査（2026-10-05）
+
+最後の3つのJSON example（bridge probe、assembly probe、Blueprint iteration live）を
+明示実行するignored integration testへ移した。通常のCargo testでは接続しない。
+private-server/owned-region条件、operator barrier、fresh state要求、失敗資料の保持、
+切断/cleanup順序は維持する。public MCP clientの引数/応答JSONは実際のwire境界だけで扱う。
+採取資料のJSONは試験fixture出力であり、runtime状態・保存codec・認可の入口にしない。
+
+bridge probeの採取結果は用途別CapturedStep enumへ移し、JSON化は最終fixture encoderだけ。
+Blueprint trialはnative MinecraftSnapshotで非空block、property、外部fixture一致を照合する。
+出力projectionを判定に読み戻さない。workflow/region jobの再起動確認用IDとscope/regionは
+Rust structで保持し、JSON ID fileへの保存/再読込みを撤去した。MCP子processの再起動と
+production保存の再読込み試験自体は残す。fixture由来のrecovery ID/external writeは型付きで
+decodeし、fresh public removal planと現時点の外部block state照合を通す。履歴だけから
+古い実行計画を復元したり、cleanup一致を再観測なしに流用することはない。
+assembly probeはnative door contextをJSON経由で読み直さず、flight contextだけを実際の
+公開MCP応答codecからdecodeする。
+
+PythonのBlueprint trial runnerはcompile-only Cargo artifact metadataから正確なtest
+executableを選び、そのhashを記録する。古いexample binary/globへfallbackしない。
+Cargoの外部build metadata JSONはapplication内部状態とは別で、libraryへcodecを追加しない。
+独立server predicate、operatorのOK確認、失敗時のworld保持は変えていない。
+このrunnerによるserver起動/実機試験は今回実行していない。
+
+計測stdoutの取り残し2件（performance handler probes、conversion sharing probe）も
+native Measurement表示/名前付きtextへ置き換えた。既存の測定値と判定を保持し、測定自体は
+再実行しない。通常のexamples/benchesにserde_json/json!使用はなくなった。
+
+最終監査:
+
+| 対象 | 最終状態 |
+| --- | --- |
+| core crateの通常依存 | serde_jsonなし。IR/Minecraft/Translate/Libraryはdev-dependencyのみ |
+| Voxrigの通常依存・wire | serde_jsonはdev-only。1.16.1 ProtocolTextのopaque server JSON例外は維持。1.21.11はnative NBT |
+| MCPの内部状態・履歴・保存 | 用途別Rust型と版付きnative storage codec。既存JSON storeは拒否専用で再開fallbackなし |
+| MCPの要求測定・応答 | mcp_input/最終output codec。activityのoperation IDは公開要求入口でdecode。内部認可/進捗はnative |
+| test bridge/fixture/golden | cfg(test)または明示ignored testだけ。独立観測・不正資料・MCP wire期待値を保ち、productionへ戻さない |
+| replay/採用比較 | native APIが判定。fixture decode/encodeは試験専用。過去のpassは採用権限にならない |
+| examples/benches・計測stdout | JSON使用なし。型付きAPIと非JSON測定表示 |
+| Python採取/比較・vendor manifest | 独立test fixture IO/外部build・source metadata。production内部通信/保存ではない |
+
+sourceのserde_json使用をtest moduleの可視性と照合し、通常依存はCargo.tomlも個別に確認した。
+MCP productionの残存使用は公開要求/応答codec、cfg(test)のfixture helperは通常buildから除外。
+非MCP crateとVoxrigの通常buildにはJSON処理を導入していない。vendor/sourceの対応は322 fileで
+検査成功し、pinは0e53062335c3c9f550321fd4cec755cdbd7c3932。source checkoutの既存logsは未操作。
+
+live trial 3 targetはcompile成功・既定ignored。native cleanup一致/不一致/未観測のoffline検査
+1件と、正確なartifact選択・曖昧時拒否のPython mock検査2件が成功した。
+実際のcompile-only artifact選択も成功し、接続は発生していない。
+workspace全targetとMCP no-default-features全target Clippyは-D warningsに成功した。
+前節の13件のdoor回帰、7回のoffline fixture export、トーチ診断、およびnative electrical
+observation/Python実測資料の再比較結果を維持する。独立fixture・過去のhashは変更しない。
+
+承認済みの「内部JSON除去、例外の境界限定、offline検証・監査・commit」の範囲は完了。
+新しいlibrary codec、責務移動、productionの認可/正当性条件の変更は追加していない。
+実機接続・world変更は今回のゴール対象外で実施していないため、この結果を実機再検証の
+成功とは扱わない。既存live試験の再実行は別途明示した実機作業で行う。

@@ -11,7 +11,7 @@ fn decoded(reply: &CallToolResult) -> Value {
 }
 
 fn emit(report: &crate::performance::Measurement) {
-    println!("PERFORMANCE {}", serde_json::to_string(report).unwrap());
+    println!("PERFORMANCE {report}");
 }
 
 #[tokio::test]

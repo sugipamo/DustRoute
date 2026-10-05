@@ -1,11 +1,8 @@
 //! Explicit isolated-server trial, built only with --features voxrig.
-#[cfg(not(feature = "voxrig"))]
-fn main() {
-    eprintln!("requires --features voxrig");
-}
 #[cfg(feature = "voxrig")]
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[ignore = "explicit isolated-server fixture trial; requires prepared private world and operator barriers"]
+async fn retain_fixture() -> anyhow::Result<()> {
     trial::main().await
 }
 
@@ -16,9 +13,63 @@ mod trial {
         bridge_protocol::{CommandWrite, PhysicalChange},
     };
     use dustroute_physical::Pos;
-    use serde_json::{Value, json};
+    use serde_json::json;
     use std::io::{self, Write};
     use voxrig::{Client, ConnectionConfig, MinecraftVersion, Server};
+    /// Native capture records; JSON appears only in the final fixture encoder.
+    #[derive(serde::Serialize)]
+    #[serde(tag = "stage", rename_all = "snake_case")]
+    enum CapturedStep {
+        Status {
+            value: dustroute_mcp::bridge::BotStatus,
+        },
+        RecordingStarted {
+            value: dustroute_mcp::bridge::UpdateRecordingStarted,
+        },
+        CommandSubmission {
+            value: dustroute_mcp::bridge_protocol::CommandSubmission,
+        },
+        Players {
+            value: Vec<dustroute_mcp::bridge::VisiblePlayer>,
+        },
+        Target {
+            value: dustroute_mcp::bridge::PlayerObservation,
+        },
+        Preview {
+            value: dustroute_mcp::bridge::PreviewSubmission,
+        },
+        Lever {
+            value: dustroute_mcp::bridge::LeverActivation,
+        },
+        PhysicalPlacement {
+            value: dustroute_mcp::bridge_protocol::PhysicalSubmission,
+        },
+        Placed {
+            value: dustroute_mcp::voxrig_bridge::ClientRegion,
+        },
+        PhysicalRemoval {
+            value: dustroute_mcp::bridge_protocol::PhysicalSubmission,
+        },
+        After {
+            value: dustroute_mcp::voxrig_bridge::ClientRegion,
+        },
+        Recording {
+            value: dustroute_mcp::bridge::UpdateRecording,
+        },
+        MaximumWait {
+            value: dustroute_mcp::bridge::WaitReceipt,
+        },
+        OutlineTarget {
+            state: String,
+            value: dustroute_mcp::bridge::PlayerObservation,
+        },
+        OutlineOcclusion {
+            value: dustroute_mcp::bridge::PlayerObservation,
+        },
+        OutlineUnsupported {
+            error: String,
+        },
+    }
     const DIM: &str = "minecraft:overworld";
     async fn pause(message: &str) -> anyhow::Result<()> {
         println!("{message}");
@@ -65,13 +116,17 @@ mod trial {
     async fn run(
         bridge: &BotBridge,
         remote: &Client,
-        steps: &mut Vec<Value>,
+        steps: &mut Vec<CapturedStep>,
     ) -> anyhow::Result<()> {
-        steps.push(json!({"stage":"status","value":bridge.status().await?}));
+        steps.push(CapturedStep::Status {
+            value: bridge.status().await?,
+        });
         let recording = bridge
             .start_update_recording(Pos::new(98, 180, 98), Pos::new(106, 187, 106), DIM, 1024)
             .await?;
-        steps.push(json!({"stage":"recording_started","value":recording}));
+        steps.push(CapturedStep::RecordingStarted {
+            value: recording.clone(),
+        });
         let changes: [CommandWrite; 5] = [
             (Pos::new(100, 180, 100), "minecraft:stone"),
             (
@@ -86,28 +141,39 @@ mod trial {
             pos,
             state: state.parse().unwrap(),
         });
-        steps.push(
-            json!({"stage":"command_submission","value":bridge.write_blocks(&changes,DIM).await?}),
-        );
+        steps.push(CapturedStep::CommandSubmission {
+            value: bridge.write_blocks(&changes, DIM).await?,
+        });
         bridge.wait_ticks(5, DIM).await?;
-        steps.push(json!({"stage":"players","value":bridge.visible_players().await?}));
+        steps.push(CapturedStep::Players {
+            value: bridge.visible_players().await?,
+        });
         let target = bridge.observe_player("AimProbe", 8.0).await?;
         anyhow::ensure!(
             target.targeted_block == Some(Pos::new(104, 183, 100)),
             "target mismatch: {target:?}"
         );
-        steps.push(json!({"stage":"target","value":target}));
+        steps.push(CapturedStep::Target { value: target });
         if std::env::var("PROBE_OUTLINE").as_deref() == Ok("1") {
             // Explicit opt-in: AimProbe also needs OP on the isolated fixture server.
             outline_targets(bridge, remote, steps).await?;
         }
-        steps.push(json!({"stage":"preview","value":bridge.preview_region("AimProbe",Pos::new(100,180,100),Pos::new(106,183,100),DIM).await?}));
+        steps.push(CapturedStep::Preview {
+            value: bridge
+                .preview_region(
+                    "AimProbe",
+                    Pos::new(100, 180, 100),
+                    Pos::new(106, 183, 100),
+                    DIM,
+                )
+                .await?,
+        });
         let activation = bridge.activate_lever(Pos::new(100, 181, 100), DIM).await?;
         anyhow::ensure!(
             !activation.before_powered && activation.after_powered,
             "toggle mismatch"
         );
-        steps.push(json!({"stage":"lever","value":activation}));
+        steps.push(CapturedStep::Lever { value: activation });
         let place = PhysicalChange::Place {
             pos: Pos::new(102, 181, 100),
             item: "minecraft:stone".into(),
@@ -115,7 +181,9 @@ mod trial {
             reference: Pos::new(102, 180, 100),
             face: Pos::new(0, 1, 0),
         };
-        steps.push(json!({"stage":"physical_placement","value":bridge.place_physical_blocks(&[place],DIM).await?}));
+        steps.push(CapturedStep::PhysicalPlacement {
+            value: bridge.place_physical_blocks(&[place], DIM).await?,
+        });
         let placed = bridge
             .scan_client_region(Pos::new(102, 181, 100), Pos::new(102, 181, 100), DIM)
             .await?;
@@ -123,8 +191,17 @@ mod trial {
             placed.snapshot().blocks[0].name == "minecraft:stone",
             "placement missing"
         );
-        steps.push(json!({"stage":"placed","value":placed}));
-        steps.push(json!({"stage":"physical_removal","value":bridge.place_physical_blocks(&[PhysicalChange::Dig{pos:Pos::new(102,181,100)}],DIM).await?}));
+        steps.push(CapturedStep::Placed { value: placed });
+        steps.push(CapturedStep::PhysicalRemoval {
+            value: bridge
+                .place_physical_blocks(
+                    &[PhysicalChange::Dig {
+                        pos: Pos::new(102, 181, 100),
+                    }],
+                    DIM,
+                )
+                .await?,
+        });
         let after = bridge
             .scan_client_region(Pos::new(98, 180, 98), Pos::new(106, 187, 106), DIM)
             .await?;
@@ -139,7 +216,7 @@ mod trial {
                 == "minecraft:air",
             "removal missing"
         );
-        steps.push(json!({"stage":"after","value":after}));
+        steps.push(CapturedStep::After { value: after });
         let recorded = bridge
             .stop_update_recording(&recording.recording_id, DIM)
             .await?;
@@ -162,8 +239,10 @@ mod trial {
                         .is_some_and(|s| s.properties.get("powered").is_some_and(|v| v == "true"))),
             "lever event missing"
         );
-        steps.push(json!({"stage":"recording","value":recorded}));
-        steps.push(json!({"stage":"maximum_wait","value":bridge.wait_ticks(200,DIM).await?}));
+        steps.push(CapturedStep::Recording { value: recorded });
+        steps.push(CapturedStep::MaximumWait {
+            value: bridge.wait_ticks(200, DIM).await?,
+        });
         // The explicit server-confirmed API must never promote client evidence.
         anyhow::ensure!(
             bridge
@@ -177,7 +256,7 @@ mod trial {
     async fn outline_targets(
         bridge: &BotBridge,
         remote: &Client,
-        steps: &mut Vec<Value>,
+        steps: &mut Vec<CapturedStep>,
     ) -> anyhow::Result<()> {
         let p = Pos::new(104, 183, 100);
         bridge
@@ -210,7 +289,10 @@ mod trial {
                 .await?;
             bridge.wait_ticks(10, DIM).await?;
             let target = bridge.observe_player("AimProbe", 8.0).await?;
-            steps.push(json!({"stage":"outline_target","state":state,"value":target}));
+            steps.push(CapturedStep::OutlineTarget {
+                state: state.to_owned(),
+                value: target.clone(),
+            });
             anyhow::ensure!(
                 target.targeted_block == Some(p)
                     && target.targeted_face.as_deref() == Some("up")
@@ -231,7 +313,9 @@ mod trial {
             .await?;
         bridge.wait_ticks(10, DIM).await?;
         let target = bridge.observe_player("AimProbe", 8.0).await?;
-        steps.push(json!({"stage":"outline_occlusion","value":target}));
+        steps.push(CapturedStep::OutlineOcclusion {
+            value: target.clone(),
+        });
         anyhow::ensure!(
             target.targeted_block == Some(obstruction),
             "occlusion mismatch"
@@ -253,7 +337,9 @@ mod trial {
             error.to_string().contains("outline geometry unsupported"),
             "unexpected error: {error}"
         );
-        steps.push(json!({"stage":"outline_unsupported","error":error.to_string()}));
+        steps.push(CapturedStep::OutlineUnsupported {
+            error: error.to_string(),
+        });
         bridge
             .write_blocks(
                 &[CommandWrite {
