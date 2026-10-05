@@ -1,5 +1,6 @@
 //! Private fresh placement capability for an adopted custom electrical Assembly.
 //! No persisted report or deserialized value can construct this capability.
+use crate::failure::FailureCause;
 use dustroute_library::assembly::Assembly;
 use dustroute_library::blueprint::BlueprintCatalog;
 use dustroute_library::runtime_behavior::RuntimeBehaviorContext;
@@ -253,7 +254,7 @@ impl ValidatedAssemblyPlacement {
         snapshot: &MinecraftSnapshot,
         version: &str,
         undo: bool,
-    ) -> Result<(), String> {
+    ) -> Result<(), FailureCause> {
         if undo {
             Self::matches(snapshot, self.construction.settled(), version)
         } else {
@@ -265,22 +266,33 @@ impl ValidatedAssemblyPlacement {
         snapshot: &MinecraftSnapshot,
         version: &str,
         undo: bool,
-    ) -> Result<(), String> {
+    ) -> Result<(), FailureCause> {
         self.validate_before(snapshot, version, !undo)
     }
     pub(crate) fn matches(
         actual: &MinecraftSnapshot,
         expected: &MinecraftSnapshot,
         version: &str,
-    ) -> Result<(), String> {
+    ) -> Result<(), FailureCause> {
         if version != "1.21.11" {
             return Err("custom piston placement requires Java 1.21.11".into());
         }
         if actual.min != expected.min || actual.max != expected.max {
             return Err("exact complete construction-region observation required".into());
         }
-        if crate::revision::blocks(actual)? != crate::revision::blocks(expected)? {
-            return Err("construction state or surrounding world differs from the verified plan; inspect before continuing".into());
+        let actual = crate::revision::blocks(actual)?;
+        let expected = crate::revision::blocks(expected)?;
+        if actual != expected {
+            let positions: std::collections::BTreeSet<_> =
+                actual.keys().chain(expected.keys()).copied().collect();
+            let differences: Vec<_> = positions
+                .into_iter()
+                .filter(|position| actual.get(position) != expected.get(position))
+                .collect();
+            return Err(FailureCause::mismatch(
+                "construction state or surrounding world differs from the verified plan; inspect before continuing",
+                &differences,
+            ));
         }
         Ok(())
     }
@@ -288,7 +300,7 @@ impl ValidatedAssemblyPlacement {
         snapshot: &MinecraftSnapshot,
         version: &str,
         bounds: RegionBounds,
-    ) -> Result<(), String> {
+    ) -> Result<(), FailureCause> {
         Self::matches(
             snapshot,
             &MinecraftSnapshot {

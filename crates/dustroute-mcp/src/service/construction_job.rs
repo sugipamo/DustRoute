@@ -335,7 +335,7 @@ impl DustRouteMcp {
                         expected.min,
                         expected.max,
                     ),
-                    matches,
+                    matches.map_err(String::from),
                     observed,
                     differences,
                 ))))

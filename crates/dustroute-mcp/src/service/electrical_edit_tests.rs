@@ -255,6 +255,15 @@ async fn electrical_edit_public_capture_preview_apply_undo_and_restart_history()
         .push(json!({"pos":{"x":98,"y":99,"z":102},"name":"minecraft:stone"}));
     let drifted = call(&client, "undo_operation", operation.clone()).await;
     assert_eq!(drifted["ok"], false, "{drifted}");
+    assert_eq!(
+        drifted["failure"]["primary"]["kind"],
+        "verification_mismatch"
+    );
+    assert_eq!(
+        drifted["failure"]["primary"]["details"]["mismatches"],
+        json!([{"x":98,"y":99,"z":102}])
+    );
+    assert_eq!(drifted["failure"]["progress"]["world"], "not_attempted");
     assert_eq!(fake.lock().unwrap().writes, 2);
 
     fake.lock().unwrap().snapshot.as_mut().unwrap()["blocks"]
@@ -451,6 +460,16 @@ async fn electrical_edit_rejects_guard_drift_and_invalid_workspace_before_writes
     )
     .await;
     assert_eq!(result["ok"], false);
+    assert_eq!(
+        result["failure"]["primary"]["kind"],
+        "verification_mismatch"
+    );
+    assert_eq!(
+        result["failure"]["primary"]["details"]["mismatches"],
+        json!([{"x":98,"y":99,"z":102}])
+    );
+    assert_eq!(result["failure"]["progress"]["world"], "not_attempted");
+    assert_eq!(result["failure"]["progress"]["operation_consumed"], false);
     assert_eq!(fake.lock().unwrap().writes, 0);
     stop(client, server).await;
     bridge.abort();

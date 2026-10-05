@@ -283,8 +283,7 @@ impl DustRouteMcp {
                 .await
                 .map_err(FailureCause::from)?
                 .into_stationary_record()?;
-            ValidatedAssemblyPlacement::matches(&observed.snapshot, expected, &status.version)
-                .map_err(|e| FailureCause::new(CauseKind::VerificationMismatch, e))?;
+            ValidatedAssemblyPlacement::matches(&observed.snapshot, expected, &status.version)?;
             if let Some(first) = receipts.first() {
                 observed.readback.interval_since(first)?;
             }

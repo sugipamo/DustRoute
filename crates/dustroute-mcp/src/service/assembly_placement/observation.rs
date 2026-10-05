@@ -246,7 +246,10 @@ fn compare_samples(
             reason: None,
             samples,
         },
-        Err(reason) => ObservationOutcome::Changed { reason, samples },
+        Err(cause) => ObservationOutcome::Changed {
+            reason: cause.message,
+            samples,
+        },
     })
 }
 
@@ -358,7 +361,9 @@ mod tests {
                 serde_json::to_value(&first).unwrap()["readback"],
                 serde_json::to_value(&second).unwrap()["readback"]
             ]);
-            let reason = ValidatedAssemblyPlacement::matches(&actual, &expected, "1.21.11").err();
+            let reason = ValidatedAssemblyPlacement::matches(&actual, &expected, "1.21.11")
+                .err()
+                .map(|cause| cause.message);
             let result =
                 observation(compare_samples(first, second, &expected, "1.21.11", bounds).unwrap());
             assert_eq!(result.matches_reference(), reason.is_none());

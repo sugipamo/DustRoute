@@ -211,10 +211,7 @@ impl AssemblyService<'_> {
                 );
                 proof
                     .validate_after(&expected, &status.version, removal)
-                    .map_err(|e| {
-                        execution_progress
-                            .cause(FailureCause::new(CauseKind::VerificationMismatch, e))
-                    })?;
+                    .map_err(|cause| execution_progress.cause(cause))?;
                 Ok::<_, FailureReport>(execution_progress)
             }
             .await;

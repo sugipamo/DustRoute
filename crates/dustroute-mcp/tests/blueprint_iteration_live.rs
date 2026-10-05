@@ -184,6 +184,17 @@ mod trial {
         )
         .await
     }
+    fn verify_drift_refusal(response: &Value, position: Pos) -> anyhow::Result<()> {
+        anyhow::ensure!(
+            response["failure"]["primary"]["kind"] == "verification_mismatch"
+                && response["failure"]["primary"]["details"]["mismatches"] == json!([position])
+                && response["failure"]["progress"]["world"] == "not_attempted"
+                && response["failure"]["progress"]["operation_consumed"] == false
+                && response["recovery"]["reobserve_required"] == true,
+            "context refusal lost its diagnostic evidence: {response}"
+        );
+        Ok(())
+    }
     async fn adopt(client: &Client, file: &mut File, generated: &Value) -> anyhow::Result<Value> {
         call(
             client,
@@ -535,7 +546,7 @@ mod trial {
         .await?;
         let guard = Pos::new(1281, 181, 1201);
         write(actor, file, guard, "minecraft:stone").await?;
-        call(
+        let refusal = call(
             session,
             file,
             "invoke_operation",
@@ -543,6 +554,7 @@ mod trial {
             false,
         )
         .await?;
+        verify_drift_refusal(&refusal, guard)?;
         let small_min = Pos::new(1280, 179, 1200);
         let small_max = Pos::new(1293, 183, 1211);
         let drift = checkpoint_region(
@@ -1067,7 +1079,7 @@ mod trial {
         )
         .await?;
         write(actor, file, guard, "minecraft:stone").await?;
-        call(
+        let refusal = call(
             client,
             file,
             "invoke_operation",
@@ -1075,6 +1087,7 @@ mod trial {
             false,
         )
         .await?;
+        verify_drift_refusal(&refusal, guard)?;
         let drift = checkpoint(actor, file, "protected_drift_blocks_apply").await?;
         anyhow::ensure!(
             block_name(&drift, edit) == "minecraft:stone"
@@ -1090,7 +1103,7 @@ mod trial {
             "scoped edit mismatch"
         );
         write(actor, file, guard, "minecraft:stone").await?;
-        call(
+        let refusal = call(
             client,
             file,
             "undo_operation",
@@ -1098,6 +1111,7 @@ mod trial {
             false,
         )
         .await?;
+        verify_drift_refusal(&refusal, guard)?;
         let drift = checkpoint(actor, file, "protected_drift_blocks_undo").await?;
         anyhow::ensure!(
             block_name(&drift, edit) == "minecraft:smooth_quartz"

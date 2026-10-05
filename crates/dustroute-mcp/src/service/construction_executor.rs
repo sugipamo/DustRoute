@@ -95,9 +95,7 @@ impl ConstructionExecutor<'_> {
                     .into_stationary_record()
                     .map_err(|e| progress.cause(e))?;
                 ValidatedAssemblyPlacement::matches(&before.snapshot, &expected, &status.version)
-                    .map_err(|e| {
-                    progress.cause(FailureCause::new(CauseKind::VerificationMismatch, e))
-                })?;
+                    .map_err(|cause| progress.cause(cause))?;
                 {
                     let _measurement =
                         crate::performance::span(crate::performance::Phase::Checkpoint);
@@ -178,9 +176,7 @@ impl ConstructionExecutor<'_> {
                     &batch_expected,
                     &status.version,
                 )
-                .map_err(|e| {
-                    progress.cause(FailureCause::new(CauseKind::VerificationMismatch, e))
-                })?;
+                .map_err(|cause| progress.cause(cause))?;
                 drop(verification);
                 progress.verified_steps = batch.last_step();
                 crate::performance::execution_progress(&progress);
