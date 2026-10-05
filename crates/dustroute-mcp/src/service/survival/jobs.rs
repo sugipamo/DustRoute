@@ -257,6 +257,7 @@ impl Entry {
                         error: crate::survival_execution::ExecutionError {
                             code: SurvivalErrorCode::ExecutionNeedsInspection,
                             detail: "stopped execution resources require inspection".into(),
+                            native_error_kind: None,
                         },
                         completed_steps,
                     },

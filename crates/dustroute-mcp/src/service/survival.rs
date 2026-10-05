@@ -338,6 +338,7 @@ use model::{
 
 mod continuation;
 mod execution;
+mod guidance;
 mod planning;
 mod records;
 mod replies;

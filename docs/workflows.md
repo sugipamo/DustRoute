@@ -85,6 +85,11 @@ world evidence is not a server lock. `cancel` is not rollback, and unresolved
 lost operations cannot be automatically resumed. See the
 [survival contract](survival-public-construction.md).
 
+On a stop or refusal, read `next_action`, the error and known progress. A failed
+detailed read may still return authorized `available_live_status`; it does not
+make the read successful or permit replay. See
+[failure handling](failure-handling-stability.md).
+
 ## Inspect or recover
 
 | Situation | Next step |

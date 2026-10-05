@@ -343,15 +343,19 @@ impl PlacementWorkflow<'_> {
             .authorize_player(&player)
             .map_err(FailureCause::from)?;
         if context.player != player {
-            return Err("revision placement belongs to another player".into());
+            return Err(FailureCause::new(
+                CauseKind::PermissionDenied,
+                "revision placement belongs to another player",
+            ));
         }
         if !after
             && (!context.lifecycle.can_begin(undo)
                 || (!undo && context.expires_at <= Instant::now()))
         {
-            return Err(
-                "revision placement attempt expired or consumed; inspect before recovery".into(),
-            );
+            return Err(FailureCause::new(
+                CauseKind::InvalidState,
+                "revision placement attempt expired or consumed; inspect before recovery",
+            ));
         }
         let expected = if undo == after {
             &context.before
@@ -369,21 +373,37 @@ impl PlacementWorkflow<'_> {
             || status.version != context.version
             || status.dimension.as_deref() != Some(context.dimension.as_str())
         {
-            return Err("server version or dimension changed".into());
+            return Err(FailureCause::new(
+                CauseKind::InvalidState,
+                "server version or dimension changed",
+            ));
         }
         let actual = self
             .bridge
             .scan_region(expected.min, expected.max, &context.dimension)
             .await
             .map_err(FailureCause::from)?;
-        if actual.min != expected.min
-            || actual.max != expected.max
-            || crate::revision::blocks(&actual)? != crate::revision::blocks(expected)?
-        {
-            return Err(
-                "revision placement context changed or result differs; inspect current world"
-                    .into(),
-            );
+        if actual.min != expected.min || actual.max != expected.max {
+            return Err(FailureCause::new(
+                CauseKind::ObservationIncomplete,
+                "revision placement observation does not cover the expected region",
+            ));
+        }
+        let actual_blocks = crate::revision::blocks(&actual)?;
+        let expected_blocks = crate::revision::blocks(expected)?;
+        if actual_blocks != expected_blocks {
+            let positions = actual_blocks
+                .keys()
+                .chain(expected_blocks.keys())
+                .copied()
+                .collect::<std::collections::BTreeSet<_>>()
+                .into_iter()
+                .filter(|position| actual_blocks.get(position) != expected_blocks.get(position))
+                .collect::<Vec<_>>();
+            return Err(FailureCause::mismatch(
+                "revision placement context changed or result differs; inspect current world",
+                &positions,
+            ));
         }
         if consume {
             let mut contexts = self.plans.placements().lock().await;
@@ -391,9 +411,15 @@ impl PlacementWorkflow<'_> {
                 .revision_mut(&id)
                 .ok_or("revision placement missing")?;
             if !undo && stored.expires_at <= Instant::now() {
-                return Err("revision placement expired during scan".into());
+                return Err(FailureCause::new(
+                    CauseKind::InvalidState,
+                    "revision placement expired during scan",
+                ));
             }
-            stored.lifecycle.begin(undo)?;
+            stored
+                .lifecycle
+                .begin(undo)
+                .map_err(|error| FailureCause::new(CauseKind::InvalidState, error))?;
         }
         if after {
             if let Some(stored) = self.plans.placements().lock().await.revision_mut(&id) {

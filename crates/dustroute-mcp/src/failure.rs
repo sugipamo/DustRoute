@@ -600,4 +600,53 @@ mod tests {
         assert_eq!(response["recovery"]["reobserve_required"], true);
         assert_eq!(response["retry_allowed"], false);
     }
+
+    #[test]
+    fn recovery_advice_keeps_secondary_observation_and_persistence_failures() {
+        let mut report = ExecutionProgress::default().cause(FailureCause::new(
+            CauseKind::InvalidInput,
+            "original refusal",
+        ));
+        report.secondary(
+            FailureCause::new(CauseKind::Timeout, "cleanup read unavailable")
+                .at(FailurePhase::AfterReadback),
+        );
+        report.secondary(FailureCause::new(
+            CauseKind::Persistence,
+            "save unavailable",
+        ));
+        let response = serde_json::to_value(report.as_response()).unwrap();
+        assert_eq!(response["failure"]["primary"]["kind"], "invalid_input");
+        assert_eq!(
+            response["failure"]["secondary"].as_array().unwrap().len(),
+            2
+        );
+        assert_eq!(response["recovery"]["reobserve_required"], true);
+        assert_eq!(response["recovery"]["inspect_saved_record"], true);
+        assert_eq!(response["recovery"]["same_operation_replay_allowed"], false);
+        assert_eq!(response["failure"]["progress"]["world"], "not_attempted");
+
+        report.secondary(FailureCause::mismatch(
+            "cleanup differs",
+            &[Pos::new(1, 2, 3)],
+        ));
+        let response = serde_json::to_value(report.as_response()).unwrap();
+        assert_eq!(response["recovery"]["replan_required"], true);
+    }
+
+    #[test]
+    fn failed_consumed_attempt_directs_the_caller_to_its_durable_history() {
+        let report = ExecutionProgress {
+            operation_consumed: true,
+            persistence: PersistenceOutcome::IntentSaved,
+            world: WorldOutcome::Unknown,
+            ..Default::default()
+        }
+        .cause(FailureCause::new(CauseKind::Timeout, "lost reply"));
+        let response = serde_json::to_value(report.as_response()).unwrap();
+        assert_eq!(response["recovery"]["inspect_saved_record"], true);
+        assert_eq!(response["recovery"]["reobserve_required"], true);
+        assert_eq!(response["recovery"]["replan_required"], true);
+        assert_eq!(response["retry_allowed"], false);
+    }
 }

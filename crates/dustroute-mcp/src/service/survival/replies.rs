@@ -1,5 +1,6 @@
 //! Owned survival response data. None is a job, native plan, or replay authority.
 //! Only the public tool adapter encodes these records as JSON.
+use super::guidance::NextAction;
 use super::model::{JobManifest, JobSchema, JobStatus};
 use crate::operations::mutation::Success;
 use crate::survival_construction::{continuation::SiteDiagnosis, generation::GenerationFailure};
@@ -68,36 +69,53 @@ pub(super) struct Refusal {
     schema_version: JobSchema,
     error: RefusalDetail,
     automatic_replay: DiagnosticOnly,
+    next_action: NextAction,
     #[serde(skip_serializing_if = "Option::is_none")]
     continuation_job_id: Option<Uuid>,
     #[serde(skip_serializing_if = "Option::is_none")]
     next_step: Option<&'static str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     historical_diagnosis: Option<Box<HistoricalDiagnosis>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    available_live_status: Option<Box<LiveDisplay>>,
 }
 #[derive(Debug, Serialize)]
 struct RefusalDetail {
     code: RefusalCode,
     detail: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    native_error_kind: Option<crate::failure::NativeFailureKind>,
 }
 impl Refusal {
     pub(super) fn new(code: impl Into<RefusalCode>, detail: impl std::fmt::Display) -> Self {
+        let code = code.into();
+        let next_action = NextAction::for_refusal(&code);
         Self {
             ok: DiagnosticOnly,
             schema_version: JobSchema::V1,
             error: RefusalDetail {
-                code: code.into(),
+                code,
                 detail: detail.to_string(),
+                native_error_kind: None,
             },
             automatic_replay: DiagnosticOnly,
+            next_action,
             continuation_job_id: None,
-            next_step: None,
+            next_step: Some(next_action.description()),
             historical_diagnosis: None,
+            available_live_status: None,
         }
+    }
+    pub(super) fn native(code: ServiceCode, error: voxrig::Error) -> Self {
+        let kind = error.kind().into();
+        let mut refusal = Self::new(code, error);
+        refusal.error.native_error_kind = Some(kind);
+        refusal
     }
     pub(super) fn linked_job(&mut self, id: Uuid) {
         self.continuation_job_id = Some(id);
-        self.next_step = Some("get the linked new job; do not replay the old checkpoint");
+        self.next_action = NextAction::InspectLinkedJob;
+        self.next_step = Some(self.next_action.description());
     }
     pub(super) fn recorded_diagnosis(&mut self, record: ExecutionRecord) {
         let last_event = record.events.last().cloned();
@@ -136,6 +154,16 @@ pub(super) enum Reply {
 impl From<Refusal> for Reply {
     fn from(r: Refusal) -> Self {
         Self::Refused(Box::new(r))
+    }
+}
+impl Reply {
+    /// A detailed history read can fail without erasing the authorized live
+    /// snapshot. It is diagnostic data, not a substitute for that failed read.
+    pub(super) fn with_live_status(mut self, status: Option<LiveDisplay>) -> Self {
+        if let Self::Refused(ref mut refusal) = self {
+            refusal.available_live_status = status.map(Box::new);
+        }
+        self
     }
 }
 impl From<Publication> for Reply {
@@ -222,6 +250,8 @@ impl Reply {
             },
             writes_minecraft: DiagnosticOnly,
             continuation,
+            next_action: NextAction::ReviewSearchFailure,
+            next_step: NextAction::ReviewSearchFailure.description(),
         }))
     }
     pub(super) fn site_changed(diagnosis: SiteDiagnosis) -> Self {
@@ -230,9 +260,12 @@ impl Reply {
             error: RefusalDetail {
                 code: ServiceCode::CheckpointSiteChanged.into(),
                 detail: "external differences require inspection; no automatic removal".into(),
+                native_error_kind: None,
             },
             diagnosis,
             writes_minecraft: DiagnosticOnly,
+            next_action: NextAction::ReviewSiteDifferences,
+            next_step: NextAction::ReviewSiteDifferences.description(),
         }))
     }
 }
@@ -248,6 +281,8 @@ pub(super) struct GenerationRefusal {
     writes_minecraft: DiagnosticOnly,
     #[serde(flatten)]
     continuation: Option<GenerationContinuation>,
+    next_action: NextAction,
+    next_step: &'static str,
 }
 #[derive(Debug, Serialize)]
 struct GenerationError {
@@ -260,6 +295,8 @@ pub(super) struct SiteChanged {
     error: RefusalDetail,
     diagnosis: SiteDiagnosis,
     writes_minecraft: DiagnosticOnly,
+    next_action: NextAction,
+    next_step: &'static str,
 }
 
 #[derive(Serialize)]
@@ -308,7 +345,26 @@ pub(super) struct LiveDisplay {
     pub execution_authority_restored: DiagnosticOnly,
     pub completed_steps: Option<usize>,
     pub status: JobStatus,
+    pub next_action: NextAction,
     pub next_step: &'static str,
+}
+impl LiveDisplay {
+    pub(super) fn new(job_id: Uuid, owner: String, status: JobStatus) -> Self {
+        let next_action = NextAction::for_status(Some(&status), false);
+        Self {
+            ok: Success,
+            schema_version: JobSchema::V1,
+            job_id,
+            owner,
+            process_local_job_present: true,
+            historical_only: false,
+            execution_authority_restored: DiagnosticOnly,
+            completed_steps: status.completed_steps(),
+            status,
+            next_action,
+            next_step: next_action.description(),
+        }
+    }
 }
 #[derive(Debug, Serialize)]
 pub(super) struct RecordDisplay {
@@ -322,6 +378,7 @@ pub(super) struct RecordDisplay {
     pub completed_steps: Option<usize>,
     pub status: Option<JobStatus>,
     pub recorded_continuation: Option<Continuation>,
+    pub next_action: NextAction,
     pub next_step: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub manifest: Option<JobManifest>,
@@ -441,12 +498,14 @@ mod tests {
             serde_json::to_value(reply).unwrap(),
             json!({"ok":false,"schema_version":"dustroute.survival-job.v1",
             "error":{"code":"job_capacity","detail":"at most 32 process-local jobs"},"automatic_replay":false,
+            "next_action":"inspect_refusal","next_step":"inspect error.code and its details; resolve the prerequisite before requesting a new plan or action",
             "parent_job_id":parent,"diagnosis":expected_diagnosis,"received_materials":materials,"execution_authority_restored":false})
         );
         let error = GenerationFailure::PlanningTaskFailed {
             reason: "worker unavailable".into(),
         };
-        let expected = json!({"ok":false,"error":{"code":"generation_refused","cause":&error},"diagnosis":expected_diagnosis,"received_materials":materials,"writes_minecraft":false});
+        let expected = json!({"ok":false,"error":{"code":"generation_refused","cause":&error},"diagnosis":expected_diagnosis,"received_materials":materials,"writes_minecraft":false,
+            "next_action":"review_search_failure","next_step":"inspect error.cause for input, material or search-budget limits; no complete plan was accepted and search exhaustion does not prove impossibility"});
         let reply = Reply::generation(
             error,
             Some(GenerationContinuation {
@@ -474,7 +533,8 @@ mod tests {
         let plain = serde_json::to_value(&refusal).unwrap();
         assert_eq!(
             plain,
-            json!({"ok":false,"schema_version":"dustroute.survival-job.v1","error":{"code":"checkpoint_consumed","detail":"already claimed"},"automatic_replay":false})
+            json!({"ok":false,"schema_version":"dustroute.survival-job.v1","error":{"code":"checkpoint_consumed","detail":"already claimed"},"automatic_replay":false,
+                "next_action":"inspect_execution","next_step":"inspect saved execution and outstanding native operations, then reobserve when permitted; no automatic replay or continuation without a sealed checkpoint"})
         );
         refusal.linked_job(new_job);
         refusal.recorded_diagnosis(ExecutionRecord {
@@ -488,6 +548,7 @@ mod tests {
             events: vec![],
         });
         let expected = json!({"ok":false,"schema_version":"dustroute.survival-job.v1","error":{"code":"checkpoint_consumed","detail":"already claimed"},"automatic_replay":false,
+            "next_action":"inspect_linked_job",
             "continuation_job_id":new_job,"next_step":"get the linked new job; do not replay the old checkpoint",
             "historical_diagnosis":{"execution_id":execution_id,"completed_steps":0,"outcome":"uncertain","recorded_continuation":"needs_inspection","last_event":null,"execution_authority_restored":false}});
         assert_eq!(serde_json::to_value(&refusal).unwrap(), expected);
@@ -531,22 +592,12 @@ mod tests {
     #[test]
     fn live_and_saved_display_distinguish_unknown_zero_and_omitted_details() {
         let id = Uuid::new_v4();
-        let live = LiveDisplay {
-            ok: Success,
-            schema_version: JobSchema::V1,
-            job_id: id,
-            owner: "Tester".into(),
-            process_local_job_present: true,
-            historical_only: false,
-            execution_authority_restored: DiagnosticOnly,
-            completed_steps: None,
-            status: JobStatus::Planned,
-            next_step: "inspect status; stopped jobs never automatically replay",
-        };
+        let live = LiveDisplay::new(id, "Tester".into(), JobStatus::Planned);
         let wire = serde_json::to_value(live).unwrap();
         assert!(wire["completed_steps"].is_null());
         assert!(wire.get("recorded_continuation").is_none());
         assert!(wire.get("diagnosis").is_none());
+        assert_eq!(wire["next_action"], "review_preview");
         let mut saved = RecordDisplay {
             ok: Success,
             schema_version: JobSchema::V1,
@@ -558,6 +609,7 @@ mod tests {
             completed_steps: Some(0),
             status: None,
             recorded_continuation: Some(Continuation::NeedsInspection),
+            next_action: NextAction::InspectExecution,
             next_step: "historical diagnosis only; reobserve and resolve outstanding operations before any new plan",
             manifest: None,
             diagnosis: None,
@@ -572,5 +624,27 @@ mod tests {
             serde_json::to_value(saved).unwrap().get("diagnosis"),
             Some(&Value::Null)
         );
+    }
+
+    #[test]
+    fn native_refusal_keeps_the_received_category_and_the_failed_mcp_envelope() {
+        let refusal = Refusal::native(
+            ServiceCode::ObservationUnavailable,
+            voxrig::Error::new(
+                voxrig::ErrorKind::UncertainDispatch,
+                anyhow::anyhow!("opaque native detail"),
+            ),
+        );
+        let reply = super::super::super::typed_reply(PublicReply {
+            response: refusal.into(),
+            execution_contract: Default::default(),
+        });
+        assert_eq!(reply.is_error, Some(true));
+        let wire = super::super::super::test_support::decode_reply(&reply).unwrap();
+        assert_eq!(wire["ok"], false);
+        assert_eq!(wire["error"]["code"], "observation_unavailable");
+        assert_eq!(wire["error"]["native_error_kind"], "UncertainDispatch");
+        assert_eq!(wire["automatic_replay"], false);
+        assert!(wire.get("available_live_status").is_none());
     }
 }

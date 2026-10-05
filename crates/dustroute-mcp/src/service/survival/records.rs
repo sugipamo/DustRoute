@@ -17,29 +17,26 @@ impl DustRouteMcp {
                 return failure(ServiceCode::PermissionDenied, e);
             }
             if !include_record {
-                return Reply::Live(Box::new(replies::LiveDisplay {
-                    ok: Success,
-                    schema_version: JobSchema::V1,
-                    job_id: id,
-                    owner: owner.clone(),
-                    process_local_job_present: true,
-                    historical_only: false,
-                    execution_authority_restored: DiagnosticOnly,
-                    completed_steps: status.completed_steps(),
-                    status: status.clone(),
-                    next_step: "inspect status; stopped jobs never automatically replay",
-                }));
+                return Reply::Live(Box::new(replies::LiveDisplay::new(
+                    id,
+                    owner.clone(),
+                    status.clone(),
+                )));
             }
         }
+        let available_live_status = live
+            .as_ref()
+            .map(|(owner, status)| replies::LiveDisplay::new(id, owner.clone(), status.clone()));
         let service = self.clone();
-        match tokio::task::spawn_blocking(move || {
+        let result = match tokio::task::spawn_blocking(move || {
             service.read_survival_record(id, include_record, live)
         })
         .await
         {
             Ok(result) => result,
             Err(e) => failure(ServiceCode::JournalUnavailable, e),
-        }
+        };
+        result.with_live_status(available_live_status)
     }
 
     fn read_survival_record(
@@ -88,7 +85,6 @@ impl DustRouteMcp {
             } else {
                 None
             };
-        let completed_steps = diagnosis.as_ref().map(|d| d.record.completed_steps);
         let recorded_continuation = diagnosis.as_ref().map(|d| d.record.continuation.clone());
         let continuation_job_id = if include_record
             && crate::storage::record_exists(&directory.join("continuation-claim.store"))
@@ -104,6 +100,16 @@ impl DustRouteMcp {
             None
         };
         let present = live.is_some();
+        let status = live.map(|(_, status)| status).or(historical_status);
+        let completed_steps = status
+            .as_ref()
+            .and_then(JobStatus::completed_steps)
+            .or_else(|| diagnosis.as_ref().map(|d| d.record.completed_steps));
+        let next_action = if continuation_job_id.is_some() {
+            super::guidance::NextAction::InspectLinkedJob
+        } else {
+            super::guidance::NextAction::for_status(status.as_ref(), !present)
+        };
         Reply::Record(Box::new(replies::RecordDisplay {
             ok: Success,
             schema_version: JobSchema::V1,
@@ -113,13 +119,10 @@ impl DustRouteMcp {
             historical_only: !present,
             execution_authority_restored: DiagnosticOnly,
             completed_steps,
-            status: live.map(|(_, status)| status).or(historical_status),
+            status,
             recorded_continuation,
-            next_step: if present {
-                "inspect status; stopped jobs never automatically replay"
-            } else {
-                "historical diagnosis only; reobserve and resolve outstanding operations before any new plan"
-            },
+            next_action,
+            next_step: next_action.description(),
             manifest: include_record.then_some(manifest),
             diagnosis: if include_record {
                 Some(diagnosis)

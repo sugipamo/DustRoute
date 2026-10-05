@@ -74,6 +74,12 @@ from both waits, recording cleanup and both restoration reads.
 `recovery` tells the caller whether to reobserve, replan or inspect saved records.
 An unavailable read requires fresh observation even when no write was attempted;
 a changed baseline or failed target comparison requires replanning.
+The advice considers both primary and secondary causes. A secondary readback or
+save failure retains its diagnostic requirement without replacing the original
+cause. Saved intent/checkpoints also direct callers to their durable history;
+that advice never claims the latest save succeeded. Revision placement context
+mismatches retain differing coordinates, including changed unedited cells.
+See [the supported-scope follow-up](failure-handling-stability.md).
 `same_operation_replay_allowed` is always false for failures. Existing repair
 rollback and explicit transition restoration remain available under their
 existing admission rules; these fields do not authorize either action. Ordinary

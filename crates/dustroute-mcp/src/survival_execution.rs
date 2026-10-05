@@ -34,12 +34,16 @@ use voxrig::{Client, ConnectionConfig, NativeBlockState};
 pub struct ExecutionError {
     pub code: SurvivalErrorCode,
     pub detail: String,
+    /// A native diagnostic fact, never proof of dispatch or safe continuation.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub native_error_kind: Option<crate::failure::NativeFailureKind>,
 }
 impl ExecutionError {
     fn new(code: SurvivalErrorCode, detail: impl ToString) -> Self {
         Self {
             code,
             detail: detail.to_string(),
+            native_error_kind: None,
         }
     }
 }
@@ -51,7 +55,10 @@ impl std::fmt::Display for ExecutionError {
 impl std::error::Error for ExecutionError {}
 impl From<voxrig::Error> for ExecutionError {
     fn from(e: voxrig::Error) -> Self {
-        Self::new(SurvivalErrorCode::NativeRefused, e)
+        let kind = e.kind().into();
+        let mut error = Self::new(SurvivalErrorCode::NativeRefused, e);
+        error.native_error_kind = Some(kind);
+        error
     }
 }
 impl From<std::io::Error> for ExecutionError {

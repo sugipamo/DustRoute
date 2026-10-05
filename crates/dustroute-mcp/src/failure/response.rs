@@ -86,18 +86,22 @@ impl FailureReport {
         let inspection = self.progress.world != WorldOutcome::NotAttempted
             || self.progress.operation_consumed
             || self.progress.persistence == PersistenceOutcome::Uncertain;
+        // Cleanup/readback failures remain independent facts. They can require
+        // a fresh observation even when the original failure was unrelated.
+        let causes = || std::iter::once(&self.primary).chain(&self.secondary);
         let reobserve = self.progress.world == WorldOutcome::Unknown
-            || matches!(
-                self.primary.kind,
-                CauseKind::ObservationUnavailable
-                    | CauseKind::ObservationIncomplete
-                    | CauseKind::MovingObservation
-                    | CauseKind::VerificationMismatch
-            )
-            || matches!(
-                self.primary.phase,
-                Some(FailurePhase::BeforeReadback | FailurePhase::AfterReadback)
-            );
+            || causes().any(|cause| {
+                matches!(
+                    cause.kind,
+                    CauseKind::ObservationUnavailable
+                        | CauseKind::ObservationIncomplete
+                        | CauseKind::MovingObservation
+                        | CauseKind::VerificationMismatch
+                ) || matches!(
+                    cause.phase,
+                    Some(FailurePhase::BeforeReadback | FailurePhase::AfterReadback)
+                )
+            });
         AttemptResponse {
             ok: false,
             schema_version: "dustroute.error.v2",
@@ -115,10 +119,11 @@ impl FailureReport {
                 reobserve_required: Some(reobserve),
                 replan_required: Some(
                     self.progress.operation_consumed
-                        || self.primary.kind == CauseKind::VerificationMismatch,
+                        || causes().any(|cause| cause.kind == CauseKind::VerificationMismatch),
                 ),
                 inspect_saved_record: Some(
-                    self.progress.persistence == PersistenceOutcome::Uncertain,
+                    self.progress.persistence != PersistenceOutcome::NotRequired
+                        || causes().any(|cause| cause.kind == CauseKind::Persistence),
                 ),
                 same_operation_replay_allowed: false,
             },

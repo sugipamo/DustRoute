@@ -28,11 +28,11 @@ impl DustRouteMcp {
         }
         let ops = match bot.survival() {
             Ok(o) => o,
-            Err(e) => return failure(ServiceCode::NativeRefused, e),
+            Err(e) => return Refusal::native(ServiceCode::NativeRefused, e).into(),
         };
         let scene = match ops.capture_survival_scene(region(scope.observed)).await {
             Ok(s) => s,
-            Err(e) => return failure(ServiceCode::ObservationUnavailable, e),
+            Err(e) => return Refusal::native(ServiceCode::ObservationUnavailable, e).into(),
         };
         if let Err(e) = policy_scope(&self.policy, &scope, &scene.source().dimension) {
             return failure(ServiceCode::PermissionDenied, e);

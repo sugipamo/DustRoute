@@ -76,6 +76,10 @@
 サーバーロックではありません。`cancel`はrollbackではなく、失われた未解決操作は
 自動再開できません。[サバイバル仕様](survival-public-construction.md)を参照してください。
 
+停止・拒否時は`next_action`、エラー、判明している進捗を確認します。詳細の読込みが
+失敗しても、権限確認済みの`available_live_status`を返す場合があります。読込みの成功や
+再送許可にはなりません。[失敗処理の詳細](failure-handling-stability.md)を参照してください。
+
 ## 診断・復旧する
 
 | 状況 | 次の手順 |

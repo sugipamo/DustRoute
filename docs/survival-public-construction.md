@@ -138,6 +138,36 @@ observation before a new plan. A sealed idle checkpoint supplies the historical
 boundary for `continue`; it does not restore the old executor. Automatic recovery
 of lost unresolved operations remains outside this milestone.
 
+Job reads and refusals include a machine-readable `next_action` and explanatory
+`next_step`. These are diagnostic advice, not execution permissions:
+
+| `next_action` | Required handoff |
+| --- | --- |
+| `review_preview` / `poll_job` | Review a live preview or poll the current controller; neither means completed. |
+| `plan_fresh` | Resolve the stop/refusal and request a new plan; saved previews cannot be started. |
+| `inspect_job` / `inspect_linked_job` | Read the affected or linked job; do not acquire its source by retrying. |
+| `inspect_execution` | Inspect outstanding operations and saved evidence; reobserve only when permitted. Historical running jobs cannot be polled as live controllers. |
+| `inspect_persistence` | Inspect storage and available evidence; a failed save may have changed the file. |
+| `continue_checkpoint` | Revalidate the sealed boundary and generate a new preview; review and explicitly start the new job. |
+| `observe_before_new_plan` | Treat completion as recorded evidence and freshly observe before new work. |
+| `review_site_differences` / `review_search_failure` | Review structured conflicts or generation causes; no automatic foreign-block removal and no assumption that exhausted search proves impossibility. |
+| `inspect_refusal` | Resolve the stated error and its prerequisite before another action. |
+
+`completed_steps` is a known completed execution prefix under the declared
+prediction/received-world contract, not proof that the latest status save
+succeeded. A persistence failure preserves the count from
+`last_status` while remaining `needs_inspection`. Unknown progress is null.
+Detailed journal evidence remains separate from the live status snapshot.
+
+If a detailed read fails, the refusal may include `available_live_status`, an
+already authorized process-local snapshot captured before the read. The outer
+reply remains `ok=false`; the snapshot does not replace the failed record read
+or prove that storage is intact. It is absent without an authorized live entry.
+Native refusals retain optional `native_error_kind` alongside the existing
+error code. Existing records without it remain readable and have an unknown
+native category; explanatory text is not parsed to manufacture one. See
+[the failure-handling roadmap](failure-handling-stability.md).
+
 ## Verification
 
 The single-builder path passed its declared isolated non-OP Java 1.21.11

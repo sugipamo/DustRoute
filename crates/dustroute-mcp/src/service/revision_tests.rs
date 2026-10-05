@@ -337,6 +337,22 @@ async fn revision_placement_revalidates_cumulative_diff_context_and_undo() {
         assert_eq!(result["ok"], mode == "ok", "{mode}: {result:?}");
         let expected = usize::from(matches!(mode, "ok" | "uncertain" | "post_mismatch"));
         assert_eq!(writes.load(Ordering::SeqCst), expected);
+        if mode == "stale" {
+            // The changed cell is outside the two edited positions, so only
+            // the whole revision-context check can diagnose it.
+            assert_eq!(
+                result["failure"]["primary"]["kind"],
+                "verification_mismatch"
+            );
+            assert_eq!(
+                result["failure"]["primary"]["details"]["mismatches"],
+                json!([Pos::new(2, 0, 0)])
+            );
+            assert_eq!(result["failure"]["progress"]["world"], "not_attempted");
+            assert_eq!(result["failure"]["progress"]["operation_consumed"], false);
+            assert_eq!(result["recovery"]["reobserve_required"], true);
+            assert_eq!(result["recovery"]["replan_required"], true);
+        }
         if mode == "uncertain" || mode == "post_mismatch" {
             let retry: Value = test_support::decode_reply(
                 &service

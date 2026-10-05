@@ -249,6 +249,7 @@ async fn public_saved_jobs_are_diagnostic_and_corrupt_identity_is_refused() {
     assert_eq!(history["historical_only"], true);
     assert_eq!(history["execution_authority_restored"], false);
     assert_eq!(history["status"]["state"], "admission_refused");
+    assert_eq!(history["next_action"], "plan_fresh");
     assert_eq!(
         history["status"]["failure"]["error"]["code"],
         "source_changed"
@@ -260,6 +261,47 @@ async fn public_saved_jobs_are_diagnostic_and_corrupt_identity_is_refused() {
     )
     .await;
     assert_eq!(detailed["manifest"]["preview"], json!(preview));
+    // A saved running state is no longer a live controller to poll. A saved
+    // completion retains its known prefix, but grants no authority for new work.
+    for (status, action, steps) in [
+        (JobStatus::Planned, "plan_fresh", None),
+        (
+            JobStatus::Running {
+                progress: ExecutionProgress::StepCompleted { completed: 7 },
+                completed_steps: 7,
+            },
+            "inspect_execution",
+            Some(7),
+        ),
+        (
+            JobStatus::Completed {
+                completed_steps: Some(7),
+                final_evidence: None,
+            },
+            "observe_before_new_plan",
+            Some(7),
+        ),
+        (
+            JobStatus::NeedsInspection {
+                reason: InspectionReason::Persistence {
+                    last_status: Box::new(JobStatus::Completed {
+                        completed_steps: Some(12),
+                        final_evidence: None,
+                    }),
+                    persistence_error: "save was uncertain".into(),
+                },
+            },
+            "inspect_persistence",
+            Some(12),
+        ),
+    ] {
+        save(&path.join("status.store"), &status).unwrap();
+        let history = call(&client, "survival_construction", get.clone()).await;
+        assert_eq!(history["next_action"], action);
+        assert_eq!(history["completed_steps"], json!(steps));
+        assert_eq!(history["historical_only"], true);
+        assert_eq!(history["execution_authority_restored"], false);
+    }
     let refused = call(
         &client,
         "survival_construction",
@@ -320,6 +362,98 @@ async fn public_saved_jobs_are_diagnostic_and_corrupt_identity_is_refused() {
     save(&path.join("manifest.store"), &manifest).unwrap();
     let invalid = call(&client, "survival_construction", get).await;
     assert_eq!(invalid["error"]["code"], "invalid_record");
+    stop(client, server).await;
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+#[tokio::test]
+async fn public_detailed_read_failure_retains_authorized_live_progress_without_success() {
+    let root = temporary();
+    let mut service = DustRouteMcp::with_test_transport_and_player(
+        "127.0.0.1:1",
+        McpPolicy {
+            read_only: false,
+            allowed_players: std::collections::BTreeSet::from(["Tester".into()]),
+            ..Default::default()
+        },
+        "Tester",
+    );
+    service.state_store = PlanStateStore::new(root.clone(), 3600);
+    let id = uuid::Uuid::new_v4();
+    let path = service.state_store.survival_job_root().join(id.to_string());
+    std::fs::create_dir_all(&path).unwrap();
+    let design = crate::survival_construction::tests::design();
+    let source = SourceIdentity {
+        record: design.request.candidate_state,
+        adopted_by: dustroute_library::blueprint::BlueprintUpdateId::new("diagnostic.fixture")
+            .unwrap(),
+        context: design.context,
+        catalog: design.records.catalog().unwrap(),
+    };
+    // Serialization-only plan: never started and no native client is created.
+    let mut entry = Entry::planned(
+        "Tester".into(),
+        source,
+        crate::survival_construction::tests::generated_wire_fixture().plan,
+        Instant::now() + Duration::from_secs(900),
+        None,
+    );
+    entry.publish(JobStatus::NeedsInspection {
+        reason: InspectionReason::Persistence {
+            last_status: Box::new(JobStatus::Completed {
+                completed_steps: Some(12),
+                final_evidence: None,
+            }),
+            persistence_error: "final save unavailable".into(),
+        },
+    });
+    service.survival.entries.lock().await.insert(id, entry);
+    let manifest = JobManifest {
+        schema: JobSchema::V1,
+        job_id: id,
+        owner: "Tester".into(),
+        source: None,
+        preview: None,
+        construction: None,
+        parent_job_id: None,
+        execution_authority_restorable: DiagnosticOnly,
+    };
+    save(&path.join("manifest.store"), &manifest).unwrap();
+    // Malformed bounded fixture data, not a filesystem or host fault trial.
+    std::fs::write(path.join("status.store"), b"invalid diagnostic fixture").unwrap();
+    let unauthorized = {
+        let mut denied = service.clone();
+        denied.policy.allowed_players = std::collections::BTreeSet::from(["AnotherPlayer".into()]);
+        let reply = denied.get_survival(id, true).await;
+        serde_json::to_value(reply).unwrap()
+    };
+    assert_eq!(unauthorized["error"]["code"], "permission_denied");
+    assert!(unauthorized.get("available_live_status").is_none());
+    let (client, server) = serve(service).await;
+    let summary = call(
+        &client,
+        "survival_construction",
+        json!({"action":"get","job_id":id}),
+    )
+    .await;
+    assert_eq!(summary["ok"], true);
+    assert_eq!(summary["status"]["state"], "needs_inspection");
+    assert_eq!(summary["completed_steps"], 12);
+    assert_eq!(summary["next_action"], "inspect_persistence");
+    let detailed = call(
+        &client,
+        "survival_construction",
+        json!({"action":"get","job_id":id,"include_record":true}),
+    )
+    .await;
+    assert_eq!(detailed["ok"], false);
+    assert_eq!(detailed["error"]["code"], "invalid_record");
+    assert_eq!(detailed["next_action"], "inspect_persistence");
+    let available = &detailed["available_live_status"];
+    assert_eq!(available["completed_steps"], 12);
+    assert_eq!(available["status"]["state"], "needs_inspection");
+    assert_eq!(available["historical_only"], false);
+    assert_eq!(available["execution_authority_restored"], false);
     stop(client, server).await;
     std::fs::remove_dir_all(root).unwrap();
 }

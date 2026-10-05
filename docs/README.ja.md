@@ -41,5 +41,6 @@ Mineflayerの[過去の試験資料](evidence/legacy-mineflayer/README.md)は証
 ローカル検査は[開発ガイド](development.md)にあり、自動push/PR検査のCIはありません。
 
 責務と依存関係の整理、今回の7候補の対応範囲は[責務境界の資料](responsibility-boundaries.md)にまとめています（詳細は英語）。
+対応範囲内の停止・診断・再計画の整備は[失敗処理のロードマップ](failure-handling-stability.md)にまとめています（詳細は英語）。
 
 入口と英日対応の維持方針は[文書方針](documentation-policy.md)を参照してください。

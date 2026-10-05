@@ -154,11 +154,11 @@ impl DustRouteMcp {
         } = prepared;
         let ops = bot
             .survival()
-            .map_err(|e| failure(ServiceCode::NativeRefused, e))?;
+            .map_err(|e| Reply::from(Refusal::native(ServiceCode::NativeRefused, e)))?;
         let scene = ops
             .capture_survival_scene(region(original.scope().observed))
             .await
-            .map_err(|e| failure(ServiceCode::ObservationUnavailable, e))?;
+            .map_err(|e| Reply::from(Refusal::native(ServiceCode::ObservationUnavailable, e)))?;
         if scene.source().dimension != boundary.dimension {
             return Err(failure(
                 ServiceCode::CheckpointDimensionChanged,
@@ -176,7 +176,7 @@ impl DustRouteMcp {
         let supplied = received_materials(
             &ops.player_state()
                 .await
-                .map_err(|e| failure(ServiceCode::InventoryUnavailable, e))?,
+                .map_err(|e| Reply::from(Refusal::native(ServiceCode::InventoryUnavailable, e)))?,
         )
         .map_err(|e| failure(e.code, e.detail))?;
         let temporary_material = construction.temporary_material.clone();

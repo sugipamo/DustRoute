@@ -145,6 +145,9 @@ impl JobStatus {
             Self::Completed {
                 completed_steps, ..
             } => *completed_steps,
+            Self::NeedsInspection {
+                reason: InspectionReason::Persistence { last_status, .. },
+            } => last_status.completed_steps(),
             _ => None,
         }
     }
@@ -222,8 +225,9 @@ mod tests {
         assert_eq!(wire["state"], "needs_inspection");
         assert_eq!(wire["last_status"]["completed_steps"], 12);
         let reread: JobStatus = serde_json::from_value(wire.clone()).unwrap();
+        assert_eq!(reread.completed_steps(), Some(12));
+        // Keeping the known prefix does not turn a failed save into completion.
         assert!(matches!(reread, JobStatus::NeedsInspection { .. }));
-        assert_eq!(reread.completed_steps(), None);
         assert_eq!(json!(reread), wire);
     }
 
@@ -240,6 +244,7 @@ mod tests {
                 ExecutionError {
                     code: SurvivalErrorCode::CheckpointConsumed,
                     detail: "checkpoint already consumed".into(),
+                    native_error_kind: None,
                 }
                 .into(),
                 json!({"ok":false,"error":{"code":"checkpoint_consumed",
@@ -270,5 +275,88 @@ mod tests {
         wire["automatic_replay"] = json!(false);
         wire["error"]["code"] = json!("future_execution_failure");
         assert!(serde_json::from_value::<JobFailure>(wire).is_err());
+    }
+
+    #[test]
+    fn native_failure_categories_survive_history_without_inference_or_authority() {
+        use crate::failure::NativeFailureKind;
+        for (kind, expected) in [
+            (voxrig::ErrorKind::Timeout, NativeFailureKind::Timeout),
+            (
+                voxrig::ErrorKind::UncertainDispatch,
+                NativeFailureKind::UncertainDispatch,
+            ),
+            (
+                voxrig::ErrorKind::Disconnected,
+                NativeFailureKind::Disconnected,
+            ),
+            (voxrig::ErrorKind::State, NativeFailureKind::State),
+        ] {
+            let error = ExecutionError::from(voxrig::Error::new(
+                kind,
+                anyhow::anyhow!("opaque fixture detail"),
+            ));
+            assert_eq!(error.code, SurvivalErrorCode::NativeRefused);
+            assert_eq!(error.native_error_kind, Some(expected));
+            let status = JobStatus::NeedsInspection {
+                reason: InspectionReason::Execution {
+                    error,
+                    completed_steps: 7,
+                },
+            };
+            let bytes = dustroute_codec::storage::encode(
+                <JobStatus as StoredRecord>::STORE_SCHEMA,
+                &status,
+                4096,
+            )
+            .unwrap();
+            let loaded: JobStatus = dustroute_codec::storage::decode(
+                <JobStatus as StoredRecord>::STORE_SCHEMA,
+                &bytes,
+                4096,
+            )
+            .unwrap();
+            let JobStatus::NeedsInspection {
+                reason:
+                    InspectionReason::Execution {
+                        error,
+                        completed_steps,
+                    },
+            } = loaded
+            else {
+                panic!("native failure must stay an inspection result");
+            };
+            assert_eq!(error.native_error_kind, Some(expected));
+            assert_eq!(completed_steps, 7);
+        }
+
+        // Existing typed records have no native category. Keep absence unknown;
+        // diagnostic prose, even if it contains category names, is not parsed.
+        let old = JobStatus::AdmissionRefused {
+            failure: ExecutionError {
+                code: SurvivalErrorCode::NativeRefused,
+                detail: "Timeout UncertainDispatch".into(),
+                native_error_kind: None,
+            }
+            .into(),
+            construction_dispatched: false,
+        };
+        let bytes =
+            dustroute_codec::storage::encode(<JobStatus as StoredRecord>::STORE_SCHEMA, &old, 4096)
+                .unwrap();
+        let loaded: JobStatus = dustroute_codec::storage::decode(
+            <JobStatus as StoredRecord>::STORE_SCHEMA,
+            &bytes,
+            4096,
+        )
+        .unwrap();
+        let JobStatus::AdmissionRefused {
+            failure: JobFailure::Execution(failure),
+            ..
+        } = loaded
+        else {
+            panic!("old native refusal must still decode");
+        };
+        assert_eq!(failure.error.native_error_kind, None);
     }
 }
