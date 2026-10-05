@@ -39,6 +39,7 @@ eligible for every transition-test tool.
 | Evidence | Declared result | Interpretation |
 | --- | --- | --- |
 | [2026-10-05 native Blueprint and region trials](blueprint-iteration-live-validation.md) | Author/review/adopt/place/edit/undo/remove and process-restart checks; 95 MCP calls, 13 expected refusals, 106,552 independent cell comparisons; sites restored | Fresh evidence for these finite workflows after internal JSON removal, not all circuit physics |
+| [2026-10-05 continuous survival trials](continuous-survival-validation.md) | 115-step roof with 18 recoveries; four changed site/material/position/connection cases stopped with known progress and replay refusal | Declared normal sequence and bounded diagnostic stops; no automatic recovery of unresolved work |
 | [2026-10-03 survival trials](survival-public-construction.md#verification) | Public non-OP 115-step roof, 18 temporary removals and retreat; separate-process continuation after placement/mining checkpoints | Bounded construction and sealed-checkpoint continuation, not arbitrary crash recovery |
 | [Door trials](reference-door-live-construction.md) and [flight trials](flying-machine-lifecycle.md) | Recorded construction, operation/arrival, diagnosis and teardown cases | Earlier version/backend-specific evidence; retained observations are historical, not new execution authority |
 

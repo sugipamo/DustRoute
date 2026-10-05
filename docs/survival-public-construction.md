@@ -170,6 +170,13 @@ native category; explanatory text is not parsed to manufacture one. See
 
 ## Verification
 
+The 2026-10-05 [continuous-work checks](continuous-survival-validation.md) repeated
+the 115-step roof with 18 recoveries and independent final comparisons. Four
+bounded site/material/position/connection changes after a first mining recovery
+stopped with the actual typed cause and known prefix, preserved source quarantine
+and refused replay. This is evidence for those input cases, not universal
+interruption recovery or all movement disturbance timings.
+
 The single-builder path passed its declared isolated non-OP Java 1.21.11
 acceptance on 2026-10-03 UTC. Public MCP authoring/adoption produced a completed
 115-step roof, 18 temporary removals and retreat without configuring an observer
