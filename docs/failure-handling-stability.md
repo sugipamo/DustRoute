@@ -109,6 +109,8 @@ and `git diff --check` passed. All 237 local link targets in the changed/new
 documents resolved. No additional prerequisite or responsibility change was
 needed. Stages 3–5 remain subsequent goals.
 
+Stage 3 is tracked in [continuous survival validation](continuous-survival-validation.md).
+
 ## Stop conditions
 
 Report before implementing a prerequisite that changes Voxrig/DustRoute

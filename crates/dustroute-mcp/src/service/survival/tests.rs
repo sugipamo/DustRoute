@@ -461,6 +461,9 @@ async fn public_detailed_read_failure_retains_authorized_live_progress_without_s
 #[path = "tests/continuation.rs"]
 mod continuation;
 
+#[path = "tests/continuous.rs"]
+mod continuous;
+
 #[tokio::test]
 #[ignore = "explicit isolated non-OP server and supplied inventory; public MCP roof acceptance"]
 async fn native_public_roof() {
