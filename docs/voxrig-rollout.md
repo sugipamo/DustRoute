@@ -9,11 +9,12 @@ outside this scope stops the task for a report.
 
 Voxrig's separate development history is published on
 [`codex/dustroute-integration`](https://github.com/sugipamo/Voxrig/tree/codex/dustroute-integration).
-The Cargo
-`voxrig` feature now uses the unmodified `vendor/voxrig` snapshot pinned to
-`784c12dba126f5829cd7a8db8542360cc48434c9`. A clean DustRoute checkout needs no
-sibling repository. [Vendor instructions](../vendor/README.md) describe checksum
-verification and deliberate updates from tested source commits.
+The Cargo `voxrig` feature uses an unmodified `vendor/voxrig` snapshot. The
+authoritative current pin is in [the source manifest](../vendor/voxrig-source.json);
+`784c12dba126f5829cd7a8db8542360cc48434c9` was the observation-rollout pin checked
+by the evidence below, not the current dependency revision. A clean DustRoute
+checkout needs no sibling repository. [Vendor instructions](../vendor/README.md)
+describe checksum verification and deliberate updates from tested source commits.
 The [pin alignment verification](evidence/voxrig/source-pin-alignment-20261002.json)
 checks all 205 files and standalone builds. This pin includes the shared native
 observation changes previously held only in DustRoute's vendor copy.
@@ -136,12 +137,14 @@ Extract a captured `after_client` record for Voxrig's
 `scripts/prepare_motion_confirmation.py`; larger regions need disjoint bounded
 parts, as retained in the flight evidence. Revoke test OP grants after cleanup.
 
-All seven rollout stages now have implementations and declared-case evidence.
-The retained Mineflayer backend is explicitly selectable; deleting it would also
-remove currently separate authentication/targeting behavior and is not part of
-this verified-path migration. Native APIs reject unsupported observations. Broad
-inventory components, online authentication, context-dependent outlines, arbitrary
-circuits and the historical 1.16.1 movement discrepancy remain separate limits.
+All seven rollout stages have implementations and declared-case evidence.
+Mineflayer was retained during the original verified-path rollout, then removed
+in the native-only cutover described above; it is not a selectable live backend.
+Native APIs reject unsupported observations. Broad inventory components, online
+authentication, context-dependent outlines, arbitrary circuits and the historical
+1.16.1 movement discrepancy remain separate limits. Current inventory-based
+construction is described in [the survival contract](survival-public-construction.md),
+independently of the earlier rollout trials.
 
 ## Native evidence already retained in Voxrig
 

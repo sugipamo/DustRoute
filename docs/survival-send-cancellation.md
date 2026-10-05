@@ -1,5 +1,13 @@
 # Survival operation prerequisite: cancelled outbound frames
 
+Current status: the guarded 1.21.11 sender is implemented. The later mining
+continuation concern also has an admitted same-profile fresh-login recovery path;
+normal construction uses one builder and still refuses continuous reuse of the
+old mining connection. See [the current survival contract](survival-public-construction.md#native-ownership-and-observations)
+and [the single-builder acceptance](survival-single-client-plan.md#integrated-live-acceptance-2026-10-03-utc).
+The concerns, stops and next-work statements below retain the historical sequence,
+not outstanding blockers for that admitted path.
+
 The user approved the unresolved mining intent/result proposal in
 [the mining review](survival-mining-cancellation.md). Native comparison then
 reproduced ordinary finish, delayed destruction after early finish plus abort,
@@ -8,15 +16,15 @@ and a bounded disconnect case on a new isolated vanilla world. The retained
 [provenance](../vendor/voxrig/docs/evidence/survival-mining-native-20261002-source.json)
 record the exact scope and failed initial fixture-control attempt.
 
-## New concern requiring a stop
+## Historical concern requiring a stop
 
-`write_packet` in the current Voxrig source awaits the packet length prefix,
-packet frame and flush separately. Its Java 1.21.11 live `Session::send` holds a
-mutex, but has no cancellation/error guard that prevents reuse of a stream whose
+At the original investigation, `write_packet` awaited the packet length prefix,
+packet frame and flush separately. Java 1.21.11 live `Session::send` held a
+mutex, but had no cancellation/error guard that prevented reuse of a stream whose
 frame may be incomplete. Dropping the future releases the writer lock; a later
 user request or automatic response may write into the unfinished frame.
 
-This is a source-derived possibility, not a reproduced partial-write failure.
+This was a source-derived possibility, not a reproduced partial-write failure.
 An unresolved mining marker prevents intentional next construction actions,
 but cannot prevent automatic keepalive/teleport/etc. responses from continuing
 the stream. Thus retaining mining intent alone is an insufficient cancellation
@@ -62,7 +70,7 @@ mutation until the result is resolved or sufficient recovery evidence exists.
 Nearby validated placement, walking, access planning and the full survival
 Blueprint executor remain later parts of the active construction objective.
 
-## Implementation and new stop
+## Sender implementation and historical mining stop
 
 The live 1.21.11 sender implements the guard and common closure boundary without
 changing the 1.16.1 sender or packet format. Six bounded tests verify fragmented

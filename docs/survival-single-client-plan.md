@@ -9,8 +9,10 @@ through the checksum-managed vendor script to
 `4b46c66cd031eacc72bdf82736eaa60c57ccb9ab`, whose implementation is unchanged from
 the live-tested `bed0465` source; only acceptance documentation/evidence was added.
 Following the approved prediction contract and native comparative acceptance,
-the current managed snapshot is `5bace7be7cd941e1340ad94052e922db23c4f892`
+the managed snapshot used for that acceptance was `5bace7be7cd941e1340ad94052e922db23c4f892`
 (313 files), with unchanged implementation from live-tested `c491f6a`.
+The [source manifest](../vendor/voxrig-source.json) records the current dependency
+pin; later updates do not relabel these acceptance fingerprints.
 
 Normal operation now uses one builder/account, with an independent observer
 used only for verification comparisons. The user approved explicitly predicted
@@ -179,8 +181,8 @@ remain. Entities, new terrain/tools, gathering and helper MODs are outside this
 goal. Native recovery interpretation must not be reimplemented in DustRoute.
 
 The old [observer-readiness blocker](survival-observer-readiness-prerequisite.md)
-remains undiagnosed. One-bot production would remove that dependency, not prove
-the tracking issue fixed; independent verification fixtures still need readiness.
+remains undiagnosed. One-bot production removed that dependency; it did not prove
+the tracking issue fixed. Independent verification fixtures still need readiness.
 
 The continuation trial now uses its own bounded aggregate writer/reader instead
 of the production single-job helpers. The trial-only limit is 64 MiB, providing a
@@ -190,8 +192,10 @@ existing atomic durable replacement and saves the final failure before checking
 completion. Production job/journal limits remain 16 MiB. Offline regressions cover
 round-tripping aggregate evidence above 16 MiB while both production helpers
 continue to refuse it, and refusing trial input above 64 MiB. This prepares the
-test infrastructure; the failed continuation trial has not been repeated or
-reclassified as accepted. The two offline regressions and native all-target
+test infrastructure. At this historical checkpoint, the failed continuation
+trial had not been repeated or reclassified as accepted. Subsequent fresh trials
+passed as recorded in the integrated live acceptance below; the original failure
+remains unchanged. The two offline regressions and native all-target
 Clippy passed; formatting passed. See the
 [verification record](evidence/survival-continuation-evidence-writer-20261003.json).
 
@@ -211,8 +215,9 @@ The single-builder integration passed the complete MCP library suite (210 passed
 Both default and Voxrig all-target Clippy passed with warnings denied. Formatting
 and the managed 313-file vendor check passed. Logs and source hashes are retained
 in [the offline verification record](evidence/survival-single-builder-offline-20261003.json).
-Integrated roof construction, cleanup, retreat and two-process continuation are
-still pending; native movement acceptance alone is not their acceptance.
+At this offline checkpoint, integrated roof construction, cleanup, retreat and
+two-process continuation were still pending. They subsequently passed the
+separate live acceptance below; native movement acceptance alone was insufficient.
 
 ## Integrated live acceptance (2026-10-03 UTC)
 

@@ -47,6 +47,34 @@ live readback checks received/reconstructed state under that operation's
 contract. Neither proves all-input behavior, atomic server state, hidden-queue
 emptiness or immunity to later edits.
 
+## Operational stability after the readability cleanup
+
+The seven-area cleanup at `39f5f09` passed 404 offline regressions across the
+MCP, bounded engine and contextual-review suites; ten opt-in MCP cases remained
+ignored. Clippy and formatting passed. A subsequent source/document review
+found stale migration descriptions, which were corrected without changing
+runtime code. No new live trial was run for this final review. These results
+support the declared contracts, not unrestricted operation under disturbances.
+
+| Priority / concern | Current handling | Remaining exposure |
+| --- | --- | --- |
+| 1. Interrupted work | Durable intent, progress and `needs_inspection`; new observations/plans; sealed survival checkpoints | A crash or lost reply during an action cannot generally resume automatically. Cancellation is not rollback. [Contract](survival-public-construction.md#stops-and-persisted-evidence) |
+| 2. Edits or queued activity during construction | Fresh comparisons, moving-state rejection and per-batch readback | Check and write are separate; matching samples cannot prove empty server queues or exclude another player's intervening edit. [Contract](live-operation-readiness-and-recovery.md#current-implementation-boundaries) |
+| 3. Survival movement | Explicit dry-cube prediction; corrections, impulses and unsupported geometry refuse continuation | No measured server-position error bound or server stop acknowledgement; a full live disturbance campaign remains separate work. [Contract](survival-public-construction.md#native-ownership-and-observations) |
+| 4. Mining cleanup | Old connection closes, fresh same-profile login rechecks the scene and inventory | Recovery occurs after each admitted temporary removal; continuous same-connection reuse is unsupported. Reconnect/loading adds cost and another failure boundary. [Contract](survival-public-construction.md#native-ownership-and-observations) |
+| 5. Construction and behavior search | Bounded workers, heuristic pruning and explicit exhausted/undetermined results | A physically possible build or valid circuit may not be established within the search/model budgets. [Construction search](survival-construction-generation.md), [model contexts](world-execution-context.md) |
+| 6. Physics and live evidence coverage | Registered behavior, explicit model selection and retained finite-case comparisons | Exact timing and arbitrary circuit conformance are not established; the cane-flight example lacks a new live comparison. [Contexts](world-execution-context.md), [cane scope](existing-machine-modification.md) |
+
+These are operational limits and verification gaps, not evidence that all these
+paths currently fail. The historical independent-observer readiness issue remains
+undiagnosed; normal single-builder construction no longer depends on it, but
+fixtures using that observer still require their own readiness checks.
+[Historical finding](survival-observer-readiness-prerequisite.md).
+
+Entities, active-circuit survival construction, chest supply and unrestricted
+terrain are unimplemented capabilities, separate from the stability concerns
+above. See the scope table rather than treating them as regressions.
+
 ## Next pages
 
 - [Getting started](getting-started.md): connection and construction paths.

@@ -53,8 +53,8 @@ not the current implementation plan or an outstanding request for approval.
 new previewed reconstruction operation. It retains the observed baseline,
 differences, proposed stages and conditions; invocation freshly reviews and
 resimulates, checks the saved record revision and current samples, then uses the
-shared batch write/readback journal. The current v4 registry preserves previous
-failed attempts. Retired v1–v3 records are rejected without changing lifecycle
+shared batch write/readback journal. The current v5 registry preserves previous
+failed attempts. Retired v1–v4 records are rejected without changing lifecycle
 state or execution pins; see the [cutover guide](architecture-cutover.md) and
 [public contract](placed-assembly-management.md#reconstruction-after-damage-or-interrupted-work).
 
@@ -85,20 +85,25 @@ isolated live trial verifies eight diagnoses, missing-quartz reconstruction,
 two close/open cycles and cleanup. General ownership inference, arbitrary-motion
 repair and automatic functional certification remain outside this work.
 
-## Findings from current code
+## Current implementation boundaries
 
-- [`scanRegion`](https://github.com/sugipamo/DustRoute/blob/9b62dcf/crates/dustroute-mcp/mineflayer/bridge.js) reads the client's
-  block cache. `writeBlocks` separately sends ordinary `/setblock ... replace`
-  chat commands and returns a submitted count after two client ticks. It has
-  no authoritative per-command receipt or conditional server-side write.
+- The live backend is now Voxrig. Fresh scans carry received/reconstructed client
+  evidence; command writes return submission receipts. Neither establishes
+  authoritative per-command execution or a conditional server-side write. See
+  [the native observation and operation boundaries](voxrig-rollout.md#observation-boundary).
+  The original Mineflayer cache and command-wait behavior is historical, not a
+  current backend or timing guarantee.
 - [`mutate_assembly_construction`](../crates/dustroute-mcp/src/service/assembly_placement/execution.rs)
   checks before a write and validates the result afterwards. Another input,
   queued event or external edit can occur between the check and the write.
   The later readback detects a mismatch after that write has already happened.
 - [`Attempt`](../crates/dustroute-mcp/src/assembly_registry.rs) durably retains
-  verified progress and errors. It does not retain a separately identified
-  in-flight stage and authoritative server execution receipt. A lost reply can
-  therefore leave the next stage unapplied, applied, or still in motion.
+  verified progress, errors, readback evidence and structured execution progress.
+  The [shared executor](../crates/dustroute-mcp/src/service/construction_executor.rs)
+  saves each batch's write intent before submission and verified completion
+  before advancing. These local facts are not authoritative server execution
+  receipts: a lost reply can leave that batch unapplied, partly applied, applied,
+  or still in motion. Reconstruction requires new observations and a new plan.
 - The separate instrumentation repository records executed scheduler callbacks
   and some queue queries. It has neither a complete readiness query exposed to
   MCP nor a guarded operation protocol. Its raw recording remains measurement

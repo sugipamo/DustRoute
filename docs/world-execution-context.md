@@ -148,14 +148,18 @@ processing is a computational partition; terminals do not follow moved blocks.
 Optimization may still relocate terminals in a separately verified candidate.
 See the [movement semantics and implementation gaps](blueprint-architecture.md#agreed-movement-semantics).
 
-General mechanical types, new device coupling, candidate/placement migration
-(5a), observation/live-placement migration (5b) and entities remain separate
-implementation work. The bounded location-state verification path is described
-below. The semantic
+General mechanical types, new device coupling and entities remain separate
+implementation work. The piston candidate/placement and native observation
+migrations subsequently acquired their declared-case implementations and evidence;
+see [general piston placement](piston-general-placement-roadmap.md) and
+[native client rollout](voxrig-rollout.md). The historical location-state
+verification sequence is described below. The semantic
 agreement does not upgrade the old dust/torch profiles, reinterpret snapshot
 conditions as temporal requirements, or rewrite immutable sources.
 
-The next movement goal found an execution prerequisite at motion-time input
+### Historical movement prerequisites and subsequent cutover
+
+The movement goal found an execution prerequisite at motion-time input
 reversal. See the [preflight and six model captures](blueprint-architecture.md#movement-verification-preflight-input-changes-during-motion).
 A drained bounded queue cannot certify the existing repeated-settling requirement;
 its input histories exceed the retained piston conformance scope.
@@ -164,12 +168,14 @@ The [target-version source audit](piston-motion-source-audit.md) then identified
 a runtime prerequisite: enclosing tick context, synchronous nested notifications
 and per-carrier motion history. That prerequisite was subsequently approved;
 the [synchronous runtime foundation](synchronous-world-runtime.md) now provides
-the delivery/state primitives and mandatory adapter initialization gate. It is
-now the delivery contract of a separate
-[horizontal piston world profile](piston-callback-runtime.md), whose context
-selects all 13 law roles. `synchronous_runtime_profile()` reports the required
+the delivery/state primitives and mandatory adapter initialization gate. It was
+originally the delivery contract of a separate horizontal piston world profile,
+whose context selected 13 law roles. That directional profile was subsequently
+retired in favor of the all-facing electrical v19 profile described above; see
+[the current callback runtime](piston-callback-runtime.md).
+`synchronous_runtime_profile()` reports the required
 runtime without reinterpreting the old serialized scheduler field. This native
-profile is not accepted by the old execution constructors or dust/torch proof
+profile family is not accepted by the bounded/compatibility constructors or dust/torch proof
 adapters. The separate `RuntimeBehaviorContext` now supplies location-only
 repeated-settling exploration and whole-realization review. The common
 `BehaviorReviewContext` dispatches to either model without rewriting old context
