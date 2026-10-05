@@ -97,4 +97,9 @@
 [診断](assembly-diagnosis.md)、[復旧契約](mcp-public-features.md#execution-and-recovery)、
 [失敗情報](structured-failure-recovery.md)へ進んでください。
 
+全コンテキストの相違では、`failure.primary.details.mismatches`の座標と
+既知の書込み進捗を確認し、診断・新しい計画へ進んでください。
+[公開経路の限定的な実機検証](public-live-acceptance.md)に、小建築・区画の確認と、
+モデル上の拒否とサーバー観測の区別を記録しています。
+
 さらに詳しく調べるときは[文書案内](README.ja.md)から機能を選びます。

@@ -115,8 +115,15 @@ records the outcomes, input-application prerequisite and limits.
 
 Stage 4 preserves typed bounded-search failures, effective budgets and unavailable
 verification provenance. [Search failure diagnostics](search-failure-diagnostics.md)
-records the changed MCP fields and acceptance boundaries. Stage 5 remains a
-subsequent goal.
+records the changed MCP fields and acceptance boundaries.
+
+Stage 5 passed its declared public small-building and region-circuit cases.
+[Public live acceptance](public-live-acceptance.md) records the one missing
+diagnostic connection found and corrected, followed by 98 MCP calls, 29 stable
+checkpoints and 114,392 independent cell comparisons. The earlier building run
+is retained separately. All final trial processes stopped normally and regions
+were restored to air. The five-stage roadmap is complete for its declared scope;
+the operational and unimplemented-capability limits remain in force.
 
 ## Stop conditions
 

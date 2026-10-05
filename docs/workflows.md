@@ -103,6 +103,11 @@ make the read successful or permit replay. See
 | Survival job was checkpointed | Use `continue` to create a fresh plan; a checkpoint has one durable continuation claim |
 | Undo requested | Check the operation-specific contract and current world; some operations have no undo or no retained undo after restart |
 
+For a complete-context mismatch, inspect `failure.primary.details.mismatches`
+and the known submission progress before diagnosing or making a new plan.
+The [bounded public live acceptance](public-live-acceptance.md) records small
+building/region cases and separates model refusals from server observations.
+
 Diagnosis locates differences; it does not prove who caused them or guarantee a
 repair plan. Read [diagnosis](assembly-diagnosis.md),
 [recovery contracts](mcp-public-features.md#execution-and-recovery) and

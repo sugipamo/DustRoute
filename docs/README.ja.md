@@ -43,4 +43,7 @@ Mineflayerの[過去の試験資料](evidence/legacy-mineflayer/README.md)は証
 責務と依存関係の整理、今回の7候補の対応範囲は[責務境界の資料](responsibility-boundaries.md)にまとめています（詳細は英語）。
 対応範囲内の停止・診断・再計画の整備は[失敗処理のロードマップ](failure-handling-stability.md)にまとめています（詳細は英語）。
 
+小建築の欠損診断・保護範囲の編集・区画回路の公開MCP経由の確認は
+[公開経路の実機検証](public-live-acceptance.md)を参照してください。
+
 入口と英日対応の維持方針は[文書方針](documentation-policy.md)を参照してください。

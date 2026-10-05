@@ -114,3 +114,13 @@ The fixture launcher uses `--format=terse` so libtest does not prefix the first
 operator barrier. Original evidence above is unchanged; this is a separate run.
 See [the retained summary](evidence/json-boundary-live-20261005.json) for fingerprints,
 raw paths and the finite stable-checkpoint scope.
+
+## Failure-handoff acceptance (2026-10-05)
+
+The later [supported-scope public acceptance](public-live-acceptance.md) uses
+`1590f5c` and adds three small-building diagnoses around a confirmed missing
+floor block, plus exact guard-coordinate checks on apply/undo and region refusal.
+The final building/region pair passed 98 calls and 29 checkpoints (114,392 cell
+comparisons), with complete cleanup and normal process exits. Earlier captures
+above remain unchanged. The additional diagnosis checks do not constitute a new
+live door reconstruction or transient-physics campaign.

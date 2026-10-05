@@ -62,6 +62,7 @@ Git history; diagnostic fixtures have not been promoted into public capability.
 | [Native Voxrig client rollout](voxrig-rollout.md) | Version adapters, moving-state reconstruction, explicit client evidence and live MCP door/flight lifecycles |
 | [Responsibility boundaries](responsibility-boundaries.md) | Readability criteria, workflow ownership, all seven cleanup areas and contract tests |
 | [Failure handling stability](failure-handling-stability.md) | Supported-scope roadmap, diagnostic handoff and conservative recovery advice |
+| [Public live acceptance](public-live-acceptance.md) | Small building diagnosis, guarded edits and staged circuits through public MCP |
 | [Architecture readability audit](architecture-readability-audit.md) | Remaining responsibility, type and module boundaries; evidence and recommended refactoring order |
 | [Architecture migration](architecture-migration.md) | Migration progress, preserved contracts, deferred concerns and regression evidence |
 | [Architecture cutover](architecture-cutover.md) | Typed workflow boundaries, retired formats/APIs, migration impact and current checks |

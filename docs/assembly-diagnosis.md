@@ -95,3 +95,10 @@ by diagnosis. Complete construction, reconstruction and removal readbacks pass,
 as do four explicit operating-state/aperture comparisons. Four MCP restarts,
 contiguous server capture, empty final region, removed force loads and normal
 server shutdown are retained. This finite trial does not extend the limits above.
+
+The later [public acceptance trial](public-live-acceptance.md) checks three
+diagnoses of a small passive building: intact, one confirmed missing floor block,
+and explicitly restored. Missing damage is reported at its coordinate; stable
+before/after layouts confirm that diagnosis does not write. Restoration is an
+owned fixture input, not automatic repair. The earlier door evidence remains
+separate; this case adds no new door operating-state guarantee.
