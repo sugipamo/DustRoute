@@ -1,6 +1,18 @@
 //! Consume one reviewed attempt, verify model batches and persist partial progress.
-use super::*;
+use super::super::PistonPlacementState;
+use super::{
+    AssemblyService, StoredAssemblyPlacement, observation, proof_from_basis, reconstruction,
+    server_contract,
+};
+use crate::OperationKind;
+use crate::assembly_registry::{Attempt, InstanceState, PlacedAssembly, RegistryLock, now_ms};
+use crate::failure::{
+    CauseKind, ExecutionProgress, FailureCause, FailurePhase, FailureReport, PersistenceOutcome,
+};
 use crate::operations::construction::{AssemblyConstructionDetails, AssemblyConstructionResult};
+use crate::piston_assembly::ValidatedAssemblyPlacement;
+use crate::service::assembly_placement;
+use tokio::time::Instant;
 
 impl AssemblyService<'_> {
     pub(in crate::service) async fn mutate_assembly_construction(
@@ -44,58 +56,10 @@ impl AssemblyService<'_> {
             let removal = undo || plan.is_removal();
             let instance_id = plan.instance().map_or(id, |(instance_id, _)| instance_id);
             let registry = RegistryLock::acquire(self.state_store)?;
-            let basis = self
-                .construction_basis(&plan.player, plan.assembly_id.clone())
+            let ReviewedConstruction { proof, steps } = self
+                .review_construction(&plan, removal, undo, &mut progress)
                 .await?;
-            if !plan.source_identity.matches(&basis) {
-                return Err(FailureCause::new(
-                    CauseKind::InvalidState,
-                    "adopted source or context changed; create a new construction plan",
-                ));
-            }
-            let transform = plan.transform;
-            let reconstruct_from = plan.reconstruction().map(|r| r.baseline.clone());
-            let remove_from = plan.operating_removal().map(|r| r.baseline.clone());
-            progress.phase = FailurePhase::ModelProof;
-            crate::performance::execution_progress(&progress);
-            let capture = crate::performance::current();
-            let queue = crate::performance::span(crate::performance::Phase::ModelQueue);
-            let (proof, steps) = tokio::task::spawn_blocking(move || {
-                capture.in_blocking(|| {
-                    let _phase = crate::performance::span(crate::performance::Phase::ModelProof);
-                    let proof = proof_from_basis(&basis, transform)?;
-                    let steps = if let Some(baseline) = reconstruct_from {
-                        proof.reconstruction_steps(&baseline)?
-                    } else if let Some(baseline) = remove_from {
-                        proof.operating_removal(&baseline)?.steps
-                    } else {
-                        proof.steps(removal).to_vec()
-                    };
-                    Ok::<_, String>((proof, steps))
-                })
-            })
-            .await
-            .map_err(|e| FailureCause::new(CauseKind::Unknown, e.to_string()))??;
-            drop(queue);
             let bounds = proof.bounds();
-            self.policy
-                .authorize_dimension(&plan.dimension)
-                .map_err(FailureCause::from)?;
-            self.policy
-                .validate_region(bounds)
-                .map_err(FailureCause::from)?;
-            self.policy
-                .validate_placement_size(steps.len())
-                .map_err(FailureCause::from)?;
-            if proof.assembly() != plan.proof.assembly()
-                || proof.context() != plan.proof.context()
-                || steps != plan.steps(undo)
-            {
-                return Err(FailureCause::new(
-                    CauseKind::InvalidState,
-                    "fresh construction/removal differs from the preview; replan",
-                ));
-            }
             progress.phase = FailurePhase::BeforeReadback;
             crate::performance::execution_progress(&progress);
             let status = self.bridge.status().await.map_err(FailureCause::from)?;
@@ -238,25 +202,7 @@ impl AssemblyService<'_> {
                         target: &plan.target,
                     }
                     .execute(&baseline, &steps, |progress| {
-                        let attempt = record
-                            .attempts
-                            .last_mut()
-                            .ok_or("missing durable attempt")?;
-                        match progress {
-                            super::super::construction_executor::StageProgress::Readback(
-                                receipt,
-                            ) => attempt.readbacks.push(*receipt),
-                            super::super::construction_executor::StageProgress::WriteIntent(
-                                intent,
-                            ) => attempt.progress = Some(intent),
-                            super::super::construction_executor::StageProgress::Verified(count) => {
-                                completed = count;
-                                attempt.verified_steps = count;
-                            }
-                        }
-                        registry
-                            .save(&mut record)
-                            .map_err(|e| FailureCause::new(CauseKind::Persistence, e))
+                        checkpoint_attempt(&registry, &mut record, &mut completed, progress)
                     })
                     .await?;
                 let expected = steps.last().map_or_else(
@@ -276,26 +222,7 @@ impl AssemblyService<'_> {
                 Ok(p) => p.clone(),
                 Err(report) => (*report.progress).clone(),
             };
-            record.state = if run.is_ok() {
-                if removal {
-                    InstanceState::Removed
-                } else {
-                    InstanceState::Applied
-                }
-            } else {
-                InstanceState::NeedsInspection
-            };
-            let attempt = record
-                .attempts
-                .last_mut()
-                .ok_or("missing durable attempt")?;
-            attempt.finished_at_unix_ms = Some(now_ms()?);
-            attempt.error = run.as_ref().err().map(ToString::to_string);
-            attempt.failure = run.as_ref().err().cloned();
-            attempt.progress = Some(progress.clone());
-            if let Err(error) = registry.save(&mut record) {
-                crate::failure::persistence_failed(&mut run, error);
-            }
+            finish_attempt(&registry, &mut record, removal, &progress, &mut run)?;
             if run.is_ok() {
                 self.plans
                     .table::<assembly_placement::StoredAssemblyPlacement>()
@@ -351,4 +278,132 @@ impl AssemblyService<'_> {
         crate::performance::execution_progress(&progress);
         result.unwrap_or_else(|e| AssemblyConstructionResult::failed_attempt(id, progress.cause(e)))
     }
+
+    /// Rebuild the source proof before consuming or persisting a live attempt.
+    async fn review_construction(
+        &self,
+        plan: &StoredAssemblyPlacement,
+        removal: bool,
+        undo: bool,
+        progress: &mut ExecutionProgress,
+    ) -> Result<ReviewedConstruction, FailureCause> {
+        let basis = self
+            .construction_basis(&plan.player, plan.assembly_id.clone())
+            .await?;
+        if !plan.source_identity.matches(&basis) {
+            return Err(FailureCause::new(
+                CauseKind::InvalidState,
+                "adopted source or context changed; create a new construction plan",
+            ));
+        }
+        let transform = plan.transform;
+        let reconstruct_from = plan.reconstruction().map(|r| r.baseline.clone());
+        let remove_from = plan.operating_removal().map(|r| r.baseline.clone());
+        progress.phase = FailurePhase::ModelProof;
+        crate::performance::execution_progress(progress);
+        let capture = crate::performance::current();
+        let queue = crate::performance::span(crate::performance::Phase::ModelQueue);
+        let (proof, steps) = tokio::task::spawn_blocking(move || {
+            capture.in_blocking(|| {
+                let _phase = crate::performance::span(crate::performance::Phase::ModelProof);
+                let proof = proof_from_basis(&basis, transform)?;
+                let steps = if let Some(baseline) = reconstruct_from {
+                    proof.reconstruction_steps(&baseline)?
+                } else if let Some(baseline) = remove_from {
+                    proof.operating_removal(&baseline)?.steps
+                } else {
+                    proof.steps(removal).to_vec()
+                };
+                Ok::<_, String>((proof, steps))
+            })
+        })
+        .await
+        .map_err(|e| FailureCause::new(CauseKind::Unknown, e.to_string()))??;
+        drop(queue);
+        let bounds = proof.bounds();
+        self.policy
+            .authorize_dimension(&plan.dimension)
+            .map_err(FailureCause::from)?;
+        self.policy
+            .validate_region(bounds)
+            .map_err(FailureCause::from)?;
+        self.policy
+            .validate_placement_size(steps.len())
+            .map_err(FailureCause::from)?;
+        if proof.assembly() != plan.proof.assembly()
+            || proof.context() != plan.proof.context()
+            || steps != plan.steps(undo)
+        {
+            return Err(FailureCause::new(
+                CauseKind::InvalidState,
+                "fresh construction/removal differs from the preview; replan",
+            ));
+        }
+        Ok(ReviewedConstruction { proof, steps })
+    }
+}
+
+struct ReviewedConstruction {
+    proof: ValidatedAssemblyPlacement,
+    steps: Vec<dustroute_translate::piston_construction::ElectricalConstructionStep>,
+}
+
+/// Each executor checkpoint is saved before the next physical stage proceeds.
+fn checkpoint_attempt(
+    registry: &RegistryLock,
+    record: &mut PlacedAssembly,
+    completed: &mut usize,
+    progress: crate::service::construction_executor::StageProgress,
+) -> Result<(), FailureCause> {
+    let attempt = record
+        .attempts
+        .last_mut()
+        .ok_or("missing durable attempt")?;
+    match progress {
+        super::super::construction_executor::StageProgress::Readback(receipt) => {
+            attempt.readbacks.push(*receipt)
+        }
+        super::super::construction_executor::StageProgress::WriteIntent(intent) => {
+            attempt.progress = Some(intent)
+        }
+        super::super::construction_executor::StageProgress::Verified(count) => {
+            *completed = count;
+            attempt.verified_steps = count;
+        }
+    }
+    registry
+        .save(record)
+        .map_err(|e| FailureCause::new(CauseKind::Persistence, e))
+}
+
+/// Final-save failure is appended to the execution result and cannot establish
+/// completion. The durable record retains the evidence available before save.
+fn finish_attempt(
+    registry: &RegistryLock,
+    record: &mut PlacedAssembly,
+    removal: bool,
+    progress: &ExecutionProgress,
+    run: &mut Result<ExecutionProgress, FailureReport>,
+) -> Result<(), FailureCause> {
+    record.state = if run.is_ok() {
+        if removal {
+            InstanceState::Removed
+        } else {
+            InstanceState::Applied
+        }
+    } else {
+        InstanceState::NeedsInspection
+    };
+    let attempt = record
+        .attempts
+        .last_mut()
+        .ok_or("missing durable attempt")?;
+    attempt.finished_at_unix_ms = Some(now_ms()?);
+    attempt.error = run.as_ref().err().map(ToString::to_string);
+    attempt.failure = run.as_ref().err().cloned();
+    attempt.progress = Some(progress.clone());
+    if let Err(error) = registry.save(record) {
+        crate::failure::persistence_failed(run, error);
+    }
+    Ok(())
 }

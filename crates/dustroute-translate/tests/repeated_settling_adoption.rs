@@ -16,6 +16,7 @@ use dustroute_library::builtin_laws::{
 use dustroute_minecraft::{Block, BlockKind, Facing, Pos, Region, RotationY, World};
 use dustroute_translate::behavior_type::BehaviorBudget;
 use dustroute_translate::promotion::*;
+use dustroute_translate::review_diagnostics::BehaviorDiagnostics;
 
 fn id(name: &str) -> BlueprintRevisionId {
     BlueprintRevisionId::new(name).unwrap()
@@ -571,16 +572,18 @@ fn arbitrary_input_not_promotes_with_fresh_proof_and_keeps_immutable_sources() {
     assert_eq!(unknown.behavior_status(), Some(CheckStatus::Undetermined));
     let report = review(&catalog, &assembly, &context);
     assert_eq!(report.status(), CheckStatus::Passed, "{report:?}");
-    assert!(
-        report.behavior[0]
-            .detail
-            .contains("universal-overapproximate-repeated-settling.v1")
+    let Some(BehaviorDiagnostics::Abstract { report: proof, .. }) = report.behavior[0]
+        .evidence
+        .as_ref()
+        .and_then(|evidence| evidence.behavior.as_ref())
+    else {
+        panic!("fresh adoption must carry an abstract proof: {report:?}");
+    };
+    assert_eq!(
+        proof.proof_method,
+        "universal-overapproximate-repeated-settling.v1"
     );
-    assert!(
-        report.behavior[0]
-            .detail
-            .contains("\"abstract_states\":9520")
-    );
+    assert_eq!(proof.status, CheckStatus::Passed);
     let candidate = PromotionCandidate::prepare(&catalog, &assembly, grouping()).unwrap();
     let checked = candidate
         .validate_in_context(&catalog, context.clone(), BehaviorBudget::default())
@@ -956,12 +959,19 @@ fn multiport_aliases_and_consumer_requirements_share_only_the_complete_binding_p
     .unwrap();
     assert_eq!(report.status(), CheckStatus::Passed, "{report:?}");
     assert_eq!(report.behavior.len(), 3);
-    assert!(
-        report
-            .behavior
-            .iter()
-            .all(|check| check.detail.contains("\"abstract_states\":4"))
-    );
+    // All three obligations reuse the complete four-state proof under one
+    // four-state review budget. Diagnostic prose is not the evidence contract.
+    for check in &report.behavior {
+        let Some(BehaviorDiagnostics::Abstract { report: proof, .. }) = check
+            .evidence
+            .as_ref()
+            .and_then(|evidence| evidence.behavior.as_ref())
+        else {
+            panic!("expected shared abstract proof: {check:?}");
+        };
+        assert_eq!(proof.abstract_states, 4);
+        assert_eq!(proof.status, CheckStatus::Passed);
+    }
     let mut shared_driver = context.clone();
     shared_driver.input_drivers[1].lever_position = shared_driver.input_drivers[0].lever_position;
     assert_eq!(

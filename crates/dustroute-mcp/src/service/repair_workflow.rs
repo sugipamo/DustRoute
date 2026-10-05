@@ -38,6 +38,16 @@ impl RepairPlans<'_> {
     }
 }
 
+struct RepairMismatches {
+    mismatches: Vec<dustroute_physical::Pos>,
+    boundary_mismatches: Vec<dustroute_physical::Pos>,
+}
+struct RepairAnalysis {
+    fragments_after: usize,
+    resulting_logic: dustroute_translate::analysis::LogicalRole,
+    semantic_verification: SemanticVerification,
+}
+
 impl RepairWorkflow<'_> {
     fn world_editor(&self) -> WorldEditor<'_> {
         WorldEditor {
@@ -213,92 +223,18 @@ impl RepairWorkflow<'_> {
         progress.phase = FailurePhase::Verification;
         crate::performance::execution_progress(progress);
         if !verified || !boundary_verified {
-            let positions: Vec<_> = mismatches
-                .iter()
-                .chain(&boundary_mismatches)
-                .copied()
-                .collect();
-            let mut report = progress.cause(FailureCause::mismatch(
-                "repair verification failed",
-                &positions,
-            ));
-            let mut rollback_submitted = false;
-            let mut rollback_verified = false;
-            if !undo {
-                let rollback = plan.patch.inverse();
-                progress.phase = FailurePhase::Restore;
-                crate::performance::execution_progress(progress);
-                match self
-                    .world_editor()
-                    .write_physical_change_batch(&rollback.changes, &plan.dimension)
-                    .await
-                {
-                    Ok(receipt) => {
-                        rollback_submitted = true;
-                        progress.submitted(receipt.placed_changes);
-                        crate::performance::execution_progress(progress);
-                    }
-                    Err(error) => {
-                        let failure = progress.submission_error(error, WorldOutcome::Unknown);
-                        report.secondary(failure.primary);
-                    }
-                }
-                // Read even if the reply was lost: observation, rather than receipt, proves restoration.
-                let blocks = self
-                    .world_editor()
-                    .verify_physical_changes(&rollback.changes, &plan.dimension)
-                    .await;
-                let boundary = self
-                    .world_editor()
-                    .verify_preserved_boundary(&plan.preserved_boundary, &plan.dimension)
-                    .await;
-                rollback_verified =
-                    matches!(&blocks, Ok((true, _))) && matches!(&boundary, Ok((true, _)));
-                for result in [blocks, boundary] {
-                    match result {
-                        Ok((false, positions)) => report.secondary(
-                            FailureCause::mismatch("rollback readback differs", &positions)
-                                .at(FailurePhase::Restore),
-                        ),
-                        Err(error) => report.secondary(error.at(FailurePhase::Restore)),
-                        _ => {}
-                    }
-                }
-                if rollback_verified {
-                    // The original target failed; restoration has its own observed outcome below.
-                    let mut rolled_back = plan.clone();
-                    rolled_back.lifecycle.confirm(true);
-                    if let Err(error) = self.store_repair_plan(operation_id, rolled_back).await {
-                        progress.persistence = PersistenceOutcome::Uncertain;
-                        report.secondary(
-                            FailureCause::new(CauseKind::Persistence, error)
-                                .at(FailurePhase::FinalSave),
-                        );
-                    } else {
-                        progress.persistence = PersistenceOutcome::FinalSaved;
-                    }
-                }
-            }
-            *report.progress = progress.clone();
-            return RepairOutcome::Failed(Box::new(RepairFailure {
-                report,
-                restoration: Some(RepairRestoration {
-                    mismatches,
-                    boundary_mismatches,
-                    rollback_submitted,
-                    rollback_ok: rollback_verified,
-                    restoration: RestorationOutcome {
-                        attempted: !undo,
-                        world: if rollback_verified {
-                            WorldOutcome::Verified
-                        } else if undo {
-                            WorldOutcome::NotAttempted
-                        } else {
-                            WorldOutcome::Unknown
-                        },
+            return self
+                .recover_verification_failure(
+                    operation_id,
+                    &plan,
+                    undo,
+                    progress,
+                    RepairMismatches {
+                        mismatches,
+                        boundary_mismatches,
                     },
-                }),
-            }));
+                )
+                .await;
         }
         progress.world = WorldOutcome::Verified;
         progress.verified_steps = patch.changes.len();
@@ -316,6 +252,134 @@ impl RepairWorkflow<'_> {
         progress.durable_verified_steps = Some(progress.verified_steps);
         progress.phase = FailurePhase::PostAnalysis;
         crate::performance::execution_progress(progress);
+        let analysis = match self.analyze_completed_repair(&plan).await {
+            Ok(analysis) => analysis,
+            Err(error) => return RepairOutcome::failed(progress.cause(error)),
+        };
+        RepairOutcome::Verified(Box::new(RepairReceipt {
+            schema_version: REPAIR_SCHEMA_V1,
+            execution_progress: progress.clone(),
+            ok: Success,
+            action: MutationAction::from_undo(undo),
+            verified,
+            boundary_verified,
+            boundary_mismatches,
+            changed_blocks: patch.changes.len(),
+            fragments_before: plan.fragments_before,
+            fragments_after: analysis.fragments_after,
+            resulting_logic: analysis.resulting_logic,
+            semantic_verification: analysis.semantic_verification,
+            bridge,
+        }))
+    }
+
+    /// Recovery is separate from target verification; a restored baseline does
+    /// not turn the failed repair into a successful application.
+    async fn recover_verification_failure(
+        &self,
+        operation_id: uuid::Uuid,
+        plan: &StoredRepairPlan,
+        undo: bool,
+        progress: &mut ExecutionProgress,
+        findings: RepairMismatches,
+    ) -> RepairOutcome {
+        let RepairMismatches {
+            mismatches,
+            boundary_mismatches,
+        } = findings;
+        let positions: Vec<_> = mismatches
+            .iter()
+            .chain(&boundary_mismatches)
+            .copied()
+            .collect();
+        let mut report = progress.cause(FailureCause::mismatch(
+            "repair verification failed",
+            &positions,
+        ));
+        let mut rollback_submitted = false;
+        let mut rollback_verified = false;
+        if !undo {
+            let rollback = plan.patch.inverse();
+            progress.phase = FailurePhase::Restore;
+            crate::performance::execution_progress(progress);
+            match self
+                .world_editor()
+                .write_physical_change_batch(&rollback.changes, &plan.dimension)
+                .await
+            {
+                Ok(receipt) => {
+                    rollback_submitted = true;
+                    progress.submitted(receipt.placed_changes);
+                    crate::performance::execution_progress(progress);
+                }
+                Err(error) => {
+                    let failure = progress.submission_error(error, WorldOutcome::Unknown);
+                    report.secondary(failure.primary);
+                }
+            }
+            // Read even if the reply was lost: observation, rather than receipt, proves restoration.
+            let blocks = self
+                .world_editor()
+                .verify_physical_changes(&rollback.changes, &plan.dimension)
+                .await;
+            let boundary = self
+                .world_editor()
+                .verify_preserved_boundary(&plan.preserved_boundary, &plan.dimension)
+                .await;
+            rollback_verified =
+                matches!(&blocks, Ok((true, _))) && matches!(&boundary, Ok((true, _)));
+            for result in [blocks, boundary] {
+                match result {
+                    Ok((false, positions)) => report.secondary(
+                        FailureCause::mismatch("rollback readback differs", &positions)
+                            .at(FailurePhase::Restore),
+                    ),
+                    Err(error) => report.secondary(error.at(FailurePhase::Restore)),
+                    _ => {}
+                }
+            }
+            if rollback_verified {
+                // The original target failed; restoration has its own observed outcome below.
+                let mut rolled_back = (*plan).clone();
+                rolled_back.lifecycle.confirm(true);
+                if let Err(error) = self.store_repair_plan(operation_id, rolled_back).await {
+                    progress.persistence = PersistenceOutcome::Uncertain;
+                    report.secondary(
+                        FailureCause::new(CauseKind::Persistence, error)
+                            .at(FailurePhase::FinalSave),
+                    );
+                } else {
+                    progress.persistence = PersistenceOutcome::FinalSaved;
+                }
+            }
+        }
+        *report.progress = progress.clone();
+        RepairOutcome::Failed(Box::new(RepairFailure {
+            report,
+            restoration: Some(RepairRestoration {
+                mismatches,
+                boundary_mismatches,
+                rollback_submitted,
+                rollback_ok: rollback_verified,
+                restoration: RestorationOutcome {
+                    attempted: !undo,
+                    world: if rollback_verified {
+                        WorldOutcome::Verified
+                    } else if undo {
+                        WorldOutcome::NotAttempted
+                    } else {
+                        WorldOutcome::Unknown
+                    },
+                },
+            }),
+        }))
+    }
+
+    /// Post-analysis cannot change the saved execution or restoration outcome.
+    async fn analyze_completed_repair(
+        &self,
+        plan: &StoredRepairPlan,
+    ) -> Result<RepairAnalysis, FailureCause> {
         let snapshot = match self
             .bridge
             .scan_region(
@@ -326,14 +390,12 @@ impl RepairWorkflow<'_> {
             .await
         {
             Ok(snapshot) => snapshot,
-            Err(error) => return RepairOutcome::failed(progress.cause(error.cause())),
+            Err(error) => return Err(error.cause()),
         };
         let post_world = match world_from_snapshot_for_service(&snapshot) {
             Ok(world) => world,
             Err(error) => {
-                return RepairOutcome::failed(
-                    progress.cause(FailureCause::new(CauseKind::ObservationIncomplete, error)),
-                );
+                return Err(FailureCause::new(CauseKind::ObservationIncomplete, error));
             }
         };
         let request = if plan.baseline_truth_table.is_some() {
@@ -358,21 +420,11 @@ impl RepairWorkflow<'_> {
                 SemanticUnavailableReason::PostAnalysisTruthTableUnavailable
             }),
         };
-        RepairOutcome::Verified(Box::new(RepairReceipt {
-            schema_version: REPAIR_SCHEMA_V1,
-            execution_progress: progress.clone(),
-            ok: Success,
-            action: MutationAction::from_undo(undo),
-            verified,
-            boundary_verified,
-            boundary_mismatches,
-            changed_blocks: patch.changes.len(),
-            fragments_before: plan.fragments_before,
+        Ok(RepairAnalysis {
             fragments_after,
             resulting_logic: post_analysis.logical_role,
             semantic_verification,
-            bridge,
-        }))
+        })
     }
 }
 

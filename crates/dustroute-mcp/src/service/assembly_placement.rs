@@ -8,9 +8,7 @@ mod typed_report_tests;
 mod validation;
 
 use super::*;
-use crate::assembly_registry::{
-    Attempt, InstanceState, PlacedAssembly, RegistryLock, TargetServer, now_ms,
-};
+use crate::assembly_registry::{InstanceState, PlacedAssembly, RegistryLock, TargetServer, now_ms};
 use crate::operations::construction::AssemblyConstructionKind;
 use crate::operations::mutation::Success;
 use crate::operations::preview::{

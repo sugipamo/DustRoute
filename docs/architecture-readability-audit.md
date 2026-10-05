@@ -7,6 +7,15 @@
 この文書は調査時点の記録。以後の実装済み範囲・保留理由・検証結果は
 [初回移行](architecture-migration.md)と[互換経路廃止を含む移行](architecture-cutover.md)を参照。以下の行番号と規模は調査基点に対応する。
 
+## Responsibility cleanup (2026-10-05 UTC)
+
+The current cleanup addresses the seven candidates carried forward in
+[Responsibility boundaries](responsibility-boundaries.md): Assembly execution,
+repair, Blueprint dispatch, contextual review, survival search, optimization and
+bounded physical execution. That page records the new private owners and
+validation results. This does not mean every item in the historical A01–A13
+inventory below has been reopened or resolved by this change.
+
 ## Mineflayer実行経路の廃止とジョブ所有権（2026-10-03 UTC）
 
 現行運用に不要なMineflayerを削除した。Voxrigが既定かつ唯一の実機backendとなり、
@@ -311,7 +320,7 @@ piston状態等をOptionで保持する。値が存在すべき組合せと、�
 根拠: [互換simulatorの明示的契約](../crates/dustroute-translate/src/sim.rs#L400)、
 [固定ドアのengine](../crates/dustroute-translate/src/piston_door.rs#L558)、
 [共通device実行](../crates/dustroute-minecraft/src/time/piston_runtime/devices.rs#L1)、
-[executor内の特化部分](../crates/dustroute-minecraft/src/time/runtime/executor/piston_behavior.rs#L1)。
+[executorの挙動状態比較（現行の移行先）](../crates/dustroute-minecraft/src/time/runtime/executor/root_behavior.rs#L1)。
 
 整理案: まずモデル選択と利用箇所の対応を明示し、Javaの共通callback実行とピストン機械処理を
 名前・moduleで区別する。探索の正規化はadapter固有の契約として位置付け、比較用recordを型で表す。

@@ -6,7 +6,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 
 use dustroute_library::PortDirection;
-use dustroute_library::assembly::{Assembly, AssemblyPortRef, AssemblyView, BlueprintGrouping};
+use dustroute_library::assembly::{
+    Assembly, AssemblyConnection, AssemblyPortRef, AssemblyView, BlueprintGrouping,
+};
 use dustroute_library::behavior_context::BehaviorReviewContext;
 use dustroute_library::behavior_type::PhysicalBehaviorContext;
 use dustroute_library::blueprint::{
@@ -422,6 +424,28 @@ pub fn review_assembly_in_context(
         behavior_context: context.cloned().map(Into::into),
         behavior: vec![],
     };
+    review_initial_placement(&view, &raw_world, &mut report);
+    let world = ValidatedWorld::try_from(raw_world).ok();
+    let connections = review_connections(catalog, assembly, &view, world.as_ref(), &mut report)?;
+    review_occurrence_requirements(
+        catalog,
+        &view,
+        context,
+        world_laws.as_ref(),
+        &connections,
+        &mut behavior,
+        &mut report,
+    )?;
+    report.behavior = behavior.checks;
+    Ok(report)
+}
+
+/// Initial geometry is checked independently of source-state equality.
+fn review_initial_placement(
+    view: &AssemblyView,
+    raw_world: &crate::world::World,
+    report: &mut PromotionReport,
+) {
     for issue in raw_world.placement_issues_with_lookup(|pos| view.block_at(pos)) {
         let (position, unknown) = match &issue {
             WorldValidationIssue::InvalidSupport {
@@ -488,12 +512,26 @@ pub fn review_assembly_in_context(
             }
         }
     }
-    let world = ValidatedWorld::try_from(raw_world).ok();
-    let mut connections = BTreeMap::new();
-    let mut route_statuses = BTreeMap::new();
+}
+
+#[derive(Default)]
+struct ReviewedConnections<'a> {
+    edges: BTreeMap<(AssemblyPortRef, AssemblyPortRef), Vec<&'a AssemblyConnection>>,
+    statuses: BTreeMap<(AssemblyPortRef, AssemblyPortRef), Vec<CheckStatus>>,
+}
+
+fn review_connections<'a>(
+    catalog: &BlueprintCatalog,
+    assembly: &'a Assembly,
+    view: &AssemblyView,
+    world: Option<&ValidatedWorld>,
+    report: &mut PromotionReport,
+) -> Result<ReviewedConnections<'a>, BlueprintError> {
+    let mut reviewed = ReviewedConnections::default();
     for edge in &assembly.connections {
         let key = view.connection_key(edge)?;
-        connections
+        reviewed
+            .edges
             .entry(key.clone())
             .or_insert_with(Vec::new)
             .push(edge);
@@ -516,7 +554,7 @@ pub fn review_assembly_in_context(
                 CheckStatus::Undetermined,
                 "block-state routes are not supported yet",
             )
-        } else if let Some(world) = &world {
+        } else if let Some(world) = world {
             match check_port_connection(
                 catalog,
                 world,
@@ -544,7 +582,8 @@ pub fn review_assembly_in_context(
                 "route check requires a valid placement",
             )
         };
-        route_statuses
+        reviewed
+            .statuses
             .entry(key.clone())
             .or_insert_with(Vec::new)
             .push(check.status);
@@ -553,6 +592,20 @@ pub fn review_assembly_in_context(
             check,
         );
     }
+    Ok(reviewed)
+}
+
+/// Requirements belong to the declaring occurrence, including aliased ports.
+/// One BehaviorReview retains the original shared budget and cache.
+fn review_occurrence_requirements(
+    catalog: &BlueprintCatalog,
+    view: &AssemblyView,
+    context: Option<&PhysicalBehaviorContext>,
+    world_laws: Option<&Result<crate::world_laws::WorldLaws, String>>,
+    connections: &ReviewedConnections<'_>,
+    behavior: &mut BehaviorReview<'_>,
+    report: &mut PromotionReport,
+) -> Result<(), BlueprintError> {
     for (path, occurrence) in &view.occurrences {
         let revision = catalog
             .revision(&occurrence.revision)
@@ -570,7 +623,7 @@ pub fn review_assembly_in_context(
                     &revision.required_laws,
                 ) {
                     Err(error) => result(CheckKind::PhysicalLaw, CheckStatus::Failed, error),
-                    Ok(()) => match world_laws.as_ref().expect("context supplied") {
+                    Ok(()) => match world_laws.expect("context supplied") {
                         Err(error) => result(
                             CheckKind::PhysicalLaw,
                             CheckStatus::Undetermined,
@@ -632,6 +685,7 @@ pub fn review_assembly_in_context(
             }
             let canonical = view.canonical_port_ref(&reference)?;
             let producers: Vec<_> = connections
+                .edges
                 .iter()
                 .filter(|((_, sink), _)| sink == canonical)
                 .flat_map(|(_, edges)| edges.iter().copied())
@@ -649,7 +703,7 @@ pub fn review_assembly_in_context(
             for edge in producers {
                 report.record(
                     [path.clone()],
-                    requirement_check(catalog, &view, &edge.source, &port, &mut behavior)?,
+                    requirement_check(catalog, view, &edge.source, &port, behavior)?,
                 );
             }
         }
@@ -660,7 +714,7 @@ pub fn review_assembly_in_context(
             };
             let check = port_type_check(
                 catalog,
-                &view,
+                view,
                 &reference,
                 std::slice::from_ref(&binding.type_revision),
                 CheckKind::StaticType,
@@ -673,7 +727,7 @@ pub fn review_assembly_in_context(
                 .push(check);
         }
         for binding in &revision.behavior_bindings {
-            report.record([path.clone()], behavior.check_binding(binding, path, &view));
+            report.record([path.clone()], behavior.check_binding(binding, path, view));
         }
         let prefix = |reference: &AssemblyPortRef| AssemblyPortRef {
             instance: path.iter().chain(&reference.instance).cloned().collect(),
@@ -684,7 +738,8 @@ pub fn review_assembly_in_context(
                 view.canonical_port_ref(&prefix(&edge.source))?.clone(),
                 view.canonical_port_ref(&prefix(&edge.sink))?.clone(),
             );
-            let status = route_statuses
+            let status = connections
+                .statuses
                 .get(&key)
                 .map_or(CheckStatus::Failed, |statuses| {
                     aggregate(statuses.iter().copied())
@@ -699,8 +754,7 @@ pub fn review_assembly_in_context(
             );
         }
     }
-    report.behavior = behavior.checks;
-    Ok(report)
+    Ok(())
 }
 
 /// Shared review entry for the existing proposal/adoption workflow. The native

@@ -95,15 +95,13 @@ use operation_plans::{OperationPlans, PlanKind};
 use dustroute_app::DustRouteService;
 use dustroute_optimize::{
     AnchorPolicy, BehavioralVerificationConfig, CompressionAxis, CompressionDirection,
-    ContextualVerificationState, ContractCheck, ContractCheckState, MacroSteadyStateReport,
-    MacroStructuralReport, ObservedMacroMetrics, OptimizationContract, OptimizationPlan,
+    ContextualVerificationState, ObservedMacroMetrics, OptimizationContract, OptimizationPlan,
     OptimizationRoutingConfig, OptimizationSafety, PhysicalOptimizationSearchBudget,
     TemporalCapabilities, TimingContractMode, assess_macro_contract, assess_optimization_safety,
     extract_model_boundary_with_context, find_builtin_verified_macro_replacements,
-    materialize_macro_replacement_in_known_regions, optimize_physical_wire_path_with_budget,
-    plan_macro_replacement_with_reserved, realize_staged_optimization_against,
-    validate_macro_structure, verify_boundary_strengths, verify_macro_steady_state,
-    verify_macro_transitions, verify_realized_optimization, verify_world_transitions,
+    materialize_macro_replacement_in_known_regions, plan_macro_replacement_with_reserved,
+    realize_staged_optimization_against, validate_macro_structure, verify_macro_steady_state,
+    verify_macro_transitions, verify_realized_optimization,
 };
 use dustroute_physical::{BlockKind, Pos};
 use dustroute_physical::{PhysicalBlockChange, PhysicalPatch};
@@ -131,8 +129,7 @@ use tokio::time::{Duration, Instant};
 
 use crate::McpConfig;
 use crate::api::{
-    DIAGNOSTIC_SCHEMA_V1, ErrorResponse, McpErrorCode, OPTIMIZATION_SCHEMA_V1, PLACEMENT_SCHEMA_V1,
-    TRANSITION_SCHEMA_V1,
+    DIAGNOSTIC_SCHEMA_V1, ErrorResponse, McpErrorCode, PLACEMENT_SCHEMA_V1, TRANSITION_SCHEMA_V1,
 };
 use crate::failure::{
     CauseKind, ExecutionProgress, FailureCause, FailurePhase, FailureReport, PersistenceOutcome,

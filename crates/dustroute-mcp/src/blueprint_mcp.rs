@@ -679,13 +679,42 @@ fn import(updates: &mut BlueprintUpdates, records: BlueprintRecords) -> Result<(
 const BUILDING_NEXT_STEP: &str = "Import result.records; propose_update with result.request after removing its id; review and adopt; then new_placement with assembly_target. After interrupted placement, diagnose and create a fresh reconstruction plan.";
 const BUILDING_UPDATE_NEXT_STEP: &str = "Import result.records; propose_update with result.request after removing its id; inspect diff, review and adopt. Existing placed instances retain their pinned source; a separate site-edit operation is required to modify one.";
 
+#[derive(Clone, Copy, Eq, PartialEq)]
+enum CatalogPersistence {
+    NotRequired,
+    Required,
+}
+
+/// A catalog effect is independent of the diagnostic response's success flag.
+/// A refused adoption can require saving its review history.
+struct CatalogActionResult<T> {
+    value: T,
+    persistence: CatalogPersistence,
+}
+impl<T> CatalogActionResult<T> {
+    fn read_only(value: T) -> Self {
+        Self {
+            value,
+            persistence: CatalogPersistence::NotRequired,
+        }
+    }
+    fn requires_save(value: T) -> Self {
+        Self {
+            value,
+            persistence: CatalogPersistence::Required,
+        }
+    }
+}
+
 fn perform(
     updates: &mut BlueprintUpdates,
     groundings: &mut BTreeMap<AssemblyRevisionId, AssemblyGrounding>,
     command: Command,
-) -> Result<(Option<Response>, bool), String> {
+) -> Result<CatalogActionResult<Option<Response>>, String> {
     match command {
-        Command::Read(query) => Ok((Some(read(updates, groundings, query)?), false)),
+        Command::Read(query) => Ok(CatalogActionResult::read_only(Some(read(
+            updates, groundings, query,
+        )?))),
         Command::Capture { record, grounding } => {
             let id = record.id.clone();
             if grounding.assembly_revision_id != id || !grounding.complete {
@@ -709,258 +738,263 @@ fn perform(
                     ..Default::default()
                 },
             )?;
-            Ok((
-                Some(Response::success(Body::Captured {
+            Ok(CatalogActionResult::requires_save(Some(Response::success(
+                Body::Captured {
                     assembly_revision_id: id,
                     validation: "not_evaluated",
-                })),
-                true,
-            ))
+                },
+            ))))
         }
         Command::Write(write) => {
             let write = write.into_checked(MAX_REQUEST_BYTES)?;
-            match write {
-                BlueprintWrite::GenerateGroundedBuildingDesign { request } => {
-                    let generated =
-                        dustroute_translate::building::generate_grounded_building_design(*request);
-                    Ok((
-                        Some(Response::building(
-                            generated.map(|r| Generated::Grounded(Box::new(r))),
-                            BUILDING_NEXT_STEP,
-                        )),
-                        false,
-                    ))
-                }
-                BlueprintWrite::GenerateBuildingDesignUpdate { request } => {
-                    let generated = (|| {
-                        let base = construction_basis(updates, &request.base_assembly_revision_id)?;
-                        let previous = request
-                            .previous
-                            .component
-                            .as_ref()
-                            .map(|c| construction_basis(updates, &c.assembly_revision_id))
-                            .transpose()?;
-                        let next = request
-                            .design
-                            .component
-                            .as_ref()
-                            .map(|c| construction_basis(updates, &c.assembly_revision_id))
-                            .transpose()?;
-                        dustroute_translate::building::generate_building_design_update(
-                            *request,
-                            &base.catalog,
-                            previous.as_ref().map(|s| &s.context),
-                            next.as_ref().map(|s| &s.context),
-                        )
-                    })();
-                    Ok((
-                        Some(Response::building(
-                            generated.map(|r| Generated::DesignUpdate(Box::new(r))),
-                            BUILDING_UPDATE_NEXT_STEP,
-                        )),
-                        false,
-                    ))
-                }
-                BlueprintWrite::GenerateBuildingDesign { request } => {
-                    let source = request
-                        .component
-                        .as_ref()
-                        .map(|c| construction_basis(updates, &c.assembly_revision_id))
-                        .transpose();
-                    let generated = match source {
-                        Ok(source) => dustroute_translate::building::generate_building_design(
-                            *request,
-                            source.as_ref().map(|s| (&s.catalog, &s.context)),
-                        ),
-                        Err(detail) => {
-                            return Ok((
-                                Some(Response::building(
-                                    Err(dustroute_translate::building::BuildingDesignError {
-                                        code: "source_not_adopted_or_reviewable",
-                                        detail,
-                                        item: request.component.as_ref().map(|c| c.name.clone()),
-                                        position: None,
-                                        diagnostics: None,
-                                    }),
-                                    BUILDING_NEXT_STEP,
-                                )),
-                                false,
-                            ));
-                        }
-                    };
-                    Ok((
-                        Some(Response::building(
-                            generated.map(|r| Generated::Design(Box::new(r))),
-                            BUILDING_NEXT_STEP,
-                        )),
-                        false,
-                    ))
-                }
-                BlueprintWrite::GenerateBuilding { request } => {
-                    let generated = dustroute_translate::building::generate_building(*request);
-                    Ok((
-                        Some(Response::building(
-                            generated.map(|r| Generated::Building(Box::new(r))),
-                            BUILDING_NEXT_STEP,
-                        )),
-                        false,
-                    ))
-                }
-                BlueprintWrite::GenerateBuildingWithDoor { request } => {
-                    let source = construction_basis(updates, &request.door.assembly_revision_id)?;
-                    let generated = dustroute_translate::building::generate_building_with_door(
-                        *request,
-                        &source.catalog,
-                        &source.context,
-                    );
-                    Ok((
-                        Some(Response::building(
-                            generated.map(|r| Generated::Building(Box::new(r))),
-                            BUILDING_NEXT_STEP,
-                        )),
-                        false,
-                    ))
-                }
-                BlueprintWrite::GenerateFlyingMachine { request } => {
-                    let generated = dustroute_translate::flying_machine::generate_flying_machine(
-                        *request,
-                        BehaviorBudget::default(),
-                    )?;
-                    let passed = generated.verification.status == CheckStatus::Passed;
-                    Ok((
-                        Some(Response::generated(
-                            Generated::FlyingMachine(Box::new(generated)),
-                            passed,
-                            if passed {
-                                "Import result.records; propose_update with result.request after removing its id; review and adopt explicitly; then plan placement at the target."
-                            } else {
-                                "Inspect result.verification; this candidate did not establish a usable generated flight."
-                            },
-                        )),
-                        false,
-                    ))
-                }
-                BlueprintWrite::EnumerateLayouts { request, budget } => {
-                    let budget = budget.unwrap_or_default();
-                    if budget.max_layouts > 4096
-                        || budget.max_bindings > 256
-                        || budget.max_millis > 30_000
-                    {
-                        return Err("Blueprint enumeration limits are 4096 layouts, 256 bindings and 30000 milliseconds".into());
-                    }
-                    let report = dustroute_optimize::blueprint_reduction::enumerate_torch_supports(
-                        updates.catalog(),
-                        &request,
-                        budget,
-                    )?;
-                    Ok((
-                        Some(Response::generated(
-                            Generated::Enumeration(Box::new(report)),
-                            true,
-                            "Review each candidate status; only passing candidates satisfy the selected type in this exact context. Use an explicit update proposal and fresh adoption checks.",
-                        )),
-                        false,
-                    ))
-                }
-                BlueprintWrite::Optimize { request, budget } => {
-                    let budget = budget.unwrap_or_default();
-                    if budget.max_layouts > 4096
-                        || budget.max_bindings > 256
-                        || budget.max_millis > 30_000
-                    {
-                        return Err("Blueprint optimization limits are 4096 layouts, 256 bindings and 30000 milliseconds".into());
-                    }
-                    let report = dustroute_optimize::blueprint_reduction::reduce_blueprint_blocks(
-                        updates.catalog(),
-                        &request,
-                        budget,
-                    )?;
-                    Ok((
-                        Some(Response::generated(
-                            Generated::Reduction(Box::new(report)),
-                            true,
-                            "Use a passing smaller candidate in an explicit parent update proposal, retain its target binding and execution context, then review and explicitly adopt. Search reports never authorize adoption.",
-                        )),
-                        false,
-                    ))
-                }
-                BlueprintWrite::Import { records } => {
-                    import(updates, records)?;
-                    Ok((
-                        Some(Response::success(Body::Imported {
-                            validation: "not_evaluated",
-                            next_step: "read the catalog or create an explicit update proposal",
-                        })),
-                        true,
-                    ))
-                }
-                BlueprintWrite::ProposeUpdate { request } => {
-                    let id = BlueprintUpdateId::new(uuid::Uuid::new_v4().to_string())
-                        .map_err(str::to_owned)?;
-                    updates
-                        .create(request.into_request(id.clone()))
-                        .map_err(|e| e.to_string())?;
-                    Ok((
-                        Some(operation_response(operation(updates, &id, false)?)),
-                        true,
-                    ))
-                }
-                BlueprintWrite::CaptureRevision { .. } => {
-                    Err("capture must resolve a saved circuit revision first".into())
-                }
-            }
+            perform_write(updates, write)
         }
-        Command::Show(uuid)
-        | Command::Get(uuid)
-        | Command::Decide(uuid, _, _)
-        | Command::Undo(uuid) => {
-            let id = BlueprintUpdateId::new(uuid.to_string()).map_err(str::to_owned)?;
-            if updates.proposal(&id).is_none() {
-                return Ok((None, false));
+        Command::Show(uuid) => perform_proposal(updates, uuid, ProposalAction::Show),
+        Command::Get(uuid) => perform_proposal(updates, uuid, ProposalAction::Get),
+        Command::Decide(uuid, decision, confirm) => {
+            perform_proposal(updates, uuid, ProposalAction::Decide { decision, confirm })
+        }
+        Command::Undo(uuid) => perform_proposal(updates, uuid, ProposalAction::Undo),
+    }
+}
+
+/// Generated candidates remain unpublished; explicit catalog commands save.
+fn perform_write(
+    updates: &mut BlueprintUpdates,
+    write: BlueprintWrite,
+) -> Result<CatalogActionResult<Option<Response>>, String> {
+    match write {
+        BlueprintWrite::GenerateGroundedBuildingDesign { request } => {
+            let generated =
+                dustroute_translate::building::generate_grounded_building_design(*request);
+            Ok(CatalogActionResult::read_only(Some(Response::building(
+                generated.map(|r| Generated::Grounded(Box::new(r))),
+                BUILDING_NEXT_STEP,
+            ))))
+        }
+        BlueprintWrite::GenerateBuildingDesignUpdate { request } => {
+            let generated = (|| {
+                let base = construction_basis(updates, &request.base_assembly_revision_id)?;
+                let previous = request
+                    .previous
+                    .component
+                    .as_ref()
+                    .map(|c| construction_basis(updates, &c.assembly_revision_id))
+                    .transpose()?;
+                let next = request
+                    .design
+                    .component
+                    .as_ref()
+                    .map(|c| construction_basis(updates, &c.assembly_revision_id))
+                    .transpose()?;
+                dustroute_translate::building::generate_building_design_update(
+                    *request,
+                    &base.catalog,
+                    previous.as_ref().map(|s| &s.context),
+                    next.as_ref().map(|s| &s.context),
+                )
+            })();
+            Ok(CatalogActionResult::read_only(Some(Response::building(
+                generated.map(|r| Generated::DesignUpdate(Box::new(r))),
+                BUILDING_UPDATE_NEXT_STEP,
+            ))))
+        }
+        BlueprintWrite::GenerateBuildingDesign { request } => {
+            let source = request
+                .component
+                .as_ref()
+                .map(|c| construction_basis(updates, &c.assembly_revision_id))
+                .transpose();
+            let generated = match source {
+                Ok(source) => dustroute_translate::building::generate_building_design(
+                    *request,
+                    source.as_ref().map(|s| (&s.catalog, &s.context)),
+                ),
+                Err(detail) => {
+                    return Ok(CatalogActionResult::read_only(Some(Response::building(
+                        Err(dustroute_translate::building::BuildingDesignError {
+                            code: "source_not_adopted_or_reviewable",
+                            detail,
+                            item: request.component.as_ref().map(|c| c.name.clone()),
+                            position: None,
+                            diagnostics: None,
+                        }),
+                        BUILDING_NEXT_STEP,
+                    ))));
+                }
+            };
+            Ok(CatalogActionResult::read_only(Some(Response::building(
+                generated.map(|r| Generated::Design(Box::new(r))),
+                BUILDING_NEXT_STEP,
+            ))))
+        }
+        BlueprintWrite::GenerateBuilding { request } => {
+            let generated = dustroute_translate::building::generate_building(*request);
+            Ok(CatalogActionResult::read_only(Some(Response::building(
+                generated.map(|r| Generated::Building(Box::new(r))),
+                BUILDING_NEXT_STEP,
+            ))))
+        }
+        BlueprintWrite::GenerateBuildingWithDoor { request } => {
+            let source = construction_basis(updates, &request.door.assembly_revision_id)?;
+            let generated = dustroute_translate::building::generate_building_with_door(
+                *request,
+                &source.catalog,
+                &source.context,
+            );
+            Ok(CatalogActionResult::read_only(Some(Response::building(
+                generated.map(|r| Generated::Building(Box::new(r))),
+                BUILDING_NEXT_STEP,
+            ))))
+        }
+        BlueprintWrite::GenerateFlyingMachine { request } => {
+            let generated = dustroute_translate::flying_machine::generate_flying_machine(
+                *request,
+                BehaviorBudget::default(),
+            )?;
+            let passed = generated.verification.status == CheckStatus::Passed;
+            Ok(CatalogActionResult::read_only(Some(Response::generated(
+                Generated::FlyingMachine(Box::new(generated)),
+                passed,
+                if passed {
+                    "Import result.records; propose_update with result.request after removing its id; review and adopt explicitly; then plan placement at the target."
+                } else {
+                    "Inspect result.verification; this candidate did not establish a usable generated flight."
+                },
+            ))))
+        }
+        BlueprintWrite::EnumerateLayouts { request, budget } => {
+            let budget = budget.unwrap_or_default();
+            if budget.max_layouts > 4096 || budget.max_bindings > 256 || budget.max_millis > 30_000
+            {
+                return Err("Blueprint enumeration limits are 4096 layouts, 256 bindings and 30000 milliseconds".into());
             }
-            match command {
-                Command::Get(_) => Ok((Some(operation_response(operation(updates, &id, false)?)), false)),
-                Command::Show(_) => {
-                    let open = updates.proposal(&id).unwrap().status() == UpdateStatus::Open;
-                    let report = if open {
-                        updates.validate(&id)
-                    } else {
-                        updates.review(&id)
-                    }.map_err(|e| e.to_string())?;
+            let report = dustroute_optimize::blueprint_reduction::enumerate_torch_supports(
+                updates.catalog(),
+                &request,
+                budget,
+            )?;
+            Ok(CatalogActionResult::read_only(Some(Response::generated(
+                Generated::Enumeration(Box::new(report)),
+                true,
+                "Review each candidate status; only passing candidates satisfy the selected type in this exact context. Use an explicit update proposal and fresh adoption checks.",
+            ))))
+        }
+        BlueprintWrite::Optimize { request, budget } => {
+            let budget = budget.unwrap_or_default();
+            if budget.max_layouts > 4096 || budget.max_bindings > 256 || budget.max_millis > 30_000
+            {
+                return Err("Blueprint optimization limits are 4096 layouts, 256 bindings and 30000 milliseconds".into());
+            }
+            let report = dustroute_optimize::blueprint_reduction::reduce_blueprint_blocks(
+                updates.catalog(),
+                &request,
+                budget,
+            )?;
+            Ok(CatalogActionResult::read_only(Some(Response::generated(
+                Generated::Reduction(Box::new(report)),
+                true,
+                "Use a passing smaller candidate in an explicit parent update proposal, retain its target binding and execution context, then review and explicitly adopt. Search reports never authorize adoption.",
+            ))))
+        }
+        BlueprintWrite::Import { records } => {
+            import(updates, records)?;
+            Ok(CatalogActionResult::requires_save(Some(Response::success(
+                Body::Imported {
+                    validation: "not_evaluated",
+                    next_step: "read the catalog or create an explicit update proposal",
+                },
+            ))))
+        }
+        BlueprintWrite::ProposeUpdate { request } => {
+            let id =
+                BlueprintUpdateId::new(uuid::Uuid::new_v4().to_string()).map_err(str::to_owned)?;
+            updates
+                .create(request.into_request(id.clone()))
+                .map_err(|e| e.to_string())?;
+            Ok(CatalogActionResult::requires_save(Some(
+                operation_response(operation(updates, &id, false)?),
+            )))
+        }
+        BlueprintWrite::CaptureRevision { .. } => {
+            Err("capture must resolve a saved circuit revision first".into())
+        }
+    }
+}
+
+/// Proposal handling receives only proposal actions, without a second copy of
+/// the ID or impossible read/write/capture command variants.
+enum ProposalAction {
+    Show,
+    Get,
+    Decide {
+        decision: Option<BlueprintDecision>,
+        confirm: bool,
+    },
+    Undo,
+}
+
+/// An open review or a refused adoption can still need to save review history.
+fn perform_proposal(
+    updates: &mut BlueprintUpdates,
+    uuid: uuid::Uuid,
+    action: ProposalAction,
+) -> Result<CatalogActionResult<Option<Response>>, String> {
+    let id = BlueprintUpdateId::new(uuid.to_string()).map_err(str::to_owned)?;
+    if updates.proposal(&id).is_none() {
+        return Ok(CatalogActionResult::read_only(None));
+    }
+    match action {
+        ProposalAction::Get => Ok(CatalogActionResult::read_only(Some(operation_response(
+            operation(updates, &id, false)?,
+        )))),
+        ProposalAction::Show => {
+            let open = updates.proposal(&id).unwrap().status() == UpdateStatus::Open;
+            let report = if open {
+                updates.validate(&id)
+            } else {
+                updates.review(&id)
+            }.map_err(|e| e.to_string())?;
+            let mut result = operation(updates, &id, true)?;
+            result.can_adopt = Some(open && report.status() == CheckStatus::Passed);
+            result.validation = Some(review_response(&report, updates.catalog()));
+            Ok(CatalogActionResult {
+                value: Some(operation_response(result)),
+                persistence: if open {
+                    CatalogPersistence::Required
+                } else {
+                    CatalogPersistence::NotRequired
+                },
+            })
+        }
+        ProposalAction::Decide { decision, confirm } => {
+            if !confirm {
+                return Err("confirm=true is required for a Blueprint decision; no Minecraft change is involved".into());
+            }
+            let Some(decision) = decision else {
+                return Err("provide blueprint_decision: {action: adopt} or {action: reject, reason: ...}".into());
+            };
+            let result = match decision {
+                BlueprintDecision::Adopt => updates.adopt(&id),
+                BlueprintDecision::Reject { reason } => updates.reject(&id, reason),
+            };
+            match result {
+                Ok(()) => Ok(CatalogActionResult::requires_save(Some(operation_response(
+                    operation(updates, &id, false)?,
+                )))),
+                Err(BlueprintUpdateError::Validation(report)) => {
                     let mut result = operation(updates, &id, true)?;
-                    result.can_adopt = Some(open && report.status() == CheckStatus::Passed);
+                    result.error_code = Some(crate::api::McpErrorCode::VerificationFailed);
+                    result.error = Some("adoption refused; required checks failed or are undetermined");
                     result.validation = Some(review_response(&report, updates.catalog()));
-                    Ok((Some(operation_response(result)), open))
+                    let mut response = operation_response(result);
+                    response.ok = false;
+                    Ok(CatalogActionResult::requires_save(Some(response)))
                 }
-                Command::Decide(_, decision, confirm) => {
-                    if !confirm {
-                        return Err("confirm=true is required for a Blueprint decision; no Minecraft change is involved".into());
-                    }
-                    let Some(decision) = decision else {
-                        return Err("provide blueprint_decision: {action: adopt} or {action: reject, reason: ...}".into());
-                    };
-                    let result = match decision {
-                        BlueprintDecision::Adopt => updates.adopt(&id),
-                        BlueprintDecision::Reject { reason } => updates.reject(&id, reason),
-                    };
-                    match result {
-                        Ok(()) => Ok((Some(operation_response(operation(updates, &id, false)?)), true)),
-                        Err(BlueprintUpdateError::Validation(report)) => {
-                            let mut result = operation(updates, &id, true)?;
-                            result.error_code = Some(crate::api::McpErrorCode::VerificationFailed);
-                            result.error = Some("adoption refused; required checks failed or are undetermined");
-                            result.validation = Some(review_response(&report, updates.catalog()));
-                            let mut response = operation_response(result);
-                            response.ok = false;
-                            Ok((Some(response), true))
-                        }
-                        Err(e) => Err(e.to_string()),
-                    }
-                }
-                Command::Undo(_) => Err("Blueprint decisions cannot be undone by changing history; retain the old revision or create a new proposal".into()),
-                _ => unreachable!(),
+                Err(e) => Err(e.to_string()),
             }
         }
+        ProposalAction::Undo => Err("Blueprint decisions cannot be undone by changing history; retain the old revision or create a new proposal".into()),
     }
 }
 
@@ -982,7 +1016,9 @@ pub(crate) fn grounded_source(
     id: &AssemblyRevisionId,
 ) -> Result<GroundedSource, String> {
     transaction(store, player, |updates, groundings| {
-        Ok((placement_basis(updates, groundings, id)?, false))
+        Ok(CatalogActionResult::read_only(placement_basis(
+            updates, groundings, id,
+        )?))
     })
 }
 
@@ -993,7 +1029,9 @@ pub(crate) fn construction_source(
     id: &AssemblyRevisionId,
 ) -> Result<crate::source_identity::SourceIdentity, String> {
     transaction(store, player, |updates, _| {
-        Ok((construction_basis(updates, id)?, false))
+        Ok(CatalogActionResult::read_only(construction_basis(
+            updates, id,
+        )?))
     })
 }
 
@@ -1004,7 +1042,7 @@ fn transaction<T>(
     action: impl FnOnce(
         &mut BlueprintUpdates,
         &mut BTreeMap<AssemblyRevisionId, AssemblyGrounding>,
-    ) -> Result<(T, bool), String>,
+    ) -> Result<CatalogActionResult<T>, String>,
 ) -> Result<T, String> {
     let root = store.blueprint_root(player);
     fs::create_dir_all(&root).map_err(|e| e.to_string())?;
@@ -1065,8 +1103,8 @@ fn transaction<T>(
         }
         Err(e) => return Err(e.to_string()),
     };
-    let (result, write) = action(&mut updates, &mut groundings)?;
-    if write {
+    let CatalogActionResult { value, persistence } = action(&mut updates, &mut groundings)?;
+    if persistence == CatalogPersistence::Required {
         let bytes = dustroute_codec::storage::encode(
             STORE_SCHEMA,
             &StoredBlueprints {
@@ -1084,7 +1122,7 @@ fn transaction<T>(
         crate::storage::replace(&path, &bytes, crate::storage::Durability::FileAndDirectory)
             .map_err(|e| e.to_string())?;
     }
-    Ok(result)
+    Ok(value)
 }
 
 // Corruption tests edit the MCP-shaped fixture, then encode a typed archive.

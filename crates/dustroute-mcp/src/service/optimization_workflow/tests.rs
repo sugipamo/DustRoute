@@ -1,10 +1,25 @@
-use super::*;
 use crate::operations::OperationResult;
-use dustroute_physical::{Block, BlockKind, World};
+use crate::service::requests::{ConfirmedOperationParams, NewMacroOptimizationParams};
+use crate::service::{
+    ExpansionEvidence, RepairLifecycle, StoredCircuit, test_support, typed_reply,
+    world_from_snapshot_for_service,
+};
+use crate::state::PlanStateStore;
+use crate::{DustRouteMcp, McpPolicy};
+use dustroute_optimize::{
+    ObservedMacroMetrics, extract_model_boundary_with_context,
+    find_builtin_verified_macro_replacements, plan_macro_replacement_with_reserved,
+    validate_macro_structure,
+};
+use dustroute_physical::{Block, BlockKind, Pos, World};
+use dustroute_translate::api::ReverseRequest;
 use dustroute_translate::minecraft_export::{ExportPurpose, JavaExportConfig, native_block_state};
 use dustroute_translate::snapshot::{MinecraftSnapshot, MinecraftSnapshotBlock};
 use dustroute_translate::world_reverse::RegionBounds;
-use serde_json::json;
+use rmcp::handler::server::wrapper::Parameters;
+use serde_json::{Value, json};
+use std::collections::BTreeSet;
+use tokio::time::{Duration, Instant};
 
 fn service(root: &std::path::Path) -> DustRouteMcp {
     let mut service = DustRouteMcp::with_test_transport_and_player(

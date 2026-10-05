@@ -74,26 +74,97 @@ or test helper when its only purpose is a retired format, an implementation
 mirror or a redundant assertion already protecting the same contract.
 A fake-transport test is not live Minecraft conformance evidence.
 
-## Remaining cleanup candidates
+## Cleanup of the seven candidates
 
-The initial change resolves the transition execution/facade boundary and the
-large inline test block. Other candidates remain separate work:
+The transition work above is retained. The subsequent cleanup covers every
+candidate from the initial inventory, with behavioral verification recorded
+below. The boundaries are concrete private functions and Rust types, not a new
+framework or a reduction in code size.
 
-| Area | Boundary to clarify | Contract to preserve |
+| Area | Owners after cleanup | Contract preserved |
 | --- | --- | --- |
-| Assembly placement | Review, mutation, readback, rollback and history | Source revalidation, consumption and rollback evidence |
-| Repair | Admission, saved lifecycle, submission and undo | Saved lifecycle before writing; uncertainty after a lost reply |
-| Blueprint dispatch | Domain command results versus persistence decisions | Explicit adoption and catalog transaction ownership |
-| Runtime review / promotion | Requirement traversal versus report construction | Independent contexts and no adoption from historical passes |
-| Survival candidate generation | Candidate expansion, search pruning and selection | Material, reachability and native evidence ownership |
-| Optimization | Immutable candidate search versus operation publication | No bridge capability in pure optimization |
-| Physical execution | Event scheduling versus device semantics | Supported model boundaries and checkpoint identities |
+| Assembly placement | The workflow admits and consumes attempts; `review_construction` rebuilds the proof; `checkpoint_attempt` saves each executor stage; `finish_attempt` records the final result | Fresh source/preview equality, saving before continuation, and independent persistence failure |
+| Repair | The workflow saves intent and confirms readback; `recover_verification_failure` owns restoration; `analyze_completed_repair` owns post-analysis | Lost replies do not permit replay; restoration does not erase the original target failure |
+| Blueprint dispatch | Command routing, write commands, proposal decisions and the catalog transaction are named stages; `CatalogActionResult` carries a separate persistence decision | An open review or refused adoption can save history without successful adoption; one lock covers load, validate and save |
+| Runtime review / promotion | Fixed-geometry review separates initial placement, actual connections and occurrence requirements; runtime review separates requirement collection, initial-world review and binding exploration | Independent model contexts, declaring-consumer attribution, one review deadline and shared graph budgets |
+| Survival candidate generation | `generation.rs` admits inputs and creates search state; `candidates.rs` generates checked actions; `policy.rs` owns ranking, pruning, cleanup search and completion | Original candidate order, heuristic limits, material reservation and native admission; exhaustion is not impossibility |
+| Optimization | `OptimizationPlanner` searches an immutable captured circuit; the workflow saves the draft, then publishes operation history | The planner receives policy and analysis only, without bridge, store or history capabilities |
+| Physical execution | `PhysicsEngine` owns scheduling, causal order, budgets, rejection and world/trace application; `BoundedDevices` prepares and dispatches existing device reactions | Model admission order, queue rollback, event phases, motion delays and checkpoint identities |
 
-Do not unify independent execution models or change Voxrig/DustRoute ownership
-for readability alone. A new feature, stronger recovery guarantee or cross-crate
-responsibility change requires a separate review with the user before proceeding.
+### Why these boundaries remain separate
+
+A construction checkpoint must be persisted before the next physical stage,
+whereas final publication records the result of the entire attempt. Neither
+successful writes nor a successful final save imply observed completion.
+Repair restoration and post-analysis cannot share a success predicate: a repair
+may fail its target and still restore its baseline, or complete writes and fail
+later analysis.
+
+Catalog response success and persistence are independent. Review history is a
+catalog change even when adoption is refused. The private persistence enum
+replaces a boolean tuple without changing the archive schema or MCP replies.
+`ProposalAction` limits the proposal handler to proposal operations, so it no
+longer accepts unrelated read/write/capture commands or carries a second ID.
+
+The fixed-geometry reviewer still uses `ValidatedWorld`; the moving-world
+reviewer uses the native initial gate and monitors actual reachable states.
+They share diagnostic types, not a proof implementation. `ReviewBudget` keeps
+the deadline established before inspection; all bindings consume the same
+remaining graph limits. No historical pass becomes adoption authority.
+
+Construction candidate generation continues to use DustRoute policy over
+Voxrig's checked hypothetical transitions. File boundaries do not turn pruning
+into a native guarantee or an exhaustive reachability algorithm. Only detached
+scene data enters its CPU worker; no execution handle is introduced.
+
+The bounded event runner remains an active model, including for the fixed door.
+Its device handlers are not replacements for the common electrical runtime.
+`apply_event_transition` retains the existing world application and trace order;
+it does not strengthen atomicity or alter what a rejected diagnostic event
+records. Queue restoration stays in the scheduler.
+
+### Tests retained
+
+No test scenarios are deleted in the seven-candidate cleanup. Two adoption
+assertions that searched diagnostic prose for retired JSON fragments now inspect
+typed abstract-proof evidence. The implementation-specific 9,520-state count
+is removed; universal proof selection and reuse of a four-state proof under one
+four-state budget remain checked directly. The existing tests cover
+externally meaningful contracts rather than the newly introduced function
+names. In particular, proposal/history restart tests, repair lost-reply tests,
+placement readback tests, adoption/alias tests, search resource tests and causal
+scheduler tests remain in place. The initial transition cleanup removed the
+obsolete JSON helper described above; it did not remove those behavioral checks.
+
+No feature, transport, save format, physics rule or Voxrig/DustRoute ownership
+change is included. If a proposed follow-up cannot clearly improve readability,
+the requested stop condition applies to the whole cleanup.
 
 ## Validation (2026-10-05 UTC)
+
+### Seven-candidate cleanup
+
+- All 44 bounded-engine regressions passed: causal order, budget limits,
+  checkpoint/retry, input admission, wire propagation, repeater delay and piston
+  start/completion.
+- All 57 contextual-review regressions passed across `promotion`,
+  `runtime_adoption`, `review_diagnostics`, `repeated_settling_adoption`,
+  `blueprint_updates`, `nested_interfaces` and `physical_periodic`.
+  The first run exposed two retired diagnostic-text assertions; those now
+  inspect typed proof evidence, and the affected suite passed on rerun.
+- The complete MCP library suite passed: 303 passed, no failures, 10 existing
+  opt-in tests ignored. It includes save/restart/replay, placement/removal,
+  repair, optimizer publication and survival resource contracts.
+- All-target Clippy passed with warnings denied for MCP, Minecraft and
+  Translate. MCP also passed with `--no-default-features`. Workspace
+  formatting and whitespace checks passed.
+- Moved search methods and device handlers were compared with the original
+  bodies during review. Search order, budget consumption and device refusal
+  conditions remain unchanged. This source review is not a live conformance test.
+- Documentation links resolve, including the historical executor reference
+  updated to its current `root_behavior` destination.
+
+### Initial transition cleanup
 
 - The initial workflow extraction and contract-test regrouping passed the full
   MCP library suite: 302 passed, no failures, 10 existing opt-in tests ignored.
@@ -108,9 +179,10 @@ responsibility change requires a separate review with the user before proceeding
 Commands (run serially):
 
 ```sh
+cargo test --offline --locked -j1 -p dustroute-minecraft --lib time::engine::tests -- --test-threads=1
+cargo test --offline --locked -j1 -p dustroute-translate --test promotion --test runtime_adoption --test review_diagnostics --test repeated_settling_adoption --test blueprint_updates --test nested_interfaces --test physical_periodic -- --test-threads=1
 cargo test --offline --locked -j1 -p dustroute-mcp --lib -- --test-threads=1
-cargo test --offline --locked -j1 -p dustroute-mcp --lib service::transition_failure_tests -- --test-threads=1
-cargo clippy --offline --locked -j1 -p dustroute-mcp --all-targets -- -D warnings
+cargo clippy --offline --locked -j1 -p dustroute-mcp -p dustroute-minecraft -p dustroute-translate --all-targets -- -D warnings
 cargo clippy --offline --locked -j1 -p dustroute-mcp --no-default-features --all-targets -- -D warnings
 cargo fmt --all -- --check
 ```

@@ -367,6 +367,13 @@ impl BehaviorModel for Audited<'_> {
     }
 }
 
+/// A shared deadline includes initial inspection; graph counts are consumed across bindings.
+#[derive(Clone, Copy)]
+struct ReviewBudget {
+    limits: BehaviorBudget,
+    started: Instant,
+}
+
 /// All retained occurrences and unclassified physical blocks stay in the
 /// context. Supported behavior and static obligations are independent checks;
 /// known child failures survive parent passes, unknowns and budget exhaustion.
@@ -374,9 +381,12 @@ pub fn review_assembly_in_runtime_context(
     catalog: &BlueprintCatalog,
     assembly: &Assembly,
     context: &RuntimeBehaviorContext,
-    mut budget: BehaviorBudget,
+    budget: BehaviorBudget,
 ) -> Result<RuntimeAssemblyReport, BlueprintError> {
-    let start = Instant::now();
+    let review_budget = ReviewBudget {
+        limits: budget,
+        started: Instant::now(),
+    };
     let view = assembly.inspect(catalog)?;
     let mut report = RuntimeAssemblyReport {
         assembly: assembly.clone(),
@@ -401,6 +411,44 @@ pub fn review_assembly_in_runtime_context(
         input_levers: context.input_levers.clone(),
         ..Default::default()
     };
+    collect_claim_requirements(&view, &mut monitor);
+    let actual_connections = review_runtime_connections(assembly, &view, &mut report)?;
+    collect_occurrence_requirements(
+        catalog,
+        assembly,
+        context,
+        &view,
+        &actual_connections,
+        &mut monitor,
+        &mut report,
+    )?;
+    let mut closed = review_initial_runtime(
+        catalog,
+        assembly,
+        context,
+        &view,
+        &mut monitor,
+        &mut report,
+        review_budget,
+    );
+    let monitor = RefCell::new(monitor);
+    closed |= review_runtime_bindings(
+        catalog,
+        assembly,
+        context,
+        &view,
+        &monitor,
+        &mut report,
+        review_budget,
+    );
+    if !closed {
+        report.arrangement.push(check(CheckKind::Behavior,CheckStatus::Undetermined,"no complete reachable physical graph; snapshots and successful prefixes cannot certify whole-realization behavior"));
+    }
+    monitor.into_inner().finish(closed, &mut report);
+    Ok(report)
+}
+
+fn collect_claim_requirements(view: &AssemblyView, monitor: &mut Monitor) {
     for (position, claims) in &view.source_claims {
         for (path, block) in claims {
             monitor.add(
@@ -423,6 +471,13 @@ pub fn review_assembly_in_runtime_context(
             );
         }
     }
+}
+
+fn review_runtime_connections(
+    assembly: &Assembly,
+    view: &AssemblyView,
+    report: &mut RuntimeAssemblyReport,
+) -> Result<BTreeSet<(AssemblyPortRef, AssemblyPortRef)>, BlueprintError> {
     let actual_connections = assembly
         .connections
         .iter()
@@ -457,6 +512,18 @@ pub fn review_assembly_in_runtime_context(
         }
         report.arrangement.push(result);
     }
+    Ok(actual_connections)
+}
+
+fn collect_occurrence_requirements(
+    catalog: &BlueprintCatalog,
+    assembly: &Assembly,
+    context: &RuntimeBehaviorContext,
+    view: &AssemblyView,
+    actual_connections: &BTreeSet<(AssemblyPortRef, AssemblyPortRef)>,
+    monitor: &mut Monitor,
+    report: &mut RuntimeAssemblyReport,
+) -> Result<(), BlueprintError> {
     for (path, occurrence) in &view.occurrences {
         let source = catalog
             .revision(&occurrence.revision)
@@ -508,9 +575,9 @@ pub fn review_assembly_in_runtime_context(
                     for id in &port.required_source_types {
                         static_requirement(
                             catalog,
-                            &view,
-                            &mut monitor,
-                            &mut report,
+                            view,
+                            monitor,
+                            report,
                             (path, CheckKind::SourceRequirement),
                             &edge.source,
                             id,
@@ -532,9 +599,9 @@ pub fn review_assembly_in_runtime_context(
         for binding in &source.static_type_bindings {
             static_requirement(
                 catalog,
-                &view,
-                &mut monitor,
-                &mut report,
+                view,
+                monitor,
+                report,
                 (path, CheckKind::StaticType),
                 &AssemblyPortRef {
                     instance: path.clone(),
@@ -568,6 +635,22 @@ pub fn review_assembly_in_runtime_context(
             );
         }
     }
+    Ok(())
+}
+
+fn review_initial_runtime(
+    catalog: &BlueprintCatalog,
+    assembly: &Assembly,
+    context: &RuntimeBehaviorContext,
+    view: &AssemblyView,
+    monitor: &mut Monitor,
+    report: &mut RuntimeAssemblyReport,
+    review_budget: ReviewBudget,
+) -> bool {
+    let ReviewBudget {
+        limits: budget,
+        started: start,
+    } = review_budget;
     monitor.observe(
         |p| {
             view.block_at(p)
@@ -602,7 +685,7 @@ pub fn review_assembly_in_runtime_context(
     });
     if !has_behavior && context.input_levers.is_empty() {
         if let Ok(run) = &mut runtime {
-            match review_uncontrolled_world(run, &mut monitor, budget, start) {
+            match review_uncontrolled_world(run, monitor, budget, start) {
                 Ok(steps) => {
                     closed = true;
                     report.arrangement.push(check(
@@ -619,7 +702,23 @@ pub fn review_assembly_in_runtime_context(
             }
         }
     }
-    let monitor = RefCell::new(monitor);
+    closed
+}
+
+fn review_runtime_bindings(
+    catalog: &BlueprintCatalog,
+    assembly: &Assembly,
+    context: &RuntimeBehaviorContext,
+    view: &AssemblyView,
+    monitor: &RefCell<Monitor>,
+    report: &mut RuntimeAssemblyReport,
+    review_budget: ReviewBudget,
+) -> bool {
+    let ReviewBudget {
+        limits: mut budget,
+        started: start,
+    } = review_budget;
+    let mut closed = false;
     let elapsed_limit = budget.max_elapsed;
     for (path, occurrence) in &view.occurrences {
         let source = catalog
@@ -653,7 +752,7 @@ pub fn review_assembly_in_runtime_context(
                     let behavior = model.verify_observed(
                         &Audited {
                             model: &model,
-                            monitor: &monitor,
+                            monitor,
                         },
                         budget,
                     );
@@ -685,9 +784,5 @@ pub fn review_assembly_in_runtime_context(
             }
         }
     }
-    if !closed {
-        report.arrangement.push(check(CheckKind::Behavior,CheckStatus::Undetermined,"no complete reachable physical graph; snapshots and successful prefixes cannot certify whole-realization behavior"));
-    }
-    monitor.into_inner().finish(closed, &mut report);
-    Ok(report)
+    closed
 }
