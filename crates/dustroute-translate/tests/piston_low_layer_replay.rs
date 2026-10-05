@@ -1,5 +1,9 @@
 //! Diagnostic replay of the same bounded snapshots/lever edges used by the
 //! live low-layer probe. Does not grant placement or MCP execution capability.
+#[allow(dead_code)]
+#[path = "../../../tests/support/diagnostic_fixture.rs"]
+mod diagnostic_fixture;
+
 use dustroute_minecraft::time::PhysicsEngine;
 use dustroute_minecraft::{
     BlockKind, PistonState, PistonVariant, Pos, Region, World, piston_state, piston_variant,
@@ -94,9 +98,12 @@ fn observation(world: &World, bounds: &MinecraftSnapshot) -> Value {
     json!(records)
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let path = std::env::args().nth(1).ok_or("expected case JSON path")?;
-    let case: Case = serde_json::from_str(&std::fs::read_to_string(path)?)?;
+#[test]
+#[ignore = "explicit offline fixture export; requires new absolute DUSTROUTE_DIAGNOSTIC_OUTPUT"]
+fn retain_fixture() -> Result<(), Box<dyn std::error::Error>> {
+    let mut output = diagnostic_fixture::output()?;
+    let path = std::env::var("DUSTROUTE_LOW_LAYER_INPUT")?;
+    let case: Case = diagnostic_fixture::input(&path)?;
     if case.schema_version != "dustroute.piston-low-layer-case.v1"
         || case.minecraft_version != "1.21.11"
     {
@@ -130,10 +137,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             break;
         }
     }
-    println!(
-        "{}",
-        json!({ "case_id": case.id, "execution_mode": "diagnostic", "placement_issues": placement_issues,
-        "event_budget": event_budget, "initial": initial, "phases": phases, "event_trace": engine.event_trace(), "transition_trace": engine.transition_trace() })
-    );
+    diagnostic_fixture::report(
+        &mut output,
+        &json!({ "case_id": case.id, "execution_mode": "diagnostic", "placement_issues": placement_issues,
+        "event_budget": event_budget, "initial": initial, "phases": phases, "event_trace": engine.event_trace(), "transition_trace": engine.transition_trace() }),
+    )?;
     Ok(())
 }

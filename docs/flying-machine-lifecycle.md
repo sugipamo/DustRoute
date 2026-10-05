@@ -46,7 +46,7 @@ BlockKindは材質や全プロパティの同一性を意味しない。公開�
 
 ## 公開操作
 
-`flying_machine_assembly_fixture` exampleが未採用のrecordsと更新提案を出力する。
+`flying_machine_assembly_fixture` test fixture adapterが未採用のrecordsと更新提案を出力する。
 既存の `test_circuit_change` → `show_operation` → `invoke_operation` で採用する。
 `new_placement` の `assembly_target` で原点と水平回転を指定する。全観測領域を
 空き領域として検査し、移動先で要求を再検証する。建築順は共通処理を使う。
@@ -102,9 +102,14 @@ BlockKindは材質や全プロパティの同一性を意味しない。公開�
 再実行は新しいrun-idと隔離座標で行う。
 
 ```sh
-cargo build --offline --locked -j 1 -p dustroute-mcp --bin dustroute-mcp -p dustroute-translate --example flying_machine_assembly_fixture
-target/debug/examples/flying_machine_assembly_fixture > .local/flying-next-public.fixture.json
+# Retired example command: use docs/development-fixture-adapters.md with a new absolute output path.
+# Retired example command: use docs/development-fixture-adapters.md with a new absolute output path.
 python3 tools/observe_assembly_construction.py --run-id flying-next-public --x 280000 --fixture .local/flying-next-public.fixture.json --rotation r90 --persistence --capture-construction
 ```
 
 [生成API](flying-machine-generation.md)では、機体・追加ブロック・距離・回転・鏡像を指定して、この共通経路へ候補を渡せる。
+
+The JSON example commands referenced historically in this document are retired.
+Current explicit test-only export/replay instructions are in
+[development-fixture-adapters.md](development-fixture-adapters.md).
+Retained evidence and hashes describe their original execution and are unchanged.

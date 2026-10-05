@@ -161,11 +161,16 @@ Use the production planner and retained command-placement regression for current
 verification:
 
 ```sh
-cargo build --offline --locked -j 1 -p dustroute-translate --example audit_reference_door_adoption
-target/debug/examples/audit_reference_door_adoption ordinary-construction
+# Retired example command: use docs/development-fixture-adapters.md with a new absolute output path.
+# Retired example command: use docs/development-fixture-adapters.md with a new absolute output path.
 cargo test --offline --locked -j 1 -p dustroute-translate --test command_placement_regression
 ```
 
 The [v6 repair and live trial](reference-door-live-construction.md) supersede this
 historical proposal. They account for command preprocessing and explicit observer
 initialization, beyond the ordering hypothesis explored here.
+
+The JSON example commands referenced historically in this document are retired.
+Current explicit test-only export/replay instructions are in
+[development-fixture-adapters.md](development-fixture-adapters.md).
+Retained evidence and hashes describe their original execution and are unchanged.

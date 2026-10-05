@@ -88,7 +88,7 @@ this work. The independent graph check lives in the reference audit example.
 Build serially before starting the private test server:
 
 ```sh
-cargo build --offline --locked -j 1 -p dustroute-translate --example audit_reference_door_adoption
+# Retired example command: use docs/development-fixture-adapters.md with a new absolute output path.
 ```
 
 Prepare a transform JSON, for example:
@@ -104,7 +104,7 @@ Prepare a transform JSON, for example:
 Generate a fresh audit fixture and use a new artifact prefix for every trial:
 
 ```sh
-target/debug/examples/audit_reference_door_adoption ordinary-target-live-prepare /tmp/door-transform.json > /tmp/door-target.json
+# Retired example command: use docs/development-fixture-adapters.md with a new absolute output path.
 python3 tools/observe_assembly_construction.py --run-id reference-door-target-new --x 65008 --rotation r90 --fixture /tmp/door-target.json --persistence --capture-construction
 ```
 
@@ -134,3 +134,8 @@ trials do not expose all pending work to MCP, define a minimum safe interval,
 or implement a live completion detector. Mid-operation input tolerance remains
 outside the accepted ordinary-door contract. This matrix does not claim all
 coordinates, surrounding circuits or shared-world building integration.
+
+The JSON example commands referenced historically in this document are retired.
+Current explicit test-only export/replay instructions are in
+[development-fixture-adapters.md](development-fixture-adapters.md).
+Retained evidence and hashes describe their original execution and are unchanged.

@@ -34,7 +34,7 @@ obstructed interior, conflicting permanent air, and unchanged ordinary authoring
 [Validation evidence](evidence/survival-grounded-authoring-20261002.json): 20
 targeted tests passed; formatting and Clippy for translate/MCP libraries and
 tests passed. The broader all-targets Clippy failed on unchanged unused helper
-functions in the `flying_machine_assembly_fixture` example; its failure log is
+functions in the `flying_machine_assembly_fixture` test fixture adapter; its failure log is
 retained and it is not claimed as a pass.
 
 ## Concern found before access planning (2026-10-02 UTC)
@@ -251,3 +251,8 @@ comparisons recovered and completed the three-block cleanup, with four exact
 retirement/fresh-recovery cycles each. [Results and scope](survival-inventory-recovery.md#verified-checkpoint)
 resolve the recorded concern for this bounded caller policy. Full adopted roof
 construction and durable execution remain future roadmap work.
+
+The JSON example commands referenced historically in this document are retired.
+Current explicit test-only export/replay instructions are in
+[development-fixture-adapters.md](development-fixture-adapters.md).
+Retained evidence and hashes describe their original execution and are unchanged.

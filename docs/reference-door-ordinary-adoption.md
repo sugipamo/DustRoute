@@ -40,17 +40,17 @@ initialization boundary, including the distinction from a live readiness sensor.
 Build once, serially:
 
 ```sh
-cargo build --offline --locked -j 1 -p dustroute-translate --example audit_reference_door_adoption
+# Retired example command: use docs/development-fixture-adapters.md with a new absolute output path.
 ```
 
 Use separate processes for the saved-data boundaries. These commands write only
 the named audit files; choose unused filenames when retaining another run:
 
 ```sh
-target/debug/examples/audit_reference_door_adoption ordinary-prepare > /tmp/ordinary-door-prepared.json
-target/debug/examples/audit_reference_door_adoption ordinary-review > /tmp/ordinary-door-review.json
-target/debug/examples/audit_reference_door_adoption ordinary-adopt /tmp/ordinary-door-prepared.json > /tmp/ordinary-door-adopted.json
-target/debug/examples/audit_reference_door_adoption ordinary-recheck /tmp/ordinary-door-adopted.json > /tmp/ordinary-door-rechecked.json
+# Retired example command: use docs/development-fixture-adapters.md with a new absolute output path.
+# Retired example command: use docs/development-fixture-adapters.md with a new absolute output path.
+# Retired example command: use docs/development-fixture-adapters.md with a new absolute output path.
+# Retired example command: use docs/development-fixture-adapters.md with a new absolute output path.
 ```
 
 The prepared file includes actual importable type/source records, the public
@@ -81,3 +81,8 @@ Live conformance remains bounded by the retained measured histories. The new
 graph proof is a model guarantee, not an exhaustive Minecraft proof. Future live
 construction must use ordinary placement callbacks and confirm each expected
 state; strict saved-state initialization cannot substitute for that trial.
+
+The JSON example commands referenced historically in this document are retired.
+Current explicit test-only export/replay instructions are in
+[development-fixture-adapters.md](development-fixture-adapters.md).
+Retained evidence and hashes describe their original execution and are unchanged.

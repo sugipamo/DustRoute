@@ -24,9 +24,7 @@ The external XOR probe captures all four stable input combinations. Compare a
 captured case with DustRoute using:
 
 ```console
-cargo run -p dustroute-translate --example compare_external_xor_trace -- \
-  .local/e2e-artifacts/external_library_xor_compatibility_probe-trace01.trace.json \
-  0 1
+# Retired example command: use docs/development-fixture-adapters.md with a new absolute output path.
 ```
 
 The comparison reports the first mismatch in redstone-tick, position, property
@@ -215,3 +213,8 @@ This creates a tracked normalized trace and metadata pair under
 promoted pair. The metadata retains the Minecraft version, source artifact,
 and the reason it was promoted, so a simulator correction can cite and retain
 the original counterexample.
+
+The JSON example commands referenced historically in this document are retired.
+Current explicit test-only export/replay instructions are in
+[development-fixture-adapters.md](development-fixture-adapters.md).
+Retained evidence and hashes describe their original execution and are unchanged.

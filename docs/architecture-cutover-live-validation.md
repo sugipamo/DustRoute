@@ -106,9 +106,9 @@ stopped normally after the failing trial, and both test ports were released.
 Build and prepare fresh inputs:
 
 ```sh
-cargo build --offline --locked -j1 -p dustroute-mcp --bin dustroute-mcp -p dustroute-translate --example audit_reference_door_adoption --example flying_machine_assembly_fixture
-target/debug/examples/audit_reference_door_adoption ordinary-live-prepare > .local/new-door.fixture.json
-target/debug/examples/flying_machine_assembly_fixture > .local/new-flight.fixture.json
+# Retired example command: use docs/development-fixture-adapters.md with a new absolute output path.
+# Retired example command: use docs/development-fixture-adapters.md with a new absolute output path.
+# Retired example command: use docs/development-fixture-adapters.md with a new absolute output path.
 ```
 
 For the diagnosis/reconstruction door trial, add `"diagnosis_trial": true` and
@@ -128,3 +128,8 @@ and unused `DUSTROUTE_E2E_RUN_SLOT`. Run:
 ```sh
 node crates/dustroute-mcp/mineflayer/e2e/runner.js normal_circuit reversed_directional_device repair_and_undo transition_run_and_restore api_error_contract vertical_dust_repair_and_undo guarded_optimized_placement focused_physical_wire_optimization
 ```
+
+The JSON example commands referenced historically in this document are retired.
+Current explicit test-only export/replay instructions are in
+[development-fixture-adapters.md](development-fixture-adapters.md).
+Retained evidence and hashes describe their original execution and are unchanged.

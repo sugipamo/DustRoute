@@ -89,3 +89,8 @@ saved under `.local/e2e-artifacts/piston-cleanup-20260927-*`. Final validation p
 
 Rust checks used one build job and tests ran serially. Results and hashes are recorded in
 [the cleanup verification record](evidence/piston-code-cleanup-20260927.json).
+
+The JSON example commands referenced historically in this document are retired.
+Current explicit test-only export/replay instructions are in
+[development-fixture-adapters.md](development-fixture-adapters.md).
+Retained evidence and hashes describe their original execution and are unchanged.

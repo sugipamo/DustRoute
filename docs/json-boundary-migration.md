@@ -1642,3 +1642,26 @@ repeated_settling_verified/adoption_authorizedはともにfalseのまま確認�
 
 残るJSON exampleは9件。保存archiveを扱う診断、authoring fixture、低層/XOR replay、
 MCP live trialを引き続き個別に整理する。JSON除去ゴール全体は未完了である。
+
+
+### 設計図・低層/XOR比較の旧command 6件の撤去
+
+reference-door adoption audit、mixed/flight assembly fixture、piston low-layer
+replay、external XOR trace comparison、compiled XOR exportを明示実行する試験用
+fixture adapterへ移した。archiveとapertureは用途別Rust型へdecodeし、内部判定でgeneric
+JSONを読み直さない。fresh review/adoption、static dependency検査、low-layer診断予算と
+失敗時の打切り、PhysicalTrace比較は既存のnative APIのまま維持する。
+通常用途はMCPとnative API、fixture IOはignored testだけである。
+
+絶対パス入力/新規出力と排他的作成を共通test codecで確認する。
+`development-fixture-adapters.md`へ用途と必要envをまとめ、古いexample実行案内を撤去した。
+過去のevidenceのcommand/source/hashは、その時点の事実として変更しない。
+BaselineCompileConfigはDeserializeを持たないため、libraryへcodecを追加せず、旧spacing/lane
+引数をtestのnumeric envからnative configへ組み立てる形にした。
+
+既存のreference-door/ordinary-door回帰13件が成功した。6つの新targetは既定でignored。
+temporary資料のmixed/flight proposal、compiled XOR、bounded low-layer、ordinary-door
+prepare/adopt/recheckの7回の明示offline出力が成功した。request ID省略、非空のcommands、
+diagnostic scope、fresh adoption/recheck結果を確認し、独立fixtureは変更していない。
+workspace全target Clippyに成功。実機接続/world変更は実施していない。
+残るJSON exampleはMCP live trialの3件であり、全体監査とその移行を継続する。

@@ -1,7 +1,10 @@
-//! Read-only model audit. Each command emits JSON; no live world is contacted.
-//! `prepare` creates an unadopted proposal. `adopt <archive.json>` revalidates a
-//! saved proposal in a separate process; a historical pass is never reused.
-#[path = "../tests/support/reference_door_blueprint.rs"]
+//! Explicit model fixture adapter; no live world is contacted.
+//! Historical fixture archives are always revalidated through native APIs.
+#[allow(dead_code)]
+#[path = "../../../tests/support/diagnostic_fixture.rs"]
+mod diagnostic_fixture;
+
+#[path = "support/reference_door_blueprint.rs"]
 mod fixture;
 
 use dustroute_translate::assembly_transform::AssemblyTransform;
@@ -12,6 +15,15 @@ use dustroute_translate::blueprint_update::{
 use dustroute_translate::piston_construction::ElectricalConstruction;
 use dustroute_translate::runtime_review::review_assembly_in_runtime_context;
 use serde_json::json;
+
+#[derive(serde::Deserialize)]
+struct ApertureFixture {
+    aperture: Vec<dustroute_translate::world::Pos>,
+}
+#[derive(serde::Deserialize)]
+struct ArchivedFixture {
+    archive: dustroute_translate::blueprint_update::BlueprintUpdateArchive,
+}
 
 fn live_probes(
     f: &fixture::Fixture,
@@ -40,11 +52,9 @@ fn live_probes(
         probes.push(json!({"powered":powered,
             "expected":electrical_snapshot(run.view().world(), context.known_region)?}));
     }
-    let source: serde_json::Value = serde_json::from_str(include_str!(
-        "../tests/fixtures/reference-3x3-bobiloosky-v1.json"
-    ))?;
-    let mut aperture: Vec<dustroute_translate::world::Pos> =
-        serde_json::from_value(source["aperture"].clone())?;
+    let source: ApertureFixture =
+        serde_json::from_str(include_str!("fixtures/reference-3x3-bobiloosky-v1.json"))?;
+    let mut aperture = source.aperture;
     if let Some(transform) = target {
         for pos in &mut aperture {
             *pos = transform.position(*pos)?;
@@ -137,11 +147,11 @@ fn target_construction(
     )
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut args = std::env::args().skip(1);
-    let command = args.next().ok_or(
-        "expected prepare, live-prepare, construction, review, adopt or recheck (optional ordinary- prefix)",
-    )?;
+#[test]
+#[ignore = "explicit offline fixture export; requires new absolute DUSTROUTE_DIAGNOSTIC_OUTPUT"]
+fn retain_fixture() -> Result<(), Box<dyn std::error::Error>> {
+    let mut output = diagnostic_fixture::output()?;
+    let command = std::env::var("DUSTROUTE_DOOR_FIXTURE_ACTION")?;
     let (ordinary, command) = command
         .strip_prefix("ordinary-")
         .map_or((false, command.as_str()), |command| (true, command));
@@ -153,10 +163,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let value = match command {
         "prepare" | "live-prepare" | "target-live-prepare" => {
             let target = if command == "target-live-prepare" {
-                Some(serde_json::from_str::<AssemblyTransform>(
-                    &std::fs::read_to_string(
-                        args.next().ok_or("expected target transform JSON path")?,
-                    )?,
+                Some(diagnostic_fixture::input::<AssemblyTransform>(
+                    &std::env::var("DUSTROUTE_DOOR_TRANSFORM_INPUT")?,
                 )?)
             } else {
                 None
@@ -213,12 +221,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "arrangement":report.arrangement,"behavior":report.behavior})
         }
         "adopt" => {
-            let input: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(
-                args.next()
-                    .ok_or("expected saved audit JSON containing archive")?,
-            )?)?;
-            let mut updates =
-                BlueprintUpdates::from_archive(serde_json::from_value(input["archive"].clone())?)?;
+            let input: ArchivedFixture =
+                diagnostic_fixture::input(&std::env::var("DUSTROUTE_DOOR_ARCHIVE_INPUT")?)?;
+            let mut updates = BlueprintUpdates::from_archive(input.archive)?;
             let id = &f.request.id;
             let result = match updates.adopt(id) {
                 Ok(()) => json!({"status":"adopted"}),
@@ -231,12 +236,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "archive":updates.archive()})
         }
         "recheck" => {
-            let input: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(
-                args.next()
-                    .ok_or("expected saved audit JSON containing archive")?,
-            )?)?;
-            let updates =
-                BlueprintUpdates::from_archive(serde_json::from_value(input["archive"].clone())?)?;
+            let input: ArchivedFixture =
+                diagnostic_fixture::input(&std::env::var("DUSTROUTE_DOOR_ARCHIVE_INPUT")?)?;
+            let updates = BlueprintUpdates::from_archive(input.archive)?;
             let request = updates
                 .proposal(&f.request.id)
                 .ok_or("saved proposal missing")?
@@ -259,9 +261,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
         }
     };
-    if args.next().is_some() {
-        return Err("unexpected extra argument".into());
-    }
-    println!("{}", serde_json::to_string_pretty(&value)?);
+    diagnostic_fixture::report(&mut output, &value)?;
     Ok(())
 }

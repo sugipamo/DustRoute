@@ -207,7 +207,7 @@ Existing tests that inspected body pattern offsets as absolute positions were
 updated to add the declared anchor; reservation/air assertions keep their exact
 world coordinates. Translation library/tests Clippy passed. The wider translation
 all-target invocation found two existing unused helper functions in the unchanged
-`flying_machine_assembly_fixture` example; that result is retained, not claimed
+`flying_machine_assembly_fixture` test fixture adapter; that result is retained, not claimed
 as an all-target pass. No unrelated sample cleanup is included.
 
 ## Complete preflight and first live roof attempt (2026-10-02 UTC)
@@ -397,3 +397,8 @@ actions, 49 permanent blocks, 18 temporary placements and removals, safe retreat
 and 3,120 independently checked cells. This supersedes the active-stage status
 above, without relabeling the earlier 119-action authored evidence. See
 [generator acceptance](survival-construction-generation.md#generated-live-acceptance-temurin-recovery).
+
+The JSON example commands referenced historically in this document are retired.
+Current explicit test-only export/replay instructions are in
+[development-fixture-adapters.md](development-fixture-adapters.md).
+Retained evidence and hashes describe their original execution and are unchanged.

@@ -80,7 +80,7 @@ Use [E2E instructions](evidence/legacy-mineflayer/README.md) for the
 private Java server and live harnesses. Offline replay:
 
 ```bash
-cargo run -p dustroute-translate --example piston_low_layer_replay -- crates/dustroute-translate/tests/fixtures/piston-low-layer/07-single-input-two-row.json
+# Retired example command: use docs/development-fixture-adapters.md with a new absolute output path.
 ```
 
 Retained evidence includes:
@@ -109,3 +109,8 @@ settled observations. Its transient cases are source-derived regressions, not
 additional live observations or a behavioral type certificate.
 
 The diagnostic example commands are retired. Explicitly ignored fixture tests retain their cases; `DUSTROUTE_DIAGNOSTIC_OUTPUT` must be a new absolute path. JSON is fixture IO only, and a diagnostic run never certifies a live circuit or adopts a design.
+
+The JSON example commands referenced historically in this document are retired.
+Current explicit test-only export/replay instructions are in
+[development-fixture-adapters.md](development-fixture-adapters.md).
+Retained evidence and hashes describe their original execution and are unchanged.

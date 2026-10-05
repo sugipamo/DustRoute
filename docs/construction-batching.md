@@ -101,7 +101,12 @@ for that evidence and the separate accounting of complete-workflow waits.
 
 The broader combined all-targets Clippy command encounters existing unused
 `observed_cane_fixture` / `observed_cane_initial` functions imported by the
-unmodified Translate `flying_machine_assembly_fixture` example. That pre-existing
+unmodified Translate `flying_machine_assembly_fixture` test fixture adapter. That pre-existing
 warning is outside this construction change; the example was not modified.
 Ordinary regression tests do not connect to Minecraft. Live timings are bounded
 passive-fixture evidence, not active-circuit conformance.
+
+The JSON example commands referenced historically in this document are retired.
+Current explicit test-only export/replay instructions are in
+[development-fixture-adapters.md](development-fixture-adapters.md).
+Retained evidence and hashes describe their original execution and are unchanged.

@@ -151,12 +151,12 @@ prints structured JSON even when the audit result is failed or undetermined;
 inspect the reported status, not just the process exit code.
 
 ```sh
-cargo build --offline --locked -j 1 -p dustroute-translate --example audit_reference_door_adoption
-target/debug/examples/audit_reference_door_adoption prepare > /tmp/door-candidate.json
-target/debug/examples/audit_reference_door_adoption construction > /tmp/door-construction.json
-target/debug/examples/audit_reference_door_adoption review > /tmp/door-review.json
-target/debug/examples/audit_reference_door_adoption adopt /tmp/door-candidate.json > /tmp/door-first.json
-target/debug/examples/audit_reference_door_adoption adopt /tmp/door-first.json > /tmp/door-restart.json
+# Retired example command: use docs/development-fixture-adapters.md with a new absolute output path.
+# Retired example command: use docs/development-fixture-adapters.md with a new absolute output path.
+# Retired example command: use docs/development-fixture-adapters.md with a new absolute output path.
+# Retired example command: use docs/development-fixture-adapters.md with a new absolute output path.
+# Retired example command: use docs/development-fixture-adapters.md with a new absolute output path.
+# Retired example command: use docs/development-fixture-adapters.md with a new absolute output path.
 cargo test --offline --locked -j 1 -p dustroute-translate --test reference_door_adoption -- --test-threads=2
 ```
 
@@ -176,3 +176,8 @@ regressions to twelve. The current reference-door target contains five tests:
 source/archive retention, construction/relocation, a normal cycle, and the two
 interruption cases. All five pass, including confirmation of the model's
 counterexample rather than a pass of the door's unrestricted contract.
+
+The JSON example commands referenced historically in this document are retired.
+Current explicit test-only export/replay instructions are in
+[development-fixture-adapters.md](development-fixture-adapters.md).
+Retained evidence and hashes describe their original execution and are unchanged.
