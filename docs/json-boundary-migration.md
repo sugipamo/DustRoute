@@ -1457,7 +1457,7 @@ MCP codec/unknown/envelope 4、operation diagnostics 7、MCP経由のstatus/gaze
 共通拒否4）。workspace全targetのClippyは`-D warnings`に成功した。
 Voxrig source/vendor/pin、保存schema、設計図の採用条件、実機接続・ワールドは変更していない。
 
-### 次の分岐点: Blueprint要求の4 MiB制限（未着手）
+### Blueprint要求の4 MiB制限（停止時の調査と承認案）
 
 `blueprint_mcp::perform`の`Command::Write`は、nativeなBlueprintWriteをJSON化し、
 そのbyte数で4 MiB制限を判定している（現在の`blueprint_mcp.rs:721`）。ここは
@@ -1486,3 +1486,77 @@ byte数へ置き換えると4 MiB境界で受け付ける要求が変わる。�
 最終版でMCPの`--no-default-features`全targetのClippyも`-D warnings`に成功した。
 `cargo fmt --all -- --check`と`git diff --check`が成功し、Cargoは単独offline/locked・
 `-j1`、試験は単一threadで実行した。4 MiBの判断・計測位置は変更していない。
+
+### 承認後: Blueprint要求の計測をMCP入力境界へ移行
+
+ユーザーの説明要求に対し、4 MiBは要求のcanonicalなBlueprintWrite JSON表現のbyte数で
+あり、HTTP/MCP envelope全体や保存archiveのbyte数ではないことを説明した。
+その後の明示承認に従って改修した。
+
+`mcp_input::MeasuredBlueprintWrite`は要求を所有し、MCP境界で従来と同じJSON表現を
+計測する。要求本体と`Result<usize, String>`はprivateで、Deserialize/Clone/任意の
+サイズを受け入れるconstructorを持たない。消費するaccessorで要求を取り出すため、
+計測した要求を差し替えられない。計測失敗もその時点で公開拒否にせず保持する。
+内部の`blueprint_mcp::perform`はJSONへencodeせず、従来と同じlock/読込み後の位置で
+4 MiBを判定する。Captureの別経路へ上限を追加せず、16 MiBの保存制限も変更しない。
+この型を保存済みの受付証明や、採用・観測・配置の権限として使用しない。
+
+公開MCP境界の試験は日本語・quote・backslash・改行を含む要求で上限直前/ちょうど/超過を
+確認した。上限以下はimportでき、超過は保存物を作成/上書きしない。lock競合、破損した
+native保存物、retired JSON保存物の拒否がサイズ超過より優先する。計測失敗は境界内の
+失敗serializerを使った単体fixtureで注入し、破損保存物の拒否より後に返ることを確認した。
+実際のBlueprintWriteの公開入力でencoding失敗が再現した、とは扱わない。
+
+関連9件のoffline試験が成功した（上限・公開拒否順1、計測失敗1、atomic/scoped/lock保存1、
+公開Blueprintのcapture・再起動/採用/再検証6）。workspace全targetとMCPの
+`--no-default-features`全targetのClippyは`-D warnings`で成功した。
+Cargoは単独offline/locked・`-j1`、試験は単一threadで実行した。
+実機接続・ワールド操作・Voxrig source/vendor pin・保存schemaは変更していない。
+
+### 残存監査の分岐点: 診断と独立証拠の採取ツール（改修未着手）
+
+crateのsrcとCargo manifest、およびvendor/voxrig/srcを調べた。MCP以外のworkspace crateと
+Voxrigのserde_jsonはdev-dependencyで、productionのJSON使用は確認した範囲では
+MCP入出力と、承認済みのMinecraft Java 1.16.1のopaqueなserver textに限られる。
+test/mock/golden fixtureのJSONは独立した期待値・試験用transportであり、productionの
+内部状態・保存・判断には使用しない。旧JSON保存物の存在検査は拒否専用で、decodeしない。
+
+一方、examples/benchまで広げると、DustRouteで22、Voxrigで5のRust fileにJSONの使用が
+見つかった（JSONを含むfile数であり、全てが未移行内部処理という意味ではない）。
+MCP clientのtool引数/応答codec、測定値のstdout出力、診断command、独立した実機観測の
+採取/再比較が混在している。全fileの個別移行判断はまだ完了していない。
+
+具体例:
+
+- `dustroute-translate/examples/audit_reference_door_adoption.rs`はJSON archiveを読み直して
+  採用/再検証する。旧CLIを撤去する方針に沿って型付きAPI/試験へ移す対象である。
+- `dustroute-translate/examples/generate_flying_machine.rs`はJSON authoring command。
+  型付き生成APIと公開MCPの生成入口は既にあるが、旧commandを参照する文書も残る。
+- `dustroute-translate/examples/compare_electrical_pistons.rs`は実測入力を読み、simulatorの
+  replay結果をJSON出力する。`compare_external_xor_trace.rs`も実測trace比較の入口。
+  単純削除すると、独立資料を新しい実装と比較する導線が失われる。
+- `vendor/voxrig/examples/packet_trace_probe.rs`はnative packetと独立したserver/client観測を
+  JSON記録にし、そのrecordの`after_client.issue`を読んで成功判定する。内部判定はnativeへ
+  移す必要があるが、記録取得自体を失うべきではない。Voxrig libraryへDustRouteの保存型を
+  導入する改修は行わない。
+- `dustroute-translate/benches/reverse_observation.rs`は型付き計測値をJSONでstdout出力する。
+  またMCPの`observation_speed_probe.rs`にもMCP応答とは別の計測JSON出力がある。
+
+既存のCLI撤去・内部APIでデバッグする承認と、診断exampleを除去する方針は維持する。
+今回確認が必要なのは、独立実機証拠の生成/受渡しと、計測出力も含む移行範囲である。
+これらを新しい「開発ツールならJSON可」の例外として暗黙に認めず、改修前に停止する。
+
+推奨する次の具体案:
+
+- MCP clientのJSONは、実際の公開MCP codecに限定して維持する。
+- obsoleteな診断/authoring commandは型付きAPIと必要なoffline回帰試験へ移し、commandと
+  現行の案内を撤去/更新する。過去の実測記録や独立goldenを新しい実装から再生成しない。
+- 独立証拠の採取と再比較は残し、nativeな採取結果・判定・replay APIを接続する。
+  既存JSON資料のdecode/encodeが必要な入口は明示した試験用fixture adapterに限定する。
+  この試験用adapterはproductionの保存や権限復元に使わない。新形式やcodecをlibraryへ
+  追加する必要が判明した場合は、その契約を提示して再度停止する。
+- 一般の計測出力は非JSONの人間向けtext等へ移し、読み手・実行手順も確認して更新する。
+  実機試験はこのゴール内では実行せず、既存資料とoffline検証で移行を確認する。
+
+独立証拠の採取/受渡しをこの試験用境界へ整理する範囲への承認を求める。
+JSON除去ゴール全体は未完了である。

@@ -1869,7 +1869,9 @@ impl DustRouteMcp {
                     grounding,
                 }
             } else {
-                crate::blueprint_mcp::Command::Write(write)
+                crate::blueprint_mcp::Command::Write(
+                    crate::mcp_input::MeasuredBlueprintWrite::measure(write),
+                )
             };
             return typed_reply(
                 self.blueprint_command(command, params.player.as_deref(), true)

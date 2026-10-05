@@ -10,6 +10,102 @@ use dustroute_translate::{cells::RotationY, world::Block, world::Region};
 
 use std::fs;
 
+fn measured_write(write: BlueprintWrite) -> Command {
+    Command::Write(crate::mcp_input::MeasuredBlueprintWrite::measure(write))
+}
+
+/// Size is the canonical BlueprintWrite payload, not the whole MCP envelope.
+fn sized_blueprint_import(bytes: usize) -> Value {
+    let mut revision = builtin_blueprints()
+        .revision(&id(NOT_TOP_REVISION))
+        .unwrap()
+        .clone();
+    revision.id = id("sized.v1");
+    revision.name = "日本語\"\\\n".into();
+    let mut write = BlueprintWrite::Import {
+        records: BlueprintRecords {
+            revisions: vec![revision],
+            ..Default::default()
+        },
+    };
+    let base = serde_json::to_vec(&write).unwrap().len();
+    if let BlueprintWrite::Import { records } = &mut write {
+        records.revisions[0]
+            .name
+            .push_str(&"x".repeat(bytes - base));
+    }
+    assert_eq!(serde_json::to_vec(&write).unwrap().len(), bytes);
+    serde_json::to_value(write).unwrap()
+}
+
+#[tokio::test]
+async fn blueprint_input_size_keeps_exact_limit_and_rejection_precedence() {
+    const LIMIT: usize = 4 * 1024 * 1024;
+    for bytes in [LIMIT - 1, LIMIT, LIMIT + 1] {
+        let root = temporary();
+        let store = PlanStateStore::new(root.clone(), 1);
+        let directory = store.blueprint_root("Tester");
+        let path = directory.join("catalog.store");
+        let (client, server) = start(&root).await;
+        let input = sized_blueprint_import(bytes);
+        let reply = call(&client, "test_circuit_change", json!({"blueprint":input})).await;
+        if bytes <= LIMIT {
+            assert_eq!(reply["ok"], true, "{reply}");
+            let before = fs::read(&path).unwrap();
+            let reply = call(
+                &client,
+                "test_circuit_change",
+                json!({"blueprint":sized_blueprint_import(LIMIT + 1)}),
+            )
+            .await;
+            assert_eq!(reply["error"], "Blueprint request exceeds 4 MiB");
+            assert_eq!(fs::read(&path).unwrap(), before);
+        } else {
+            assert_eq!(reply["ok"], false, "{reply}");
+            assert_eq!(reply["error"], "Blueprint request exceeds 4 MiB");
+            assert!(!path.exists());
+            // Both catalog lock and current-store rejection precede the quota.
+            let lock = fs::OpenOptions::new()
+                .read(true)
+                .write(true)
+                .open(directory.join("catalog.lock"))
+                .unwrap();
+            fs2::FileExt::try_lock_exclusive(&lock).unwrap();
+            let reply = call(&client, "test_circuit_change", json!({"blueprint":input})).await;
+            assert_eq!(
+                reply["error"],
+                "Blueprint catalog is busy; retry the same request"
+            );
+            drop(lock);
+            fs::write(&path, b"broken archive").unwrap();
+            let reply = call(&client, "test_circuit_change", json!({"blueprint":input})).await;
+            assert!(
+                reply["error"]
+                    .as_str()
+                    .unwrap()
+                    .starts_with("invalid current MCP Blueprint store:")
+            );
+            assert_eq!(fs::read(&path).unwrap(), b"broken archive");
+            fs::remove_file(&path).unwrap();
+            fs::write(directory.join("catalog.json"), b"retired JSON archive").unwrap();
+            let reply = call(&client, "test_circuit_change", json!({"blueprint":input})).await;
+            assert!(
+                reply["error"]
+                    .as_str()
+                    .unwrap()
+                    .starts_with("retired JSON Blueprint store;")
+            );
+            assert!(!path.exists());
+            assert_eq!(
+                fs::read(directory.join("catalog.json")).unwrap(),
+                b"retired JSON archive"
+            );
+        }
+        stop(client, server).await;
+        fs::remove_dir_all(root).unwrap();
+    }
+}
+
 pub(crate) use flight_fixture::base as runtime_fixture;
 
 #[allow(dead_code)]
@@ -410,7 +506,7 @@ async fn runtime_blueprint_review_and_adoption_preserve_child_failures_after_res
         execute(
             &PlanStateStore::new(root.clone(), 3600),
             "Tester",
-            Command::Write(BlueprintWrite::Import {
+            measured_write(BlueprintWrite::Import {
                 records: BlueprintRecords {
                     types: fixture.catalog.type_revisions().cloned().collect(),
                     classifications: fixture.catalog.classifications().cloned().collect(),
@@ -1269,7 +1365,7 @@ fn blueprint_store_is_atomic_scoped_and_locked_across_instances() {
     fs::write(&retired, b"retired JSON archive").unwrap();
     let write = serde_json::from_value(records["blueprint"].clone()).unwrap();
     assert!(
-        execute(&store, "Tester", Command::Write(write))
+        execute(&store, "Tester", measured_write(write))
             .unwrap_err()
             .contains("retired JSON")
     );
@@ -1279,7 +1375,7 @@ fn blueprint_store_is_atomic_scoped_and_locked_across_instances() {
     execute(
         &store,
         "Tester",
-        Command::Write(serde_json::from_value(records["blueprint"].clone()).unwrap()),
+        measured_write(serde_json::from_value(records["blueprint"].clone()).unwrap()),
     )
     .unwrap();
     let path = store.blueprint_root("Tester").join("catalog.store");
@@ -1297,7 +1393,7 @@ fn blueprint_store_is_atomic_scoped_and_locked_across_instances() {
     let write =
         serde_json::from_value(json!({"action":"import","records":{"revisions":[valid,rebound]}}))
             .unwrap();
-    assert!(execute(&store, "Tester", Command::Write(write)).is_err());
+    assert!(execute(&store, "Tester", measured_write(write)).is_err());
     assert_eq!(fs::read(&path).unwrap(), before);
     assert!(
         execute(
@@ -1358,7 +1454,7 @@ fn blueprint_store_is_atomic_scoped_and_locked_across_instances() {
         // A write must not replace rejected history with a fresh empty catalog.
         let write = serde_json::from_value(records["blueprint"].clone()).unwrap();
         assert!(
-            execute(&other, "Tester", Command::Write(write))
+            execute(&other, "Tester", measured_write(write))
                 .unwrap_err()
                 .contains(reason)
         );

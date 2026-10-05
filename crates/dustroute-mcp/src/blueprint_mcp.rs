@@ -212,7 +212,7 @@ pub(crate) enum BlueprintDecision {
 
 pub(crate) enum Command {
     Read(BlueprintRead),
-    Write(BlueprintWrite),
+    Write(crate::mcp_input::MeasuredBlueprintWrite),
     Capture {
         record: Box<AssemblyRevision>,
         grounding: AssemblyGrounding,
@@ -718,9 +718,7 @@ fn perform(
             ))
         }
         Command::Write(write) => {
-            if serde_json::to_vec(&write).map_err(|e| e.to_string())?.len() > MAX_REQUEST_BYTES {
-                return Err("Blueprint request exceeds 4 MiB".into());
-            }
+            let write = write.into_checked(MAX_REQUEST_BYTES)?;
             match write {
                 BlueprintWrite::GenerateGroundedBuildingDesign { request } => {
                     let generated =
