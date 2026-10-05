@@ -168,13 +168,17 @@ fn search_reduces_real_blocks_moves_both_ports_and_does_not_rewrite_old_interpre
     let result =
         reduce_blueprint_blocks(&catalog, &request, BlueprintReductionBudget::default()).unwrap();
     eprintln!(
-        "stats={:?}; stop={}; baseline={:?}",
+        "stats={:?}; stop={:?}; baseline={:?}",
         result.stats, result.stop_reason, result.baseline.behavior
     );
     let best = result
         .best
         .as_ref()
         .expect("a smaller typed NOT must be found");
+    assert_eq!(
+        result.stop_reason,
+        BlueprintReductionStop::SmallerCandidateFound
+    );
     assert_eq!(result.baseline_blocks, 7);
     assert_eq!(best.occupied_blocks, 3);
     assert!(!result.global_minimality_proven);
@@ -247,7 +251,7 @@ fn changed_laws_unknown_context_and_search_limits_do_not_turn_partial_results_in
     )
     .unwrap();
     assert!(exhausted.best.is_none());
-    assert!(exhausted.stop_reason.contains("budget exhausted"));
+    assert_eq!(exhausted.stop_reason, BlueprintReductionStop::LayoutBudget);
     assert!(!exhausted.global_minimality_proven);
     let zero = reduce_blueprint_blocks(
         &catalog,
@@ -259,6 +263,7 @@ fn changed_laws_unknown_context_and_search_limits_do_not_turn_partial_results_in
     )
     .unwrap();
     assert!(zero.best.is_none());
+    assert_eq!(zero.stop_reason, BlueprintReductionStop::TimeBudget);
     assert!(
         zero.baseline
             .behavior
@@ -270,6 +275,10 @@ fn changed_laws_unknown_context_and_search_limits_do_not_turn_partial_results_in
         reduce_blueprint_blocks(&catalog, &request, BlueprintReductionBudget::default()).unwrap();
     assert!(unknown.best.is_none());
     assert_eq!(unknown.stats.layouts_examined, 0);
+    assert_eq!(
+        unknown.stop_reason,
+        BlueprintReductionStop::BaselineNotPassed
+    );
 }
 
 #[test]
@@ -455,7 +464,7 @@ fn existing_builtin_not_realizations_reduce_by_observing_the_torch_directly() {
         let result =
             reduce_blueprint_blocks(&catalog, &request, BlueprintReductionBudget::default())
                 .unwrap();
-        eprintln!("{builtin}: {:?}; {}", result.stats, result.stop_reason);
+        eprintln!("{builtin}: {:?}; {:?}", result.stats, result.stop_reason);
         let best = result
             .best
             .expect("existing NOT should improve, without a hand-authored replacement");

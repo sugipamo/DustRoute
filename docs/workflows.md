@@ -96,6 +96,7 @@ make the read successful or permit replay. See
 | --- | --- |
 | Circuit appears faulty | `new_repair`; inspect competing explanations with `get_repair_context` before choosing a patch |
 | Placed Assembly is damaged | `manage_assembly(action=diagnose)` for fresh design differences; review a supported new `plan_reconstruction` if appropriate |
+| Planning or optimization found no accepted candidate | Read the typed cause, effective limits and refusal/review evidence; revise the request before searching again. An exhausted search does not prove impossibility. [Details](search-failure-diagnostics.md) |
 | Operation failed or writes are uncertain | Preserve its result, observe the whole context and inspect the changed/protected cells; do not automatically retry |
 | MCP restarted | Read durable history, reobserve and create a new operation; old saved passes are not executable proofs |
 | Finite flying machine arrived | Diagnose against its declared input-derived reference; explicitly select `removal_reference=observed_inputs` when planning arrival-state removal |

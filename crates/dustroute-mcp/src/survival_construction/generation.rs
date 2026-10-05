@@ -106,6 +106,7 @@ pub enum GenerationFailure {
     },
     NoCompletePlanWithinLimits {
         reason: SearchStop,
+        limits: SearchLimits,
         search: Box<ConstructionSearch>,
     },
 }

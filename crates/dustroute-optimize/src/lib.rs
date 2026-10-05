@@ -21,10 +21,11 @@ pub use macro_realize::{
     ContextualVerificationState, MacroBoundaryDirection, MacroBoundaryPort, MacroPortRoute,
     MacroRealizationError, MacroRealizationVerification, MacroReplacementPlan,
     MacroSteadyStateReport, MacroStructuralReport, MacroTransitionCase, MacroTransitionEdge,
-    MacroTransitionReport, MaterializedMacroReplacement, extract_cell_boundary,
-    extract_model_boundary, extract_model_boundary_with_context, materialize_macro_replacement,
-    materialize_macro_replacement_in_assembly, materialize_macro_replacement_in_known_regions,
-    plan_blueprint_replacement, plan_macro_replacement, plan_macro_replacement_in_catalog,
+    MacroTransitionReport, MaterializedMacroReplacement, TransitionUnavailableReason,
+    extract_cell_boundary, extract_model_boundary, extract_model_boundary_with_context,
+    materialize_macro_replacement, materialize_macro_replacement_in_assembly,
+    materialize_macro_replacement_in_known_regions, plan_blueprint_replacement,
+    plan_macro_replacement, plan_macro_replacement_in_catalog,
     plan_macro_replacement_with_reserved, resolve_blueprint_layout, resolve_builtin_layout,
     validate_macro_structure, verify_boundary_strengths, verify_macro_steady_state,
     verify_macro_transitions, verify_world_transitions,
@@ -40,10 +41,10 @@ pub use phased::{
 };
 pub use physical::{
     PhasedPhysicalScore, PhasedPhysicalSelection, PhysicalOptimizationPhase,
-    PhysicalOptimizationSearchBudget, PhysicalOptimizationSearchStats, PhysicalWireOptimization,
-    PhysicalWireOptimizationError, optimize_physical_wire_path,
-    optimize_physical_wire_path_with_budget, optimize_physical_wire_path_with_constraints,
-    select_phased_physical_scores,
+    PhysicalOptimizationSearchBudget, PhysicalOptimizationSearchStats, PhysicalOptimizationStop,
+    PhysicalWireOptimization, PhysicalWireOptimizationError, PhysicalWireOptimizationFailure,
+    optimize_physical_wire_path, optimize_physical_wire_path_with_budget,
+    optimize_physical_wire_path_with_constraints, select_phased_physical_scores,
 };
 pub use placement::{
     MutationKind, PlacementMutation, PlacementOptimizationResult, PlacementScore, PlacementWeights,

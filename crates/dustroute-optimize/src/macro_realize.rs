@@ -165,8 +165,33 @@ impl MacroTransitionCase {
     }
 }
 
+/// Typed provenance of an unavailable comparison; explanatory text is not a classifier.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TransitionUnavailableReason {
+    TooManyInputs,
+    VerificationBudget,
+    AmbiguousTerminalMapping,
+    IncompleteObservation,
+    UnsettledObservation,
+    UnsupportedPhysics,
+}
+impl TransitionUnavailableReason {
+    pub fn code(self) -> &'static str {
+        match self {
+            Self::TooManyInputs => "too_many_inputs",
+            Self::VerificationBudget => "verification_budget",
+            Self::AmbiguousTerminalMapping => "ambiguous_terminal_mapping",
+            Self::IncompleteObservation => "incomplete_observation",
+            Self::UnsettledObservation => "unsettled_observation",
+            Self::UnsupportedPhysics => "unsupported_physics",
+        }
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MacroTransitionReport {
+    pub unavailable_reason: Option<TransitionUnavailableReason>,
     pub state: ContextualVerificationState,
     pub cases: Vec<MacroTransitionCase>,
     pub differing_cases: usize,

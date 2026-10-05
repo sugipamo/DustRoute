@@ -2,6 +2,7 @@
 use super::boundary::{boundary_terminal_mapping, set_driver_in_world};
 use super::{
     ContextualVerificationState, MacroTransitionCase, MacroTransitionEdge, MacroTransitionReport,
+    TransitionUnavailableReason,
 };
 use dustroute_physical::{Pos, World};
 use dustroute_translate::{world_reverse::InferredTruthTable, world_reverse::RegionBounds};
@@ -52,9 +53,10 @@ pub fn verify_world_transitions(
     if original_truth.inputs.len() != candidate_truth.inputs.len()
         || original_truth.outputs.len() != candidate_truth.outputs.len()
     {
-        return unavailable_transitions(
-            "original and candidate terminal counts are not comparable".to_owned(),
-        );
+        return unavailable_transitions(TransitionFailure {
+            kind: TransitionUnavailableReason::AmbiguousTerminalMapping,
+            reason: "original and candidate terminal counts are not comparable".to_owned(),
+        });
     }
     let original_context = match prepare_transition_context(original, original_truth, settle_ticks)
     {
@@ -144,19 +146,20 @@ fn compare_transition_contexts(
     max_inputs: usize,
 ) -> MacroTransitionReport {
     if input_count > max_inputs || input_count >= usize::BITS as usize {
-        return unavailable_transitions(format!(
-            "cannot exhaustively enumerate {input_count} transition inputs"
-        ));
+        return unavailable_transitions(TransitionFailure {
+            kind: TransitionUnavailableReason::TooManyInputs,
+            reason: format!("cannot exhaustively enumerate {input_count} transition inputs"),
+        });
     }
     let states = 1_usize << input_count;
     let original_states = match settled_transition_states(&original_context, states, settle_ticks) {
         Ok(states) => states,
-        Err(reason) => return unavailable_transitions(reason),
+        Err(reason) => return unavailable_transitions(TransitionFailure::simulation(reason)),
     };
     let candidate_states = match settled_transition_states(&candidate_context, states, settle_ticks)
     {
         Ok(states) => states,
-        Err(reason) => return unavailable_transitions(reason),
+        Err(reason) => return unavailable_transitions(TransitionFailure::simulation(reason)),
     };
     let mut cases = Vec::new();
     for from_bits in 0..states {
@@ -173,7 +176,9 @@ fn compare_transition_contexts(
                 observe_ticks,
             ) {
                 Ok(trace) => trace,
-                Err(reason) => return unavailable_transitions(reason),
+                Err(reason) => {
+                    return unavailable_transitions(TransitionFailure::simulation(reason));
+                }
             };
             let candidate_outputs = match simulate_boundary_transition(
                 &candidate_context,
@@ -182,7 +187,9 @@ fn compare_transition_contexts(
                 observe_ticks,
             ) {
                 Ok(trace) => trace,
-                Err(reason) => return unavailable_transitions(reason),
+                Err(reason) => {
+                    return unavailable_transitions(TransitionFailure::simulation(reason));
+                }
             };
             let first_difference_tick = original_outputs
                 .iter()
@@ -201,6 +208,7 @@ fn compare_transition_contexts(
     }
     let differing_cases = cases.iter().filter(|case| !case.equivalent).count();
     MacroTransitionReport {
+        unavailable_reason: None,
         state: if differing_cases == 0 {
             ContextualVerificationState::Passed
         } else {
@@ -243,10 +251,10 @@ fn prepare_transition_context(
     world: &World,
     expected: &InferredTruthTable,
     settle_ticks: usize,
-) -> Result<MacroTransitionContext, String> {
+) -> Result<MacroTransitionContext, TransitionFailure> {
     let (low, high) = world
         .bounds()
-        .ok_or_else(|| "transition world is empty".to_owned())?;
+        .ok_or_else(|| TransitionFailure::simulation("transition world is empty".to_owned()))?;
     let analysis = dustroute_translate::world_reverse::analyze_world_region(
         world,
         RegionBounds::new(low, high),
@@ -257,14 +265,17 @@ fn prepare_transition_context(
         expected.inputs.len(),
         settle_ticks,
     )
-    .map_err(|error| error.to_string())?;
+    .map_err(TransitionFailure::inference)?;
     let mapping = boundary_terminal_mapping(
         expected.inputs.iter().map(|terminal| terminal.anchor),
         &inferred,
         &analysis,
         true,
     )
-    .ok_or_else(|| "transition input boundary mapping is ambiguous".to_owned())?;
+    .ok_or_else(|| TransitionFailure {
+        kind: TransitionUnavailableReason::AmbiguousTerminalMapping,
+        reason: "transition input boundary mapping is ambiguous".to_owned(),
+    })?;
     let drivers = mapping
         .iter()
         .map(|index| {
@@ -273,7 +284,7 @@ fn prepare_transition_context(
                 &analysis,
                 &inferred.inputs[*index],
             )
-            .map_err(|error| error.to_string())
+            .map_err(TransitionFailure::inference)
         })
         .collect::<Result<Vec<_>, _>>()?;
     Ok(MacroTransitionContext {
@@ -359,11 +370,89 @@ fn bits(value: usize, count: usize) -> Vec<bool> {
     (0..count).map(|index| value & (1 << index) != 0).collect()
 }
 
-fn unavailable_transitions(reason: String) -> MacroTransitionReport {
+struct TransitionFailure {
+    kind: TransitionUnavailableReason,
+    reason: String,
+}
+impl TransitionFailure {
+    fn simulation(reason: String) -> Self {
+        Self {
+            kind: TransitionUnavailableReason::UnsupportedPhysics,
+            reason,
+        }
+    }
+    fn inference(error: dustroute_translate::world_reverse::TruthTableError) -> Self {
+        use dustroute_translate::world_reverse::TruthTableError as E;
+        let kind = match &error {
+            E::TooManyInputs(_) => TransitionUnavailableReason::TooManyInputs,
+            E::BudgetExceeded { .. }
+            | E::RuntimeBudgetExceeded { .. }
+            | E::ElapsedBudgetExceeded { .. } => TransitionUnavailableReason::VerificationBudget,
+            E::IncompleteObservation => TransitionUnavailableReason::IncompleteObservation,
+            E::NonSettling { .. } => TransitionUnavailableReason::UnsettledObservation,
+            E::NoInputs
+            | E::NoOutputs
+            | E::UnmappedExternalInputs(_)
+            | E::UnmappedObservableOutputs(_)
+            | E::AmbiguousInputMapping { .. }
+            | E::AmbiguousOutputMapping { .. }
+            | E::NoDriverPosition(_) => TransitionUnavailableReason::AmbiguousTerminalMapping,
+            E::InvalidDriver { .. } | E::Simulation(_) => {
+                TransitionUnavailableReason::UnsupportedPhysics
+            }
+        };
+        Self {
+            kind,
+            reason: error.to_string(),
+        }
+    }
+}
+
+fn unavailable_transitions(failure: TransitionFailure) -> MacroTransitionReport {
     MacroTransitionReport {
+        unavailable_reason: Some(failure.kind),
         state: ContextualVerificationState::Pending,
         cases: Vec::new(),
         differing_cases: 0,
-        reason: Some(reason),
+        reason: Some(failure.reason),
+    }
+}
+
+#[cfg(test)]
+mod failure_tests {
+    use super::*;
+    use dustroute_translate::world_reverse::TruthTableError;
+
+    #[test]
+    fn inference_limits_retain_pending_state_and_evidence_without_fake_zero_cases() {
+        // The source's Display says "cannot enumerate", which the old prose
+        // classifier mistakenly categorized as unsupported physics.
+        let limited = unavailable_transitions(TransitionFailure::inference(
+            TruthTableError::TooManyInputs(9),
+        ));
+        assert_eq!(limited.state, ContextualVerificationState::Pending);
+        assert_eq!(
+            limited.unavailable_reason,
+            Some(TransitionUnavailableReason::TooManyInputs)
+        );
+        assert!(limited.cases.is_empty());
+        assert_eq!(
+            limited.reason.as_deref(),
+            Some("cannot enumerate 9 inferred inputs")
+        );
+        let budget = unavailable_transitions(TransitionFailure::inference(
+            TruthTableError::RuntimeBudgetExceeded {
+                rows: 8,
+                completed_rows: 2,
+                solver_iterations: 16,
+                max_solver_iterations: 16,
+            },
+        ));
+        assert_eq!(budget.state, ContextualVerificationState::Pending);
+        assert_eq!(
+            budget.unavailable_reason,
+            Some(TransitionUnavailableReason::VerificationBudget)
+        );
+        assert!(budget.cases.is_empty());
     }
 }

@@ -97,6 +97,11 @@ cases never certifies reuse: every winning candidate still passes the full
 universal contextual check. A result may retain a fully verified smaller candidate
 when later search exhausts its budget; an incomplete candidate proof itself
 never counts as a pass. `best: null` does not prove that no improvement exists.
+Reports echo `budget` and a typed `stop_reason`: `baseline_not_passed`,
+`layout_budget`, `binding_budget`, `time_budget`, `smaller_candidate_found` or
+`generated_family_exhausted`. An early candidate return is not family exhaustion.
+These stable labels replace the former prose strings. See
+[search failure diagnostics](search-failure-diagnostics.md).
 
 ## Existing MCP workflow
 

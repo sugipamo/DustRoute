@@ -683,7 +683,7 @@ fn generated_smoke(
             },
         );
         assert!(
-            matches!(&limited,Err(generation::GenerationFailure::NoCompletePlanWithinLimits { reason: generation::SearchStop::CandidateBudget,search }) if search.candidate_checks == 1)
+            matches!(&limited,Err(generation::GenerationFailure::NoCompletePlanWithinLimits { reason: generation::SearchStop::CandidateBudget,search, .. }) if search.candidate_checks == 1)
         );
         events.push(json!({"phase":"generated_smoke_checked","case":name,"full_replay_equal":true,"failed_branch_isolated":true,"shortage":shortage,"limited":limited}));
     }

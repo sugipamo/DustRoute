@@ -406,7 +406,16 @@ The optional `search` object bounds physical path exploration with
 `max_expansions`, `max_candidates`, and `max_millis`. Results echo both the
 resolved budget and measured `expansions`, `candidates`, `truncated`, and
 `stop_reason`. Stable stop reasons are `max_expansions`, `max_candidates`, and
-`time_budget`.
+`time_budget`. Failed searches retain the same budget/counters and a typed
+candidate `cause`; a truncated search uses `error_code: resource_limit`, publishes
+no operation ID or partial patch, and does not prove physical impossibility.
+Unavailable original/candidate truth-table inference is exposed in
+`verification.truth_table_failures`, using the shared typed analysis diagnostic.
+`search.candidate_budget_scope: strength_preserving_paths_per_segment` clarifies
+that `max_candidates` limits strength-preserving enumeration per segment, not
+the total generated-candidate counter or constant direct-path candidates.
+Transition views add `reason_code`; explanation text does not classify failures.
+See [search failure diagnostics](search-failure-diagnostics.md).
 
 The latter reports a three-stage `phase_trace`: `local_density`,
 `connector_recovery`, and `global_compaction`. Search may internally accept a

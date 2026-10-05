@@ -36,6 +36,7 @@ pub enum UnrecordedFailure {
     Message(String),
     Coded(CodedRefusal),
     Cause(Box<FailureCause>),
+    WireSearch(Box<super::preview::optimization::WireSearchRefusal>),
 }
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct CodedRefusal {
@@ -76,6 +77,9 @@ impl From<FailureCause> for UnrecordedFailure {
 }
 impl Serialize for UnrecordedFailure {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        if let Self::WireSearch(error) = self {
+            return error.serialize(serializer);
+        }
         if let Self::Coded(error) = self {
             return error.serialize(serializer);
         }
@@ -86,7 +90,7 @@ impl Serialize for UnrecordedFailure {
         record.serialize_field("ok", &false)?;
         match self {
             Self::Message(message) => record.serialize_field("error", message)?,
-            Self::Cause(_) | Self::Coded(_) => unreachable!(),
+            Self::Cause(_) | Self::Coded(_) | Self::WireSearch(_) => unreachable!(),
         }
         record.end()
     }

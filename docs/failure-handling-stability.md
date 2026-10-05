@@ -107,12 +107,16 @@ Both all-target strict Clippy configurations passed:
 and the same command with `--no-default-features`. `cargo fmt --all -- --check`
 and `git diff --check` passed. All 237 local link targets in the changed/new
 documents resolved. No additional prerequisite or responsibility change was
-needed. Stages 3–5 remain subsequent goals.
+needed. At that point, stages 3–5 remained subsequent goals.
 
 Stage 3 passed its declared normal sequence and four bounded changed-prerequisite
 cases. [Continuous survival validation](continuous-survival-validation.md)
-records the outcomes, input-application prerequisite and limits. Stages 4–5 remain
-subsequent goals.
+records the outcomes, input-application prerequisite and limits.
+
+Stage 4 preserves typed bounded-search failures, effective budgets and unavailable
+verification provenance. [Search failure diagnostics](search-failure-diagnostics.md)
+records the changed MCP fields and acceptance boundaries. Stage 5 remains a
+subsequent goal.
 
 ## Stop conditions
 

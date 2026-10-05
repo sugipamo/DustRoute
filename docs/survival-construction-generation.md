@@ -70,8 +70,10 @@ Limits cap candidate extensions (including refusals), expansions, retained
 frontier and action count. A candidate extension can invoke several native
 checks, so this counter is not described as a count of physics calls. Native
 edit/tick limits remain unchanged. Intermediate successor sets are also bounded.
-Failures identify budget/frontier exhaustion and retain bounded refusal/progress
-samples and hypothetical remaining targets; they do not prove impossibility.
+Failures identify budget/frontier exhaustion and echo the effective `limits`.
+They retain bounded refusal/progress samples, action-limited/pruned counts and
+hypothetical remaining targets; they do not prove impossibility. See
+[search failure diagnostics](search-failure-diagnostics.md) for the MCP handoff.
 
 Reservations include unbuilt permanent targets. Temporary placement consumes
 supplied material even when permanent work uses the same material. Removal does

@@ -21,6 +21,8 @@ pub struct PhysicalWireOptimization {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct PhysicalOptimizationSearchBudget {
     pub max_expansions: usize,
+    /// Limits enumerated strength-preserving paths per segment, not the total
+    /// generated-candidate counter or the constant direct-path family.
     pub max_candidates: usize,
     pub max_millis: u64,
 }
@@ -40,7 +42,24 @@ pub struct PhysicalOptimizationSearchStats {
     pub expansions: usize,
     pub candidates: usize,
     pub truncated: bool,
-    pub stop_reason: Option<&'static str>,
+    pub stop_reason: Option<PhysicalOptimizationStop>,
+}
+
+/// A computation limit, never evidence that no valid route exists.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PhysicalOptimizationStop {
+    MaxExpansions,
+    MaxCandidates,
+    TimeBudget,
+}
+
+/// Retain search evidence even when no candidate can be returned.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PhysicalWireOptimizationFailure {
+    pub reason: PhysicalWireOptimizationError,
+    pub budget: PhysicalOptimizationSearchBudget,
+    pub search: PhysicalOptimizationSearchStats,
 }
 
 struct SearchControl<'a> {
@@ -102,7 +121,8 @@ pub fn select_phased_physical_scores(
     })
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum PhysicalWireOptimizationError {
     NoWirePath,
     NotSimplePath,
@@ -116,7 +136,7 @@ pub enum PhysicalWireOptimizationError {
 pub fn optimize_physical_wire_path(
     world: &World,
     focus: RegionBounds,
-) -> Result<PhysicalWireOptimization, PhysicalWireOptimizationError> {
+) -> Result<PhysicalWireOptimization, PhysicalWireOptimizationFailure> {
     optimize_physical_wire_path_with_constraints(world, focus, false)
 }
 
@@ -124,7 +144,7 @@ pub fn optimize_physical_wire_path_with_constraints(
     world: &World,
     focus: RegionBounds,
     preserve_strength: bool,
-) -> Result<PhysicalWireOptimization, PhysicalWireOptimizationError> {
+) -> Result<PhysicalWireOptimization, PhysicalWireOptimizationFailure> {
     optimize_physical_wire_path_with_budget(
         world,
         focus,
@@ -138,19 +158,28 @@ pub fn optimize_physical_wire_path_with_budget(
     focus: RegionBounds,
     preserve_strength: bool,
     budget: PhysicalOptimizationSearchBudget,
-) -> Result<PhysicalWireOptimization, PhysicalWireOptimizationError> {
+) -> Result<PhysicalWireOptimization, PhysicalWireOptimizationFailure> {
     let deadline = Instant::now() + Duration::from_millis(budget.max_millis);
     let mut stats = PhysicalOptimizationSearchStats::default();
-    let mut result = {
+    let result = {
         let mut control = SearchControl {
             budget,
             deadline,
             stats: &mut stats,
         };
-        optimize_physical_wire_path_internal(world, focus, preserve_strength, &mut control)?
+        optimize_physical_wire_path_internal(world, focus, preserve_strength, &mut control)
     };
-    result.search = stats;
-    Ok(result)
+    match result {
+        Ok(mut result) => {
+            result.search = stats;
+            Ok(result)
+        }
+        Err(reason) => Err(PhysicalWireOptimizationFailure {
+            reason,
+            budget,
+            search: stats,
+        }),
+    }
 }
 
 fn optimize_physical_wire_path_internal(
@@ -520,12 +549,12 @@ fn shortest_supported_3d_path(
         }
         if control.stats.expansions >= control.budget.max_expansions {
             control.stats.truncated = true;
-            control.stats.stop_reason = Some("max_expansions");
+            control.stats.stop_reason = Some(PhysicalOptimizationStop::MaxExpansions);
             return None;
         }
         if Instant::now() >= control.deadline {
             control.stats.truncated = true;
-            control.stats.stop_reason = Some("time_budget");
+            control.stats.stop_reason = Some(PhysicalOptimizationStop::TimeBudget);
             return None;
         }
         control.stats.expansions += 1;
@@ -584,17 +613,17 @@ fn strength_preserving_paths(
     fn visit(search: &mut Search<'_>, path: &mut Vec<Pos>, seen: &mut BTreeSet<Pos>) {
         if search.stats.expansions >= search.budget.max_expansions {
             search.stats.truncated = true;
-            search.stats.stop_reason = Some("max_expansions");
+            search.stats.stop_reason = Some(PhysicalOptimizationStop::MaxExpansions);
             return;
         }
         if Instant::now() >= search.deadline {
             search.stats.truncated = true;
-            search.stats.stop_reason = Some("time_budget");
+            search.stats.stop_reason = Some(PhysicalOptimizationStop::TimeBudget);
             return;
         }
         if search.results.len() >= search.budget.max_candidates {
             search.stats.truncated = true;
-            search.stats.stop_reason = Some("max_candidates");
+            search.stats.stop_reason = Some(PhysicalOptimizationStop::MaxCandidates);
             return;
         }
         search.stats.expansions += 1;
@@ -953,13 +982,13 @@ mod tests {
             world.place(BlockKind::RedstoneWire, pos);
         }
         update_wire_shapes(&mut world);
-        assert_eq!(
-            optimize_physical_wire_path(
-                &world,
-                RegionBounds::new(Pos::new(0, 1, 0), Pos::new(2, 1, 1))
-            ),
-            Err(PhysicalWireOptimizationError::NotSimplePath)
-        );
+        let failure = optimize_physical_wire_path(
+            &world,
+            RegionBounds::new(Pos::new(0, 1, 0), Pos::new(2, 1, 1)),
+        )
+        .unwrap_err();
+        assert_eq!(failure.reason, PhysicalWireOptimizationError::NotSimplePath);
+        assert!(!failure.search.truncated);
     }
 
     #[test]
@@ -1156,7 +1185,10 @@ mod tests {
             );
         }
         assert!(stats.truncated);
-        assert_eq!(stats.stop_reason, Some("max_candidates"));
+        assert_eq!(
+            stats.stop_reason,
+            Some(PhysicalOptimizationStop::MaxCandidates)
+        );
     }
 
     #[test]

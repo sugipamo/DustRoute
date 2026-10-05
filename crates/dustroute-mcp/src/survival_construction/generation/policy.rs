@@ -246,6 +246,7 @@ impl<'a> Search<'a> {
             } else {
                 SearchStop::CandidateFrontierExhausted
             },
+            limits: self.limits,
             search: Box::new(self.stats),
         })
     }

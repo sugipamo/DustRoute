@@ -231,7 +231,12 @@ fn assess_timing(
             .reason
             .clone()
             .unwrap_or_else(|| "transition traces were unavailable".to_owned());
-        return unavailable_code(transition_unavailable_code(&reason), reason);
+        return unavailable_code(
+            report
+                .unavailable_reason
+                .map_or("transition_unavailable", |kind| kind.code()),
+            reason,
+        );
     }
     if report.cases.is_empty() {
         return unavailable_code(
@@ -280,7 +285,12 @@ fn assess_pulses(
             .reason
             .clone()
             .unwrap_or_else(|| "pulse traces were unavailable".to_owned());
-        return unavailable_code(transition_unavailable_code(&reason), reason);
+        return unavailable_code(
+            report
+                .unavailable_reason
+                .map_or("transition_unavailable", |kind| kind.code()),
+            reason,
+        );
     }
     if report.cases.is_empty() {
         return unavailable_code(
@@ -396,16 +406,6 @@ fn unavailable_code(code: impl Into<String>, reason: impl Into<String>) -> Contr
     }
 }
 
-fn transition_unavailable_code(reason: &str) -> &'static str {
-    if reason.contains("cannot exhaustively enumerate") || reason.contains("too many inputs") {
-        "too_many_inputs"
-    } else if reason.contains("ambiguous") || reason.contains("not comparable") {
-        "ambiguous_terminal_mapping"
-    } else {
-        "unsupported_physics"
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -414,6 +414,7 @@ mod tests {
     #[test]
     fn default_contract_rejects_a_new_pulse_even_when_final_values_match() {
         let report = MacroTransitionReport {
+            unavailable_reason: None,
             state: ContextualVerificationState::Failed,
             cases: vec![MacroTransitionCase {
                 from: vec![false],
@@ -433,6 +434,7 @@ mod tests {
     #[test]
     fn pulse_detection_handles_a_transition_that_temporarily_reverts() {
         let report = MacroTransitionReport {
+            unavailable_reason: None,
             state: ContextualVerificationState::Failed,
             cases: vec![MacroTransitionCase {
                 from: vec![false],
@@ -452,6 +454,7 @@ mod tests {
     #[test]
     fn bounded_delay_accepts_a_shift_within_the_budget_but_exact_trace_rejects_it() {
         let report = MacroTransitionReport {
+            unavailable_reason: None,
             state: ContextualVerificationState::Failed,
             cases: vec![MacroTransitionCase {
                 from: vec![false],
@@ -523,6 +526,7 @@ mod tests {
     #[test]
     fn pending_transition_measurement_is_unavailable_not_passed() {
         let report = MacroTransitionReport {
+            unavailable_reason: Some(crate::TransitionUnavailableReason::TooManyInputs),
             state: ContextualVerificationState::Pending,
             cases: Vec::new(),
             differing_cases: 0,
@@ -535,8 +539,40 @@ mod tests {
     }
 
     #[test]
+    fn pending_contract_uses_typed_provenance_and_never_guesses_from_prose() {
+        let mut report = MacroTransitionReport {
+            unavailable_reason: Some(crate::TransitionUnavailableReason::VerificationBudget),
+            state: ContextualVerificationState::Pending,
+            cases: Vec::new(),
+            differing_cases: 0,
+            reason: Some("ambiguous; too many inputs; this text is not evidence".into()),
+        };
+        for kind in [
+            Some(crate::TransitionUnavailableReason::VerificationBudget),
+            None,
+        ] {
+            report.unavailable_reason = kind;
+            let timing = assess_timing(OptimizationContract::default().timing, Some(&report));
+            let pulse = assess_pulses(OptimizationContract::default().pulse, Some(&report));
+            for check in [timing, pulse] {
+                assert_eq!(check.state, ContractCheckState::Unavailable);
+                assert_eq!(
+                    check.reason_codes,
+                    [if kind.is_some() {
+                        "verification_budget"
+                    } else {
+                        "transition_unavailable"
+                    }]
+                );
+                assert_eq!(check.reasons, [report.reason.clone().unwrap()]);
+            }
+        }
+    }
+
+    #[test]
     fn empty_transition_measurement_is_unavailable_not_vacuously_passed() {
         let report = MacroTransitionReport {
+            unavailable_reason: None,
             state: ContextualVerificationState::Passed,
             cases: Vec::new(),
             differing_cases: 0,

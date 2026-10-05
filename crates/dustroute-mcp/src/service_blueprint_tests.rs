@@ -2043,6 +2043,37 @@ async fn blueprint_optimization_moves_ports_and_reenters_persisted_explicit_adop
         layouts.iter().find(|c| c["placement"] == "west").unwrap()["status"],
         "undetermined"
     );
+    for (budget, reason) in [
+        (
+            json!({"max_layouts":0,"max_bindings":256,"max_millis":30000}),
+            "layout_budget",
+        ),
+        (
+            json!({"max_layouts":4096,"max_bindings":0,"max_millis":30000}),
+            "binding_budget",
+        ),
+        (
+            json!({"max_layouts":4096,"max_bindings":256,"max_millis":0}),
+            "time_budget",
+        ),
+    ] {
+        let limited = call(
+            &client,
+            "test_circuit_change",
+            json!({"blueprint":{
+                "action":"optimize", "request":request, "budget":budget
+            }}),
+        )
+        .await;
+        assert_eq!(limited["ok"], true, "{limited}"); // a successful read-only report
+        assert_eq!(limited["result"]["stop_reason"], reason, "{limited}");
+        assert_eq!(limited["result"]["budget"], budget);
+        assert!(limited["result"]["best"].is_null());
+        assert_eq!(limited["result"]["global_minimality_proven"], false);
+        assert_eq!(limited["writes_minecraft"], false);
+        assert_eq!(limited["catalog_changed"], false);
+        assert_eq!(limited["adoption_authorized"], false);
+    }
     let result = call(
         &client,
         "test_circuit_change",

@@ -57,6 +57,7 @@ fn fixture() -> MacroProposals {
         reason: Some("fixture mismatch".into()),
     };
     let transitions = MacroTransitionReport {
+        unavailable_reason: None,
         state: ContextualVerificationState::Failed,
         cases: vec![MacroTransitionCase {
             from: vec![false, false],
@@ -110,11 +111,26 @@ fn fixture() -> MacroProposals {
     }
 }
 #[test]
-fn native_macro_reports_match_the_pre_migration_wire() {
-    let native = fixture();
-    let expected: Value =
+fn macro_reports_preserve_the_wire_and_add_typed_transition_provenance() {
+    let mut native = fixture();
+    let mut expected: Value =
         serde_json::from_str(include_str!("macro-wire-before-bdc08c6.json")).unwrap();
-    assert_eq!(serde_json::to_value(native).unwrap(), expected);
+    // Retain the historical fixture unchanged; the new diagnostic field is
+    // additive and absence of a failure kind must not invent one.
+    expected["placement_plans"][0]["transition_report"]["reason_code"] = Value::Null;
+    assert_eq!(serde_json::to_value(&native).unwrap(), expected);
+    let transitions = native.placement_plans[0].transitions.as_mut().unwrap();
+    transitions.state = ContextualVerificationState::Pending;
+    transitions.unavailable_reason =
+        Some(dustroute_optimize::TransitionUnavailableReason::VerificationBudget);
+    transitions.reason = Some("ambiguous words are not a category".into());
+    transitions.cases.clear();
+    transitions.differing_cases = 0;
+    let wire = serde_json::to_value(native).unwrap();
+    let pending = &wire["placement_plans"][0]["transition_report"];
+    assert_eq!(pending["reason_code"], "verification_budget");
+    assert_eq!(pending["state"], "pending");
+    assert_eq!(pending["case_count"], 0);
 }
 #[test]
 fn no_candidate_is_distinct_from_a_known_empty_proposal_list() {

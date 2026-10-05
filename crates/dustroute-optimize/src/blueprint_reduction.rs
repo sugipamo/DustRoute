@@ -94,6 +94,18 @@ pub struct ReviewedReductionCandidate {
     pub review: RecordedReview,
 }
 
+/// Why this bounded proposal search stopped. None of these proves a global minimum.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BlueprintReductionStop {
+    BaselineNotPassed,
+    LayoutBudget,
+    BindingBudget,
+    TimeBudget,
+    SmallerCandidateFound,
+    GeneratedFamilyExhausted,
+}
+
 #[derive(Clone, Debug, Serialize)]
 pub struct BlueprintReductionReport {
     pub base_state: AssemblyRevisionId,
@@ -111,7 +123,8 @@ pub struct BlueprintReductionReport {
     /// candidate, not from the old Assembly or its immutable source records.
     pub prior_interpretations: Vec<BlueprintOccurrence>,
     pub stats: BlueprintReductionStats,
-    pub stop_reason: String,
+    pub budget: BlueprintReductionBudget,
+    pub stop_reason: BlueprintReductionStop,
     /// Always false: finite subset enumeration and supplied alternatives cannot
     /// prove a global minimum over all possible realizations of the type.
     pub global_minimality_proven: bool,
@@ -175,6 +188,25 @@ fn fresh_budget(started: Instant, budget: BlueprintReductionBudget) -> BehaviorB
 fn time_left(started: Instant, budget: BlueprintReductionBudget) -> bool {
     started.elapsed() < Duration::from_millis(budget.max_millis)
 }
+// Check only the resource about to be used; a capped layout count does not
+// prevent checking bindings of an already admitted layout. Time is shared.
+fn exhausted_budget(
+    report: &BlueprintReductionReport,
+    started: Instant,
+    budget: BlueprintReductionBudget,
+    entering_layout: bool,
+) -> Option<BlueprintReductionStop> {
+    if !time_left(started, budget) {
+        Some(BlueprintReductionStop::TimeBudget)
+    } else if entering_layout && report.stats.layouts_examined >= budget.max_layouts {
+        Some(BlueprintReductionStop::LayoutBudget)
+    } else if !entering_layout && report.stats.bindings_examined >= budget.max_bindings {
+        Some(BlueprintReductionStop::BindingBudget)
+    } else {
+        None
+    }
+}
+
 fn evaluate(
     catalog: &BlueprintCatalog,
     candidate: &BlueprintReductionCandidate,
@@ -678,8 +710,8 @@ fn search_layout(
     started: Instant,
     budget: BlueprintReductionBudget,
 ) -> Result<bool, String> {
-    if report.stats.layouts_examined >= budget.max_layouts || !time_left(started, budget) {
-        report.stop_reason = "search budget exhausted".into();
+    if let Some(reason) = exhausted_budget(report, started, budget, true) {
+        report.stop_reason = reason;
         return Ok(true);
     }
     report.stats.layouts_examined += 1;
@@ -733,8 +765,8 @@ fn search_layout(
         .contract;
     let mut assignment = vec![0; target.inputs.len() + target.outputs.len()];
     loop {
-        if report.stats.bindings_examined >= budget.max_bindings || !time_left(started, budget) {
-            report.stop_reason = "search budget exhausted".into();
+        if let Some(reason) = exhausted_budget(report, started, budget, false) {
+            report.stop_reason = reason;
             return Ok(true);
         }
         let selected: Vec<_> = assignment.iter().map(|i| options[*i]).collect();
@@ -760,8 +792,7 @@ fn search_layout(
             if report.best.as_ref().is_some_and(|best| {
                 best.occupied_blocks == world.iter().filter(|(p, _)| target.scope.owns(**p)).count()
             }) {
-                report.stop_reason =
-                    "smaller generated layouts exhausted; global minimality not established".into();
+                report.stop_reason = BlueprintReductionStop::SmallerCandidateFound;
                 return Ok(true);
             }
         }
@@ -813,15 +844,20 @@ pub fn reduce_blueprint_blocks(
         best: None,
         prior_interpretations: view.occurrences.values().cloned().collect(),
         stats: Default::default(),
-        stop_reason: "baseline did not pass the selected target type".into(),
+        budget,
+        stop_reason: if time_left(started, budget) {
+            BlueprintReductionStop::BaselineNotPassed
+        } else {
+            BlueprintReductionStop::TimeBudget
+        },
         global_minimality_proven: false,
     };
     if baseline_review.status() != CheckStatus::Passed {
         return Ok(report);
     }
     for alternative in &request.alternatives {
-        if report.stats.bindings_examined >= budget.max_bindings || !time_left(started, budget) {
-            report.stop_reason = "search budget exhausted".into();
+        if let Some(reason) = exhausted_budget(&report, started, budget, false) {
+            report.stop_reason = reason;
             return Ok(report);
         }
         validate_alternative(request, &baseline, alternative)?;
@@ -965,8 +1001,11 @@ pub fn reduce_blueprint_blocks(
             }
         }
     }
-    report.stop_reason =
-        "smaller generated layouts exhausted; global minimality not established".into();
+    report.stop_reason = if time_left(started, budget) {
+        BlueprintReductionStop::GeneratedFamilyExhausted
+    } else {
+        BlueprintReductionStop::TimeBudget
+    };
     Ok(report)
 }
 

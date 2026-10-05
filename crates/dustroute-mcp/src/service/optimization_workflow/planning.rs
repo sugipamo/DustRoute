@@ -12,7 +12,7 @@ use crate::operations::preview::optimization::{
     MacroPlacement, MacroVerification, OptimizationAssessmentView, OptimizationContractView,
     VerificationState, WireMetrics, WireObjective, WireOptimizationPreview, WirePhase,
     WirePlanningPolicy, WireSearch, WireSemantic, WireSteadyState, WireTransitions,
-    WireVerification,
+    WireTruthFailures, WireVerification,
 };
 use dustroute_app::DustRouteService;
 use dustroute_optimize::{
@@ -289,11 +289,7 @@ impl OptimizationPlanner<'_> {
         ) {
             Ok(optimization) => optimization,
             Err(error) => {
-                return Err(UnrecordedFailure::coded(
-                    McpErrorCode::InvalidState,
-                    format!("no safe physical wire optimization: {error:?}"),
-                    false,
-                ));
+                return Err(UnrecordedFailure::WireSearch(Box::new(error.into())));
             }
         };
         if let Err(error) = self
@@ -365,10 +361,12 @@ impl OptimizationPlanner<'_> {
             ));
         }
         let before_truth =
-            dustroute_translate::world_reverse::infer_truth_table(&world, &before, 8, 64).ok();
+            dustroute_translate::world_reverse::infer_truth_table(&world, &before, 8, 64);
         let after_truth =
-            dustroute_translate::world_reverse::infer_truth_table(&optimized_world, &after, 8, 64)
-                .ok();
+            dustroute_translate::world_reverse::infer_truth_table(&optimized_world, &after, 8, 64);
+        let truth_table_failures = WireTruthFailures::new(&before_truth, &after_truth);
+        let before_truth = before_truth.ok();
+        let after_truth = after_truth.ok();
         let semantic = match (&before_truth, &after_truth) {
             (Some(before), Some(after)) => {
                 let comparison =
@@ -528,6 +526,7 @@ impl OptimizationPlanner<'_> {
             },
             patch: optimization.patch,
             verification: WireVerification {
+                truth_table_failures,
                 diagnostics_not_worse: true,
                 temporal_requirement_preserved: true,
                 temporal_requirement: after_temporal.requirement,

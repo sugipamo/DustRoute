@@ -178,8 +178,9 @@ struct Transitions<'a>(&'a MacroTransitionReport);
 impl Serialize for Transitions<'_> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let r = self.0;
-        let mut record = serializer.serialize_struct("MacroTransitions", 5)?;
+        let mut record = serializer.serialize_struct("MacroTransitions", 6)?;
         record.serialize_field("state", &VerificationState(r.state))?;
+        record.serialize_field("reason_code", &r.unavailable_reason)?;
         record.serialize_field("case_count", &r.cases.len())?;
         record.serialize_field("differing_cases", &r.differing_cases)?;
         record.serialize_field("reason", &r.reason)?;

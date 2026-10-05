@@ -526,6 +526,67 @@ mod tests {
         assert!(wire.get("automatic_replay").is_none());
     }
     #[test]
+    fn generation_refusals_preserve_resource_and_search_evidence_without_a_job() {
+        use crate::survival_construction::generation::{
+            ConstructionSearch, SearchLimits, SearchStop,
+        };
+        let limits = SearchLimits {
+            candidate_checks: 1,
+            ..Default::default()
+        };
+        let failures = [
+            GenerationFailure::InsufficientMaterials {
+                missing: BTreeMap::from([("minecraft:stone".into(), 3)]),
+            },
+            GenerationFailure::InvalidInput {
+                error: crate::survival_construction::ConstructionPlanningError {
+                    code: SurvivalErrorCode::InvalidSearchLimits,
+                    action: None,
+                    position: None,
+                    detail: "candidate checks must be positive".into(),
+                    missing_materials: BTreeMap::new(),
+                },
+            },
+            GenerationFailure::NoCompletePlanWithinLimits {
+                reason: SearchStop::CandidateBudget,
+                limits,
+                search: Box::new(ConstructionSearch {
+                    candidate_checks: 1,
+                    best_remaining_permanent: 3,
+                    best_remaining_targets: vec![[1, 2, 3]],
+                    ..Default::default()
+                }),
+            },
+        ];
+        for failure in failures {
+            let result = crate::service::typed_reply(Reply::generation(failure, None));
+            assert_eq!(result.is_error, Some(true));
+            let wire = crate::service::test_support::decode_reply(&result).unwrap();
+            assert_eq!(wire["ok"], false);
+            assert_eq!(wire["writes_minecraft"], false);
+            assert_eq!(wire["next_action"], "review_search_failure");
+            assert!(wire.get("job_id").is_none());
+            assert!(wire.get("generated").is_none());
+            let cause = &wire["error"]["cause"];
+            match cause["kind"].as_str().unwrap() {
+                "insufficient_materials" => assert_eq!(cause["missing"]["minecraft:stone"], 3),
+                "invalid_input" => assert_eq!(cause["error"]["code"], "invalid_search_limits"),
+                "no_complete_plan_within_limits" => {
+                    assert_eq!(cause["reason"], "candidate_budget");
+                    assert_eq!(cause["limits"]["candidate_checks"], 1);
+                    assert_eq!(cause["limits"]["actions"], limits.actions);
+                    assert_eq!(cause["search"]["candidate_checks"], 1);
+                    assert_eq!(
+                        cause["search"]["best_remaining_targets"],
+                        serde_json::json!([[1, 2, 3]])
+                    );
+                }
+                unexpected => panic!("unexpected cause: {unexpected}"),
+            }
+        }
+    }
+
+    #[test]
     fn refusal_keeps_linked_claim_and_historical_facts_without_restoring_a_job() {
         let new_job = Uuid::new_v4();
         let execution_id = Uuid::new_v4();

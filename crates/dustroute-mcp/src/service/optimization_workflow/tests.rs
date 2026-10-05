@@ -202,6 +202,12 @@ async fn unavailable_wire_semantics_remain_null_and_cannot_authorize_execution()
     let response = propose_wire(&service, id, focus).await;
     assert_eq!(response["ok"], true, "{response}");
     assert_eq!(response["verification"]["semantic"]["available"], false);
+    for side in ["original", "candidate"] {
+        assert_eq!(
+            response["verification"]["truth_table_failures"][side]["code"],
+            "no_inputs"
+        );
+    }
     assert!(
         response["verification"]["semantic"]
             .get("equivalent")
@@ -412,4 +418,63 @@ async fn invalid_focus_and_contract_size_refuse_before_plan_storage() {
     }
     assert!(service.operations.list().await.is_empty());
     assert!(!root.exists());
+}
+
+#[tokio::test]
+async fn exhausted_wire_search_preserves_limits_without_publishing_a_partial_plan() {
+    let root = test_support::temporary();
+    let service = service(&root);
+    let mut world = World::new();
+    for x in 0..=8 {
+        for z in 0..=4 {
+            world.set(Pos::new(x, 0, z), Block::new(BlockKind::Solid));
+        }
+    }
+    for wire in (0..=8)
+        .map(|x| Pos::new(x, 1, 0))
+        .chain((1..=4).map(|z| Pos::new(8, 1, z)))
+        .chain((4..=7).rev().map(|x| Pos::new(x, 1, 4)))
+    {
+        world.place(BlockKind::RedstoneWire, wire);
+    }
+    dustroute_translate::wire::update_wire_shapes(&mut world);
+    let focus = RegionBounds::new(Pos::new(0, 1, 0), Pos::new(8, 1, 4));
+    let snapshot = fixture_snapshot(
+        &world,
+        RegionBounds::new(Pos::new(0, 0, 0), Pos::new(8, 2, 4)),
+    );
+    let id = capture(&service, snapshot).await;
+    let reply = service
+        .new_optimization(Parameters(
+            serde_json::from_value(json!({
+                "circuit_id":id, "focus":focus, "objective":"density_then_wire_length",
+                "contract":{"analog":{"preserve_strength":true}},
+                "search":{"max_expansions":1}
+            }))
+            .unwrap(),
+        ))
+        .await;
+    let response = test_support::decode_reply(&reply).unwrap();
+    assert_eq!(reply.is_error, Some(true));
+    assert_eq!(response["ok"], false, "{response}");
+    assert_eq!(response["error_code"], "resource_limit");
+    assert_eq!(response["cause"], "no_strength_preserving_route");
+    assert_eq!(response["search"]["stop_reason"], "max_expansions");
+    assert_eq!(response["search"]["budget"]["max_expansions"], 1);
+    assert_eq!(response["search"]["expansions"], 1);
+    assert_eq!(response["search"]["truncated"], true);
+    assert_eq!(response["writes_minecraft"], false);
+    assert_eq!(response["impossibility_proven"], false);
+    assert_eq!(response["retryable"], false);
+    assert!(response.get("operation_id").is_none());
+    assert!(response.get("patch").is_none());
+    assert!(service.operations.list().await.is_empty());
+    assert!(!root.exists());
+    // The same geometry has an acceptable model-only candidate at the default
+    // budget. A smaller budget's refusal was not a proof of impossibility.
+    let candidate =
+        dustroute_optimize::optimize_physical_wire_path_with_constraints(&world, focus, true)
+            .unwrap();
+    assert_eq!(candidate.wire_blocks_after, 17);
+    assert!(!candidate.patch.changes.is_empty());
 }

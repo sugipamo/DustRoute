@@ -8,6 +8,7 @@ pub(crate) use common::{FocusedComponent, focused_component, focused_hierarchy};
 pub(crate) use flat::{ReverseAnalysisReport, reverse_report};
 pub(crate) use hierarchical::{HierarchicalAnalysisReport, hierarchical_report};
 pub(crate) use mechanisms::ObservedMechanism;
+pub(crate) use truth::TruthErrorView;
 pub(crate) const MAX_FLAT_ANALYSIS_COMPONENTS: usize = 512;
 
 #[cfg(test)]

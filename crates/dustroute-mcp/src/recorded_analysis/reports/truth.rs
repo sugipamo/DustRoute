@@ -170,3 +170,13 @@ impl Serialize for ErrorDetails<'_> {
         record.end()
     }
 }
+
+/// Reuse the analysis failure projection for other model-only MCP reports.
+/// The owned source enum retains its numeric and positional evidence.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct TruthErrorView(pub TruthTableError);
+impl Serialize for TruthErrorView {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        ErrorDetails(&self.0).serialize(serializer)
+    }
+}

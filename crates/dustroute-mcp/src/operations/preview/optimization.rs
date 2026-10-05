@@ -6,7 +6,8 @@ use dustroute_optimize::{
     ContextualVerificationState, ContractCheck, ContractCheckState, LogicalContractMode,
     MacroSteadyStateReport, MacroTransitionReport, OptimizationContract,
     OptimizationContractAssessment, PhasedPhysicalScore, PhysicalOptimizationPhase,
-    PhysicalOptimizationSearchBudget, PhysicalOptimizationSearchStats, TimingContractMode,
+    PhysicalOptimizationSearchBudget, PhysicalOptimizationSearchStats, PhysicalOptimizationStop,
+    PhysicalWireOptimizationError, PhysicalWireOptimizationFailure, TimingContractMode,
 };
 use dustroute_physical::{PhysicalPatch, Pos, TemporalRequirement};
 use dustroute_translate::cells::RotationY;
@@ -332,15 +333,16 @@ pub(crate) struct WireMetrics {
     pub path_length_after: usize,
     pub changed_blocks: usize,
 }
-#[derive(Debug, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub(crate) struct WireSearch {
     budget: WireBudget,
+    candidate_budget_scope: &'static str,
     expansions: usize,
     candidates: usize,
     truncated: bool,
-    stop_reason: Option<&'static str>,
+    stop_reason: Option<PhysicalOptimizationStop>,
 }
-#[derive(Debug, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 struct WireBudget {
     max_expansions: usize,
     max_candidates: usize,
@@ -357,10 +359,47 @@ impl WireSearch {
                 max_candidates: budget.max_candidates,
                 max_millis: budget.max_millis,
             },
+            candidate_budget_scope: "strength_preserving_paths_per_segment",
             expansions: stats.expansions,
             candidates: stats.candidates,
             truncated: stats.truncated,
             stop_reason: stats.stop_reason,
+        }
+    }
+}
+/// A failed read-only search has no operation ID or executable partial patch.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct WireSearchRefusal {
+    ok: bool,
+    schema_version: &'static str,
+    error: &'static str,
+    error_code: crate::api::McpErrorCode,
+    retryable: bool,
+    cause: PhysicalWireOptimizationError,
+    search: WireSearch,
+    writes_minecraft: bool,
+    impossibility_proven: bool,
+    next_action: &'static str,
+    next_step: &'static str,
+}
+impl From<PhysicalWireOptimizationFailure> for WireSearchRefusal {
+    fn from(failure: PhysicalWireOptimizationFailure) -> Self {
+        Self {
+            ok: false,
+            schema_version: crate::api::ERROR_SCHEMA_V1,
+            error: "no acceptable wire optimization candidate was found in this search",
+            error_code: if failure.search.truncated {
+                crate::api::McpErrorCode::ResourceLimit
+            } else {
+                crate::api::McpErrorCode::InvalidState
+            },
+            retryable: false,
+            cause: failure.reason,
+            search: WireSearch::new(failure.budget, failure.search),
+            writes_minecraft: false,
+            impossibility_proven: false,
+            next_action: "review_search_failure",
+            next_step: "inspect search limits and candidate refusal; revise the request or budget before a new search; this result does not prove physical impossibility",
         }
     }
 }
@@ -404,8 +443,32 @@ pub(crate) struct WirePlanningPolicy {
     pub temporary_connector_growth_budget: usize,
     pub final_global_improvement_required: bool,
 }
+#[derive(Debug, Default, Serialize)]
+pub(crate) struct WireTruthFailures {
+    original: Option<crate::recorded_analysis::reports::TruthErrorView>,
+    candidate: Option<crate::recorded_analysis::reports::TruthErrorView>,
+}
+impl WireTruthFailures {
+    pub(crate) fn new(
+        original: &Result<
+            dustroute_translate::world_reverse::InferredTruthTable,
+            dustroute_translate::world_reverse::TruthTableError,
+        >,
+        candidate: &Result<
+            dustroute_translate::world_reverse::InferredTruthTable,
+            dustroute_translate::world_reverse::TruthTableError,
+        >,
+    ) -> Self {
+        use crate::recorded_analysis::reports::TruthErrorView;
+        Self {
+            original: original.as_ref().err().cloned().map(TruthErrorView),
+            candidate: candidate.as_ref().err().cloned().map(TruthErrorView),
+        }
+    }
+}
 #[derive(Debug, Serialize)]
 pub(crate) struct WireVerification {
+    pub truth_table_failures: WireTruthFailures,
     pub diagnostics_not_worse: bool,
     pub temporal_requirement_preserved: bool,
     pub temporal_requirement: TemporalRequirement,
@@ -431,6 +494,7 @@ impl From<&MacroSteadyStateReport> for WireSteadyState {
 }
 #[derive(Debug, Serialize)]
 pub(crate) struct WireTransitions {
+    reason_code: Option<dustroute_optimize::TransitionUnavailableReason>,
     state: VerificationState,
     case_count: usize,
     differing_cases: usize,
@@ -439,6 +503,7 @@ pub(crate) struct WireTransitions {
 impl From<&MacroTransitionReport> for WireTransitions {
     fn from(report: &MacroTransitionReport) -> Self {
         Self {
+            reason_code: report.unavailable_reason,
             state: VerificationState(report.state),
             case_count: report.cases.len(),
             differing_cases: report.differing_cases,
@@ -534,6 +599,7 @@ mod tests {
     #[test]
     fn unavailable_checks_are_distinct_from_known_zero_and_failed_evidence() {
         let verification = WireVerification {
+            truth_table_failures: WireTruthFailures::default(),
             diagnostics_not_worse: true,
             temporal_requirement_preserved: true,
             temporal_requirement: TemporalRequirement::SteadyStateSafe,
@@ -551,6 +617,7 @@ mod tests {
             assert!(wire[field].is_null());
         }
         let known_zero = MacroTransitionReport {
+            unavailable_reason: None,
             state: ContextualVerificationState::Passed,
             cases: vec![],
             differing_cases: 0,
@@ -559,7 +626,7 @@ mod tests {
         let wire = serde_json::to_value(WireTransitions::from(&known_zero)).unwrap();
         assert_eq!(
             wire,
-            json!({"state":"passed","case_count":0,"differing_cases":0,"reason":null})
+            json!({"state":"passed","case_count":0,"differing_cases":0,"reason":null,"reason_code":null})
         );
         assert_eq!(
             serde_json::to_value(BoundaryStrength::Passed).unwrap(),
