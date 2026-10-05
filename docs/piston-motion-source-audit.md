@@ -32,7 +32,7 @@ Loom artifact to reproduce the source audit:
 Run the independent engine diagnostics with:
 
 ```bash
-cargo run -q -p dustroute-minecraft --example audit_piston_execution_boundaries
+DUSTROUTE_DIAGNOSTIC_OUTPUT=/tmp/audit_piston_execution_boundaries.json cargo test --offline --locked -j1 -p dustroute-minecraft --test audit_piston_execution_boundaries -- --ignored --exact retain_fixture --test-threads=1
 ```
 
 The [four captured rows](../crates/dustroute-minecraft/tests/fixtures/piston_execution_boundaries_preflight.jsonl)
@@ -176,3 +176,5 @@ Audit validation: all four diagnostic outcomes and the capture hash were checked
 `cargo fmt --all --check`, example-scoped Clippy with `-D warnings`, and
 `git diff --check` passed. The full workspace suite was not repeated for this
 diagnostic/documentation-only addition.
+
+The diagnostic example commands are retired. Explicitly ignored fixture tests retain their cases; `DUSTROUTE_DIAGNOSTIC_OUTPUT` must be a new absolute path. JSON is fixture IO only, and a diagnostic run never certifies a live circuit or adopts a design.

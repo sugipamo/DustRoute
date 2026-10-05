@@ -1,12 +1,19 @@
 //! Read-only model diagnostic for the pre-migration input-boundary contract.
 //! This is not a live Minecraft observation or an authorization to place blocks.
+#[allow(dead_code)]
+#[path = "../../../tests/support/diagnostic_fixture.rs"]
+mod diagnostic_fixture;
+
 use dustroute_minecraft::time::PhysicsEngine;
 use dustroute_minecraft::{
     Block, BlockKind, Facing, PistonState, PistonVariant, Pos, Region, World, piston_state,
 };
 use serde_json::json;
 
-fn main() {
+#[test]
+#[ignore = "explicit offline diagnostic fixture; requires absolute DUSTROUTE_DIAGNOSTIC_OUTPUT"]
+fn retain_fixture() -> Result<(), Box<dyn std::error::Error>> {
+    let mut output = diagnostic_fixture::output()?;
     let piston = Pos::new(0, 1, 0);
     for (name, source, region) in [
         (
@@ -45,9 +52,9 @@ fn main() {
             let before = engine.world().clone();
             engine.schedule_redstone_input(engine.time().game_tick + 1, source, powered);
             let result = engine.run_redstone_piston_events();
-            println!(
-                "{}",
-                json!({
+            diagnostic_fixture::row(
+                &mut output,
+                &json!({
                     "case": name, "requested_powered": powered,
                     "result": result.as_ref().map(|_| "ok").map_err(ToString::to_string),
                     "world_unchanged": engine.world() == &before,
@@ -56,11 +63,12 @@ fn main() {
                     "payload_at_two": engine.world().kind_at(Pos::new(2, 1, 0)) == BlockKind::Solid,
                     "pending_events": engine.pending_event_count(),
                     "trace_complete": engine.trace_status().is_complete(),
-                })
-            );
+                }),
+            )?;
             if result.is_err() {
                 break;
             }
         }
     }
+    Ok(())
 }

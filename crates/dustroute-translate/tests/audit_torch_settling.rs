@@ -1,5 +1,9 @@
 //! Read-only proof-premise investigation, not a repeated-use certificate.
 //! Retains exact execution state; no summaries are accepted by adoption gates.
+#[allow(dead_code)]
+#[path = "../../../tests/support/diagnostic_fixture.rs"]
+mod diagnostic_fixture;
+
 use std::collections::BTreeMap;
 
 use dustroute_library::assembly::{Assembly, AssemblyRevision};
@@ -15,7 +19,7 @@ use dustroute_translate::physical_behavior::{
     PhysicalBehaviorModel, PhysicalBehaviorSelection, PhysicalBehaviorState, PhysicalOutput,
 };
 use serde::Deserialize;
-use serde_json::{Value, json};
+use serde_json::json;
 
 fn isolated(standing: bool) -> (World, Pos, Pos) {
     let mut world = World::new();
@@ -102,7 +106,20 @@ fn model(world: &World, input: Pos, output: Pos) -> PhysicalBehaviorModel {
 }
 
 /// Exhausts this static electrical domain, independently of history/reachability.
-fn electrical_rows(world: &World, input: Option<Pos>, torch: Pos, output: Pos) -> Vec<Value> {
+#[derive(serde::Serialize)]
+struct ElectricalRow {
+    input: Option<bool>,
+    torch_lit: bool,
+    support_powered: bool,
+    output: bool,
+}
+
+fn electrical_rows(
+    world: &World,
+    input: Option<Pos>,
+    torch: Pos,
+    output: Pos,
+) -> Vec<ElectricalRow> {
     ValidatedWorld::try_from(world.clone()).unwrap();
     let mut rows = vec![];
     for level in if input.is_some() {
@@ -122,9 +139,12 @@ fn electrical_rows(world: &World, input: Option<Pos>, torch: Pos, output: Pos) -
                 ..Default::default()
             };
             let solved = solve_instantaneous(&driven, &devices, 128).unwrap();
-            rows.push(json!({"input":input.map(|_|level), "torch_lit":lit,
-                "support_powered":torch_support_is_powered(&driven, torch, &solved),
-                "output":solved.signal(output)>0}));
+            rows.push(ElectricalRow {
+                input: input.map(|_| level),
+                torch_lit: lit,
+                support_powered: torch_support_is_powered(&driven, torch, &solved),
+                output: solved.signal(output) > 0,
+            });
         }
     }
     rows
@@ -195,14 +215,17 @@ struct Sample {
     lit: bool,
 }
 
-fn main() {
+#[test]
+#[ignore = "explicit offline diagnostic fixture; requires absolute DUSTROUTE_DIAGNOSTIC_OUTPUT"]
+fn retain_fixture() -> Result<(), Box<dyn std::error::Error>> {
+    let mut output = diagnostic_fixture::output()?;
     let mut electrical = vec![];
     for standing in [false, true] {
         let (world, input, torch) = isolated(standing);
         let rows = electrical_rows(&world, Some(input), torch, torch);
         assert!(
             rows.iter()
-                .all(|r| r["support_powered"] == r["input"] && r["output"] == r["torch_lit"])
+                .all(|r| Some(r.support_powered) == r.input && r.output == r.torch_lit)
         );
         electrical.push(
             json!({"layout":if standing {"isolated_standing"} else {"isolated_wall"}, "rows":rows}),
@@ -225,7 +248,7 @@ fn main() {
         let rows = electrical_rows(&world, Some(input), torch, cell.outputs[0].pos);
         assert!(
             rows.iter()
-                .all(|r| r["support_powered"] == r["input"] && r["output"] == r["torch_lit"])
+                .all(|r| Some(r.support_powered) == r.input && r.output == r.torch_lit)
         );
         electrical.push(json!({"layout":cell.name,"rows":rows}));
     }
@@ -234,11 +257,11 @@ fn main() {
     feedback.set(Pos::new(1, 1, 0), Block::new(BlockKind::Solid));
     feedback.place(BlockKind::RedstoneWire, Pos::new(0, 1, 0));
     let rows = electrical_rows(&feedback, None, torch, Pos::new(0, 1, 0));
-    assert!(rows.iter().all(|r| r["support_powered"] == r["torch_lit"]));
+    assert!(rows.iter().all(|r| r.support_powered == r.torch_lit));
     electrical.push(json!({"layout":"four_block_feedback", "rows":rows}));
 
     let capture: Capture =
-        serde_json::from_str(include_str!("../tests/fixtures/torch_burnout_1_21_11.json")).unwrap();
+        serde_json::from_str(include_str!("fixtures/torch_burnout_1_21_11.json")).unwrap();
     let mut continuations = vec![];
     for case in capture.cases {
         let (world, input, output) = isolated(case.orientation == "standing");
@@ -267,16 +290,16 @@ fn main() {
             "max_settling_steps_for_false_true":maxima,
             "exact_tail_states":caches.iter().map(|cache|cache.len()).sum::<usize>()}));
     }
-    println!(
-        "{}",
-        serde_json::to_string_pretty(&json!({
+    diagnostic_fixture::report(
+        &mut output,
+        &json!({
             "scope":"electrical_premises_and_exact_tails_from_retained_prefixes_only",
             "profile":PhysicalBehaviorProfile::DustSingleTorchBlockEffectsV1,
             "repeated_settling_verified":false,"adoption_authorized":false,"writes_minecraft":false,
             "dust_law":dustroute_library::builtin_laws::dust_law_revision(),
             "torch_law":dustroute_library::builtin_laws::torch_law_revision(),
             "electrical_rows":electrical,"continuations":continuations
-        }))
-        .unwrap()
-    );
+        }),
+    )?;
+    Ok(())
 }

@@ -1,5 +1,9 @@
 //! Read-only diagnostics for the motion-time source audit. These capture the
 //! retained v1 engine, not desired behavior or Vanilla conformance fixtures.
+#[allow(dead_code)]
+#[path = "../../../tests/support/diagnostic_fixture.rs"]
+mod diagnostic_fixture;
+
 use dustroute_minecraft::time::{
     EventOutcome, PhysicsEngine, PhysicsEventKind, PhysicsEventPhase, QueuedEvent,
 };
@@ -112,13 +116,17 @@ fn piston_edges(off_tick: u64) -> Value {
     })
 }
 
-fn main() {
+#[test]
+#[ignore = "explicit offline diagnostic fixture; requires absolute DUSTROUTE_DIAGNOSTIC_OUTPUT"]
+fn retain_fixture() -> Result<(), Box<dyn std::error::Error>> {
+    let mut output = diagnostic_fixture::output()?;
     for row in [
         callback_order(PhysicsEventPhase::NeighborUpdate),
         callback_order(PhysicsEventPhase::BlockEntity),
         piston_edges(2),
         piston_edges(8),
     ] {
-        println!("{row}");
+        diagnostic_fixture::row(&mut output, &row)?;
     }
+    Ok(())
 }

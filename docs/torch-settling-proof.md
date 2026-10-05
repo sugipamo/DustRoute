@@ -17,7 +17,7 @@ its graph counts must not be presented as measurements of this newer profile.
 Run the read-only diagnostic:
 
 ```bash
-cargo run -p dustroute-translate --example audit_torch_settling
+DUSTROUTE_DIAGNOSTIC_OUTPUT=/tmp/audit_torch_settling.json cargo test --offline --locked -j1 -p dustroute-translate --test audit_torch_settling -- --ignored --exact retain_fixture --test-threads=1
 ```
 
 Its JSON includes the complete selected law records, profile, static electrical
@@ -147,3 +147,5 @@ states while retaining complete physical execution/replay. The data-driven
 abstract verifier implements that decision. Its soundness boundary, regression
 evidence and remaining integration are documented in
 [abstract behavioral verification](abstract-behavior-verification.md).
+
+The diagnostic example commands are retired. Explicitly ignored fixture tests retain their cases; `DUSTROUTE_DIAGNOSTIC_OUTPUT` must be a new absolute path. JSON is fixture IO only, and a diagnostic run never certifies a live circuit or adopts a design.

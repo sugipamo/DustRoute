@@ -56,7 +56,7 @@ Regression entry points:
 ```bash
 cargo test -p dustroute-translate --test piston_completion
 cargo test -p dustroute-translate --test piston_payload_push
-cargo run -p dustroute-translate --example piston_completion_isolation
+DUSTROUTE_DIAGNOSTIC_OUTPUT=/tmp/piston_completion_isolation.json cargo test --offline --locked -j1 -p dustroute-translate --test piston_completion_isolation -- --ignored --exact retain_fixture --test-threads=1
 ```
 
 ## Event budget and normalization
@@ -107,3 +107,5 @@ The separate [horizontal callback profile](piston-callback-runtime.md) now
 implements those motion-time rules and reproduces the saved single-input 1×2
 settled observations. Its transient cases are source-derived regressions, not
 additional live observations or a behavioral type certificate.
+
+The diagnostic example commands are retired. Explicitly ignored fixture tests retain their cases; `DUSTROUTE_DIAGNOSTIC_OUTPUT` must be a new absolute path. JSON is fixture IO only, and a diagnostic run never certifies a live circuit or adopts a design.

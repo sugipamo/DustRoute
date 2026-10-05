@@ -1,6 +1,10 @@
 //! Read-only preflight for location-state behavioral verification.
 //! Existing deterministic model results, not live Minecraft conformance or a
 //! definition of allowed input timing. No production handler is changed here.
+#[allow(dead_code)]
+#[path = "../../../tests/support/diagnostic_fixture.rs"]
+mod diagnostic_fixture;
+
 use dustroute_minecraft::time::{PhysicsEngine, PhysicsEventKind};
 use dustroute_minecraft::{
     Block, BlockKind, Facing, PistonState, PistonVariant, Pos, Region, World,
@@ -34,7 +38,7 @@ fn simple_world() -> (World, Region, Pos, Vec<Pos>) {
 
 fn two_row_world() -> (World, Region, Pos, Vec<Pos>) {
     let fixture: Value = serde_json::from_str(include_str!(
-        "../tests/fixtures/piston-low-layer/07-single-input-two-row.json"
+        "fixtures/piston-low-layer/07-single-input-two-row.json"
     ))
     .unwrap();
     let initial: MinecraftSnapshot = serde_json::from_value(fixture["initial"].clone()).unwrap();
@@ -46,7 +50,10 @@ fn two_row_world() -> (World, Region, Pos, Vec<Pos>) {
     )
 }
 
-fn main() {
+#[test]
+#[ignore = "explicit offline diagnostic fixture; requires absolute DUSTROUTE_DIAGNOSTIC_OUTPUT"]
+fn retain_fixture() -> Result<(), Box<dyn std::error::Error>> {
+    let mut output = diagnostic_fixture::output()?;
     for (layout, direct) in [
         ("single_sticky_direct", true),
         ("single_sticky_propagation", false),
@@ -84,9 +91,9 @@ fn main() {
             }).collect();
             let final_outputs: Vec<_> =
                 outputs.iter().map(|p| engine.world().kind_at(*p)).collect();
-            println!(
-                "{}",
-                json!({
+            diagnostic_fixture::row(
+                &mut output,
+                &json!({
                     "layout":layout, "on_tick":1, "off_tick":off_tick, "input_position":input, "output_positions":outputs,
                     "execution_context":engine.execution_context(),
                     "initial_outputs":initial_outputs, "result":result.as_ref().map(|_| "ok").map_err(ToString::to_string),
@@ -94,8 +101,9 @@ fn main() {
                     "final_outputs":final_outputs, "expected_if_off_settles_to_absence":vec![BlockKind::Air; outputs.len()],
                     "pending_events":engine.pending_event_count(), "trace_status":engine.trace_status(),
                     "events":events, "location_changes":samples,
-                })
-            );
+                }),
+            )?;
         }
     }
+    Ok(())
 }

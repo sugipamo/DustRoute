@@ -1,4 +1,8 @@
 //! Offline isolation only. Does not change production completion validation.
+#[allow(dead_code)]
+#[path = "../../../tests/support/diagnostic_fixture.rs"]
+mod diagnostic_fixture;
+
 use dustroute_minecraft::time::PhysicsEngine;
 use dustroute_minecraft::{
     Block, BlockKind, Facing, PistonAction, PistonVariant, Pos, World, plan_piston,
@@ -89,7 +93,10 @@ fn mutation(name: &str) -> Value {
         "diagnostic_rebased_validation_error":local_error})
 }
 
-fn main() {
+#[test]
+#[ignore = "explicit offline diagnostic fixture; requires absolute DUSTROUTE_DIAGNOSTIC_OUTPUT"]
+fn retain_fixture() -> Result<(), Box<dyn std::error::Error>> {
+    let mut output = diagnostic_fixture::output()?;
     let mut schedules = Vec::new();
     for action in [PistonAction::Extend, PistonAction::Retract] {
         for gap in [0, 1, 2, 3] {
@@ -108,9 +115,10 @@ fn main() {
     .into_iter()
     .map(mutation)
     .collect();
-    println!(
-        "{}",
-        json!({"schema_version":"dustroute.piston-completion-isolation.v1",
-        "execution_mode":"offline_diagnostic","schedules":schedules,"mutations":mutations})
-    );
+    diagnostic_fixture::report(
+        &mut output,
+        &json!({"schema_version":"dustroute.piston-completion-isolation.v1",
+        "execution_mode":"offline_diagnostic","schedules":schedules,"mutations":mutations}),
+    )?;
+    Ok(())
 }

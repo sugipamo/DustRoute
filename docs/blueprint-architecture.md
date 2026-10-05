@@ -1061,7 +1061,7 @@ input/output relation. Under this model the recorded input prefix is a
 counterexample to an eventual OFF → empty requirement.
 
 ```bash
-cargo run -p dustroute-translate --example audit_piston_input_during_motion
+DUSTROUTE_DIAGNOSTIC_OUTPUT=/tmp/audit_piston_input_during_motion.json cargo test --offline --locked -j1 -p dustroute-translate --test audit_piston_input_during_motion -- --ignored --exact retain_fixture --test-threads=1
 ```
 
 The [six diagnostic rows](../crates/dustroute-translate/tests/fixtures/piston_input_during_motion_preflight.jsonl)
@@ -1113,7 +1113,7 @@ payload at `(1,1,0)`, and an adjacent input. Its historical results were:
 Run the same diagnostic against the current implementation with:
 
 ```bash
-cargo run -p dustroute-translate --example audit_piston_input_boundary
+DUSTROUTE_DIAGNOSTIC_OUTPUT=/tmp/audit_piston_input_boundary.json cargo test --offline --locked -j1 -p dustroute-translate --test audit_piston_input_boundary -- --ignored --exact retain_fixture --test-threads=1
 ```
 
 [Captured results](../crates/dustroute-translate/tests/fixtures/piston_input_boundary_pre_migration.jsonl)
@@ -1178,7 +1178,7 @@ placement validation failed. The two law columns are direct adapter evaluations,
 not a second whole-world simulation.
 
 ```bash
-cargo run -p dustroute-translate --example audit_bounded_dust_strength
+DUSTROUTE_DIAGNOSTIC_OUTPUT=/tmp/audit_bounded_dust_strength.json cargo test --offline --locked -j1 -p dustroute-translate --test audit_bounded_dust_strength -- --ignored --exact retain_fixture --test-threads=1
 ```
 
 [Captured rows](../crates/dustroute-translate/tests/fixtures/bounded_dust_strength_pre_migration.jsonl)
@@ -1264,3 +1264,5 @@ Investigation, comparison with existing code/fixtures and ordinary debugging are
 part of the declared work. Mark an issue as an implementation defect, a missing
 migration, an evidence limit or a missing requirement so that the user can decide
 at the appropriate level.
+
+The diagnostic example commands are retired. Explicitly ignored fixture tests retain their cases; `DUSTROUTE_DIAGNOSTIC_OUTPUT` must be a new absolute path. JSON is fixture IO only, and a diagnostic run never certifies a live circuit or adopts a design.

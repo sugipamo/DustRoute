@@ -1,13 +1,20 @@
 //! Read-only diagnostic of the current bounded dust-strength boundary.
 //! The pre-migration results are frozen separately; reruns reflect current policy.
 //! Diagnostic u8 inputs above 15 are not valid placement or live-world evidence.
+#[allow(dead_code)]
+#[path = "../../../tests/support/diagnostic_fixture.rs"]
+mod diagnostic_fixture;
+
 use dustroute_library::builtin_laws::dust_law_revision;
 use dustroute_minecraft::time::{PhysicsEngine, PhysicsEventKind};
 use dustroute_minecraft::{Block, BlockKind, Facing, Pos, Region, World};
 use dustroute_translate::dust_law::DustLaw;
 use serde_json::json;
 
-fn main() {
+#[test]
+#[ignore = "explicit offline diagnostic fixture; requires absolute DUSTROUTE_DIAGNOSTIC_OUTPUT"]
+fn retain_fixture() -> Result<(), Box<dyn std::error::Error>> {
+    let mut output = diagnostic_fixture::output()?;
     let law = DustLaw::from_revision(dust_law_revision()).unwrap();
     let source = Pos::new(0, 1, 0);
     let first = Pos::new(1, 1, 0);
@@ -35,9 +42,9 @@ fn main() {
             .with_piston_planning_region(Region::new(Pos::new(-3, -1, -3), Pos::new(5, 3, 3)));
         engine.schedule_external(0, first, PhysicsEventKind::NeighborUpdate { source });
         let result = engine.run_redstone_propagation();
-        println!(
-            "{}",
-            json!({
+        diagnostic_fixture::row(
+            &mut output,
+            &json!({
                 "source_level": level,
                 "placement_rejects_source_level": rejects_level,
                 "execution_mode": "diagnostic",
@@ -48,7 +55,8 @@ fn main() {
                 "dust_law_neighbor": law.strength(0, level),
                 "pending_events": engine.pending_event_count(),
                 "trace_complete": engine.trace_status().is_complete(),
-            })
-        );
+            }),
+        )?;
     }
+    Ok(())
 }

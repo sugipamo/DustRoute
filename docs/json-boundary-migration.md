@@ -1621,3 +1621,24 @@ workspace全targetとMCPの`--no-default-features`全targetのClippy、fmt、差
 次は、残る診断/fixture生成exampleとMCP試験clientの用途・呼出し元を個別に確認して移行する。
 現時点で16のRust example fileにJSON使用が残る。MCP codecとして許可されるものも含むため、
 file数だけで全てを未対応内部JSONとは扱わない。統合ゴールの完了監査も未実施で、goalはactive。
+
+
+### 診断command 7件の撤去と試験用fixture化
+
+旧audit/probe example 7件を撤去し、明示実行するignored integration testへ移した。
+対象はbounded dust strength、piston input boundary/during motion、torch settling、
+reference-door interruptions、piston completion isolation、piston execution boundaries。
+モデルの計算・予算・観測資料・否定結果の意味は変えず、JSON出力を試験専用の
+`tests/support/diagnostic_fixture.rs`へ限定する。出力は絶対パスの新規fileだけを許可し、
+上書きを拒否する。公開の実行手順とsource参照も更新した。既存の独立fixtureと過去証拠は
+再生成しない。診断結果を実機証拠・採用・配置権限へ昇格させない。
+
+トーチ診断のelectrical rowsをRust structへ置き換え、support/input/output/litの条件は
+native fieldで照合する。Optionの未取得をfalse/zeroへ置き換えない。JSONは最後のfixture
+projectionだけである。temporary出力への明示的なoffline実行が成功し、
+repeated_settling_verified/adoption_authorizedはともにfalseのまま確認した。
+7つの試験targetはcompile成功・既定でignoredを確認し、workspace全target Clippyに成功。
+実機への接続・world変更は行っていない。
+
+残るJSON exampleは9件。保存archiveを扱う診断、authoring fixture、低層/XOR replay、
+MCP live trialを引き続き個別に整理する。JSON除去ゴール全体は未完了である。

@@ -2,8 +2,12 @@
 //! A bad exact fixed point disproves the candidate relation. Finding none does
 //! not prove adoption, and this diagnostic cannot publish candidate records.
 #[allow(dead_code)]
-#[path = "../tests/support/reference_door_blueprint.rs"]
+#[path = "support/reference_door_blueprint.rs"]
 mod fixture;
+
+#[allow(dead_code)]
+#[path = "../../../tests/support/diagnostic_fixture.rs"]
+mod diagnostic_fixture;
 
 use std::time::{Duration, Instant};
 
@@ -17,7 +21,10 @@ use dustroute_translate::runtime_behavior::RuntimeBehaviorModel;
 use dustroute_translate::{world::BlockKind, world::Pos};
 use serde_json::json;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+#[test]
+#[ignore = "explicit offline diagnostic fixture; requires absolute DUSTROUTE_DIAGNOSTIC_OUTPUT"]
+fn retain_fixture() -> Result<(), Box<dyn std::error::Error>> {
+    let mut output = diagnostic_fixture::output()?;
     let f = fixture::fixture();
     let mut catalog = f.catalog;
     catalog.insert_revisions(f.request.revisions)?;
@@ -148,9 +155,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         tick_cases.push(case);
     }
-    println!(
-        "{}",
-        serde_json::to_string_pretty(&json!({
+    diagnostic_fixture::report(
+        &mut output,
+        &json!({
             "schema_version":"dustroute.reference-door-interruption-probe.v2",
             "context":model.context(),"type_revision":model.definition(),
             "status":if witness.is_some() {"counterexample_found"} else {"no_counterexample_within_probe"},
@@ -160,7 +167,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "input_boundary":"existing runtime model advances, not game ticks or measured server input times",
             "post_world_tick_cases":tick_cases,"first_post_world_tick_failure":first_tick_failure,
             "public_adoption_performed":false,"live_evidence":false,
-        }))?
-    );
+        }),
+    )?;
     Ok(())
 }

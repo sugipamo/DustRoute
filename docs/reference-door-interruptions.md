@@ -109,8 +109,8 @@ construction checks. This initial model-only investigation did not start
 Minecraft; the linked follow-up records the subsequently authorized live runs.
 
 ```sh
-cargo build --offline --locked -j 1 -p dustroute-translate --example probe_reference_door_interruptions
-target/debug/examples/probe_reference_door_interruptions > /tmp/door-interruptions.json
+cargo test --offline --locked -j1 -p dustroute-translate --test probe_reference_door_interruptions --no-run
+DUSTROUTE_DIAGNOSTIC_OUTPUT=/tmp/probe_reference_door_interruptions.json cargo test --offline --locked -j1 -p dustroute-translate --test probe_reference_door_interruptions -- --ignored --exact retain_fixture --test-threads=1
 cargo test --offline --locked -j 1 -p dustroute-translate --test reference_door_adoption -- --test-threads=2
 ```
 
@@ -118,3 +118,5 @@ The diagnostic exits successfully when it has produced a valid report, including
 a counterexample. Inspect its status and witness; exit code zero is not an
 adoption pass. Likewise, regression tests pass by confirming the documented
 rejection evidence rather than by certifying the door's unrestricted contract.
+
+The diagnostic example commands are retired. Explicitly ignored fixture tests retain their cases; `DUSTROUTE_DIAGNOSTIC_OUTPUT` must be a new absolute path. JSON is fixture IO only, and a diagnostic run never certifies a live circuit or adopts a design.
