@@ -95,8 +95,10 @@ not establish universal crash recovery, instant interruption or empty server
 queues. No production execution or Voxrig code change was needed.
 
 [Hashed trial captures, controllers and excluded-input evidence](evidence/survival-continuous-20261005.md)
-retain the exact source, binary/JAR/runtime hashes, commands and outputs. Stages
-4–5 of the roadmap remain separate goals.
+retain the exact source, binary/JAR/runtime hashes, commands and outputs. The
+subsequent stages also completed: [search failure diagnostics](search-failure-diagnostics.md)
+records stage 4, and [public live acceptance](public-live-acceptance.md) records
+stage 5. Those results are separate from this stage 3 survival campaign.
 
 ## Stop conditions
 

@@ -134,9 +134,10 @@ source category even under misleading explanatory text. Construction reply tests
 retain missing quantities and effective limits without publishing a job.
 
 These checks cover diagnostics and the existing model gates. They do not add
-live Minecraft physics evidence. Stage 5 remains the separate public live
-building/circuit acceptance goal. See [the roadmap](failure-handling-stability.md)
-and [capabilities](capabilities.md) for the supported scope.
+live Minecraft physics evidence. The subsequent stage 5
+[public live building/circuit acceptance](public-live-acceptance.md) completed
+separately. See [the roadmap](failure-handling-stability.md) and
+[capabilities](capabilities.md) for the supported scope.
 
 ## 2026-10-05 offline results
 

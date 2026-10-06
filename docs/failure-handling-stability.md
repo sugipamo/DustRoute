@@ -15,9 +15,13 @@ implement arbitrary crash recovery.
 | 4. Search failures | Distinguish shortages, unsupported input, exhausted budgets and rejected candidates | A failed search is not reported as physical impossibility or an executable partial plan |
 | 5. Public live acceptance | Recheck a small building and supported circuit, with bounded declared changes | Independently compare completion/cleanup and inspection outcomes through MCP |
 
-The first goal covers the inventory and concrete missing diagnostic connections
-in stages 1–2. Existing later-stage evidence is retained; this change does not
-claim a new continuous-construction or live disturbance campaign.
+All five stages are complete within their declared scope. The initial goal
+covered the inventory and missing diagnostic connections in stages 1–2.
+Subsequent goals supplied the [continuous survival](continuous-survival-validation.md),
+[search failure](search-failure-diagnostics.md) and
+[public live acceptance](public-live-acceptance.md) results described below.
+Earlier captures remain evidence of their recorded versions; completion does
+not extend the supported physics or interrupted-operation recovery contracts.
 
 ## Inventory and changes
 
